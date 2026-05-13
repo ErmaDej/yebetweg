@@ -11,6 +11,8 @@ interface AuthContextProps {
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ error?: string }>
+  updatePassword: (newPassword: string) => Promise<{ error?: string }>
   clearError: () => void
 }
 
@@ -22,6 +24,8 @@ export const AuthContext = createContext<AuthContextProps>({
   signInWithPassword: async () => ({}),
   signUp: async () => ({}),
   signOut: async () => {},
+  resetPassword: async () => ({}),
+  updatePassword: async () => ({}),
   clearError: () => {},
 })
 
@@ -134,6 +138,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function resetPassword(email: string) {
+    setLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (error) {
+        setError(error.message)
+        return { error: error.message }
+      }
+      return {}
+    } catch (e: any) {
+      setError(e.message)
+      return { error: e.message }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function updatePassword(newPassword: string) {
+    setLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+      if (error) {
+        setError(error.message)
+        return { error: error.message }
+      }
+      return {}
+    } catch (e: any) {
+      setError(e.message)
+      return { error: e.message }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function clearError() {
     setError(null)
   }
@@ -146,6 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithPassword,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
     clearError,
   }
 
