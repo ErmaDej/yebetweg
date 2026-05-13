@@ -78,15 +78,28 @@ export function Navbar() {
             </span>
           </Button>
           <ModeToggle />
-          <Button
-            size="sm"
-            variant={user ? "outline" : "default"}
-            onClick={() => setAuthOpen(true)}
-            className="h-9 px-3"
-          >
-            <UserCircle2 className="h-4 w-4 mr-2" />
-            {user ? user.email?.split("@")[0] : language === "en" ? "Login" : "ግባ"}
-          </Button>
+          {user ? (
+            <a href="/dashboard">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 px-3"
+              >
+                <UserCircle2 className="h-4 w-4 mr-2" />
+                <span className="hidden xs:inline">{user.email?.split("@")[0]}</span>
+              </Button>
+            </a>
+          ) : (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setAuthOpen(true)}
+              className="h-9 px-3"
+            >
+              <UserCircle2 className="h-4 w-4 mr-2" />
+              {language === "en" ? "Login" : "ግባ"}
+            </Button>
+          )}
           <AuthSheet open={authOpen} onOpenChange={setAuthOpen} />
 
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -128,16 +141,25 @@ export function Navbar() {
                   <Globe className="h-4 w-4 mr-2" />
                   {language === "en" ? "ወደ አማርኛ ይለውጡ" : "Switch to English"}
                 </Button>
-                <Button
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setAuthOpen(true)
-                    setMobileOpen(false)
-                  }}
-                >
-                  <UserCircle2 className="h-4 w-4 mr-2" />
-                  {user ? user.email?.split("@")[0] : language === "en" ? "Login" : "ግባ"}
-                </Button>
+                {user ? (
+                  <a href="/dashboard" onClick={() => setMobileOpen(false)}>
+                    <Button className="w-full justify-start">
+                      <UserCircle2 className="h-4 w-4 mr-2" />
+                      {language === "en" ? "Dashboard" : "ዳሽቦርድ"}
+                    </Button>
+                  </a>
+                ) : (
+                  <Button
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setAuthOpen(true)
+                      setMobileOpen(false)
+                    }}
+                  >
+                    <UserCircle2 className="h-4 w-4 mr-2" />
+                    {language === "en" ? "Login" : "ግባ"}
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>

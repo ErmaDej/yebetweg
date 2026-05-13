@@ -241,11 +241,13 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
    - [ ] Add password reset
    - [ ] Create protected routes
 
-2. **Payment Integration**
-   - [ ] Set up Stripe/Flutterwave account
-   - [ ] Implement payment form
+2. **Payment Integration (Chapa & TeleBirr)**
+   - [ ] Integrate Chapa payment gateway (for cards/mobile)
+   - [ ] Integrate TeleBirr payment gateway (for USSD)
+   - [ ] Implement dual payment option UI
    - [ ] Add subscription database triggers
    - [ ] Create payment success/failure handling
+   - [ ] Set up payment webhooks for transaction verification
 
 3. **Messaging System**
    - [ ] Create messaging database schema
