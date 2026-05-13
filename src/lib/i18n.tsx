@@ -80,6 +80,8 @@ type TranslationKey =
   | "premium.feature.consultation"
   | "premium.feature.alerts"
   | "premium.feature.report"
+  | "premium.paymentHeadline"
+  | "premium.paymentDescription"
   | "premium.getStarted"
   | "premium.choosePlan"
   | "social.title"
@@ -198,6 +200,8 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "premium.feature.consultation": "Expert consultation booking",
     "premium.feature.alerts": "Price change alerts",
     "premium.feature.report": "Monthly market report",
+    "premium.paymentHeadline": "Secure local checkout with Chapa or TeleBirr",
+    "premium.paymentDescription": "Choose the payment method that works best for you. TeleBirr support is built for Ethiopia’s leading mobile money users.",
     "premium.getStarted": "Get Started",
     "premium.choosePlan": "Choose Plan",
     "social.title": "Stay Connected",
@@ -228,7 +232,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "footer.audience.homeowners": "Homeowners",
     "footer.audience.professionals": "Professionals",
     "footer.audience.buyers": "Buyers & Sellers",
-    "footer.copyright": "2024 YeBetWeg | All rights reserved",
+    "footer.copyright": "2026 YeBetWeg | All rights reserved",
     "ads.advertise": "Advertise With Us",
     "ads.label": "Advertisement",
     "common.verified": "Verified",
@@ -315,6 +319,8 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "premium.feature.consultation": "የባለሙያ ምክር ቦታ",
     "premium.feature.alerts": "የዋጋ ለውጥ ማሳወቂያ",
     "premium.feature.report": "ወርሃዊ የገበያ ሪፖርት",
+    "premium.paymentHeadline": "የታማኝ የአገልግሎት ጣቢያ በቻፓ ወይም በቴሌቢር",
+    "premium.paymentDescription": "ለእርስዎ የሚሰራውን የክፍያ ዘዴ ይምረጡ። የቴሌቢር ድጋፍ ለኢትዮጵያ ዋነኛ የሞባይል ገንዘብ ተጠቃሚዎች ተዘጋጀ ነው።",
     "premium.getStarted": "ይጀምሩ",
     "premium.choosePlan": "እቅድ ይምረጡ",
     "social.title": "ግንኙነት ይጠብቁ",
@@ -345,7 +351,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "footer.audience.homeowners": "ቤት ባለቤቶች",
     "footer.audience.professionals": "ባለሙያዎች",
     "footer.audience.buyers": "ገዢዎች እና ሻጭዎች",
-    "footer.copyright": "2024 YeBetWeg | መብቱ በሕግ የተጠበቀ ነው",
+    "footer.copyright": "2026 YeBetWeg | መብቱ በሕግ የተጠበቀ ነው",
     "ads.advertise": "ከእኛ ጋር ያስተምሩ",
     "ads.label": "ማስተባበያ",
     "common.verified": "የተረጋገጠ",

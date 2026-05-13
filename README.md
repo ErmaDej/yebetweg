@@ -341,7 +341,7 @@ The application can be deployed to:
 - [x] Environment variables configured
 - [x] Database migrations applied
 - [x] Seed data populated
-- [x] RLS policies enforced
+- [x] RLS policies prepared for production enablement
 - [x] Images optimized
 - [x] Mobile responsiveness verified
 - [x] Bilingual content verified

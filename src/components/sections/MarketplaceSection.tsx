@@ -29,12 +29,34 @@ function ListingCard({ listing, index }: { listing: any; index: number }) {
   const title = language === "am" ? listing.title_am : listing.title_en
   const [contactOpen, setContactOpen] = useState(false)
   const [inquirySent, setInquirySent] = useState(false)
+  const [inquiryError, setInquiryError] = useState("")
+  const [inquiryData, setInquiryData] = useState({ name: "", phone: "" })
 
   const handleInquiry = async () => {
+    if (!inquiryData.name || !inquiryData.phone) {
+      setInquiryError(language === "en" ? "Please fill in all fields" : "እባክዎ ሁሉንም መስኮቶችን ይሙሉ")
+      return
+    }
+
+    const { error } = await supabase.from("inquiries").insert({
+      name: sanitizeText(inquiryData.name, 100),
+      email: "marketplace@yebetweg.com",
+      phone: inquiryData.phone,
+      subject: `Inquiry for ${title}`,
+      message: `Inquiry from ${inquiryData.name} - Phone: ${inquiryData.phone}`,
+      listing_id: listing.id,
+    })
+
+    if (error) {
+      setInquiryError(language === "en" ? "Failed to send inquiry" : "ጥያቄን ለማስገባ አልተሳካም ነው")
+      return
+    }
+
     setInquirySent(true)
     setTimeout(() => {
       setContactOpen(false)
       setInquirySent(false)
+      setInquiryData({ name: "", phone: "" })
     }, 2000)
   }
 
@@ -111,20 +133,31 @@ function ListingCard({ listing, index }: { listing: any; index: number }) {
                   {language === "en" ? "Inquiry sent successfully!" : "ጥያቄ በተሳካ ሁኔታ ተልኳል!"}
                 </p>
               </div>
-            ) : (
+) : (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {language === "en"
                     ? "Submit an inquiry to connect with the listing owner."
                     : "ከዝርዝር ባለቤት ጋር ለመገናኘት ጥያቄ ያስገቡ።"}
                 </p>
+                {inquiryError && (
+                  <p className="text-xs text-destructive">{inquiryError}</p>
+                )}
                 <div className="space-y-2">
                   <Label>{t("contact.name")}</Label>
-                  <Input placeholder={language === "en" ? "Your name" : "ስምዎ"} />
+                  <Input
+                    placeholder={language === "en" ? "Your name" : "ስምዎ"}
+                    value={inquiryData.name}
+                    onChange={(e) => setInquiryData({ ...inquiryData, name: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>{t("contact.phone")}</Label>
-                  <Input placeholder="+251..." />
+                  <Input
+                    placeholder="+251..."
+                    value={inquiryData.phone}
+                    onChange={(e) => setInquiryData({ ...inquiryData, phone: e.target.value })}
+                  />
                 </div>
                 <Button onClick={handleInquiry} className="w-full">
                   {t("contact.send")}

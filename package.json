@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migration:list": "bash ./scripts/list-migrations.sh",
+    "migration:run": "bash ./scripts/run-migrations.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -40,6 +42,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
+    "supabase": "^2.98.2",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"
   }

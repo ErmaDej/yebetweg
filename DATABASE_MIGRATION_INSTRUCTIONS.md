@@ -1,7 +1,7 @@
 # YeBetWeg Database Migration to YeBetWegProj1x
 
 ## Quick Summary
-Your YeBetWeg application is ready to connect to your new Supabase project. The `.env` file has been updated with your new credentials, and all migration files are prepared.
+Your YeBetWeg application is connected to the new Supabase project and migrations have been executed successfully. The `.env` file has been updated with your new credentials, and all migration files are prepared.
 
 ## ✅ Completed Tasks
 
@@ -19,11 +19,17 @@ Your YeBetWeg application is ready to connect to your new Supabase project. The 
 - ✓ All images optimized for web (800x500 for articles, 600x400 for listings)
 
 ### 3. Database Migrations Ready
-Three migration files are prepared in `supabase/migrations/`:
+Ten migration files are prepared in `supabase/migrations/`:
 - `20260508182213_001_yebetweg_schema.sql` - Full database schema with RLS
-- `20260508182337_002_yebetweg_seed_data.sql` - Initial data seed
-- `003_unsplash_images_and_migration.sql` - Unsplash images (auto-applied)
-- `004_add_unsplash_images` - Additional image migrations (auto-applied)
+- `20260508182337_002_yebetweg_seed_data.sql` - Initial seed data for blogs, tips, market prices, listings, professionals, ads, subscribers, and inquiries
+- `003_unsplash_images_and_migration.sql` - Unsplash image data and index improvements
+- `20260508193022_004_add_unsplash_images.sql` - Additional Unsplash image updates
+- `20260508193509_005_update_listing_professional_images.sql` - More listing/professional image updates
+- `20260510130523_006_security_rls_policy_fixes.sql` - RLS and policy hardening
+- `20260510130544_007_security_check_constraints.sql` - Data integrity constraints and validation
+- `20260510145818_20260510_001_fix_image_urls.sql` - Image URL refresh and cleanup
+- `20260511120000_008_add_users_and_auth_schema.sql` - Auth/user schema, premium/pro model, and permissions
+- `20260511120001_009_seed_user_auth_and_premium_data.sql` - Seed admin users, premium/pro test accounts, and subscription payments
 
 ## 📋 Migration Steps
 
@@ -31,6 +37,11 @@ Three migration files are prepared in `supabase/migrations/`:
 1. Go to https://app.supabase.com
 2. Log in with your credentials
 3. Select project: **YeBetWegProj1x** (ID: `jxyavtdmcloxnhuavokc`)
+
+### Step 1b: Prepare local credentials
+1. Copy `.env.example` to `.env`
+2. Add your runtime values and database connection string
+3. Use the service role key for API/admin access if needed
 
 ### Step 2: Apply Database Schema
 
@@ -43,18 +54,35 @@ Three migration files are prepared in `supabase/migrations/`:
 5. Click **Run**
 6. Wait for success confirmation
 
+7. Open `supabase/migrations/20260511120000_008_add_users_and_auth_schema.sql`
+8. Copy entire contents and paste into the editor
+9. Click **Run**
+10. Wait for success confirmation
+
+**Option B: Automated batch migration**
+
+1. Create a local `.env` file from `.env.example`
+2. Set `SUPABASE_DB_URL` or `DATABASE_URL` to your Supabase Postgres connection string
+3. Run `npm run migration:list` to verify the migration order
+4. Run `npm run migration:run` to apply all SQL files in `supabase/migrations/` sequentially
+
+> Note: `SUPABASE_SERVICE_ROLE_KEY` is useful for admin API access, but the migration runner needs a direct database connection URL (`SUPABASE_DB_URL` or `DATABASE_URL`) to execute SQL with `psql`.
+
 ### Step 3: Apply Seed Data
 
 1. Click **New Query**
 2. Open `supabase/migrations/20260508182337_002_yebetweg_seed_data.sql`
 3. Copy entire contents and paste into the editor
 4. Click **Run**
-5. Wait for completion
+5. Open `supabase/migrations/20260511120001_009_seed_user_auth_and_premium_data.sql`
+6. Copy entire contents and paste into the editor
+7. Click **Run**
+8. Wait for completion
 
 ### Step 4: Verify Migration
 
 1. Click **Table Editor** in left sidebar
-2. You should see these 9 tables:
+2. You should see these tables:
    - `blogs` (8 articles with Unsplash images)
    - `tips` (10 construction tips)
    - `market_prices` (15 material prices)
@@ -63,7 +91,12 @@ Three migration files are prepared in `supabase/migrations/`:
    - `ads` (3 advertisements with images)
    - `subscribers` (newsletter signups)
    - `inquiries` (contact form submissions)
+   - `users` (admin, premium, and pro accounts)
    - `premium_subscriptions` (membership tracking)
+
+3. Confirm the migration run was successful and all tables are populated.
+4. If RLS is still disabled for flexibility, enable it before production using the RLS policy migration files.
+   - `subscription_payments` (paid subscription transactions)
 
 3. Click on each table to verify data is populated
 

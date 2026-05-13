@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react"
-import { Menu, Globe } from "lucide-react"
+import { Menu, Globe, UserCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useLanguage } from "@/lib/i18n"
+import { useAuthContext } from "@/context/AuthContext"
+import { AuthSheet } from "@/components/layout/AuthSheet"
 import { cn } from "@/lib/utils"
 import { YeBetWegLogoMarkOnly } from "@/components/icons/logo-image"
 
@@ -19,8 +21,10 @@ const navLinks = [
 
 export function Navbar() {
   const { t, language, setLanguage } = useLanguage()
+  const { user } = useAuthContext()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -74,6 +78,16 @@ export function Navbar() {
             </span>
           </Button>
           <ModeToggle />
+          <Button
+            size="sm"
+            variant={user ? "outline" : "default"}
+            onClick={() => setAuthOpen(true)}
+            className="h-9 px-3"
+          >
+            <UserCircle2 className="h-4 w-4 mr-2" />
+            {user ? user.email?.split("@")[0] : language === "en" ? "Login" : "ግባ"}
+          </Button>
+          <AuthSheet open={authOpen} onOpenChange={setAuthOpen} />
 
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
@@ -113,6 +127,16 @@ export function Navbar() {
                 >
                   <Globe className="h-4 w-4 mr-2" />
                   {language === "en" ? "ወደ አማርኛ ይለውጡ" : "Switch to English"}
+                </Button>
+                <Button
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setAuthOpen(true)
+                    setMobileOpen(false)
+                  }}
+                >
+                  <UserCircle2 className="h-4 w-4 mr-2" />
+                  {user ? user.email?.split("@")[0] : language === "en" ? "Login" : "ግባ"}
                 </Button>
               </div>
             </SheetContent>

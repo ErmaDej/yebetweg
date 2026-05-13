@@ -1,4 +1,4 @@
-import { Check, X, Crown, Zap } from "lucide-react"
+import { Check, X, Crown, Zap, CreditCard, Smartphone } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -201,16 +201,36 @@ export function PremiumSection() {
           </CardContent>
         </Card>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground mb-3">
-            {language === "en"
-              ? "Payment via Chapa — Ethiopia's leading payment processor"
-              : "በቻፓ ክፍያ — የኢትዮጵያ ዋነኛ ክፍያ አቀማመጃ"}
-          </p>
-          <Button variant="outline" className="gap-2">
-            <Zap className="h-4 w-4" />
-            {language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
-          </Button>
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-3xl border border-border/60 bg-white/90 p-6 shadow-sm">
+            <p className="text-sm font-semibold text-foreground mb-2">
+              {t("premium.paymentHeadline")}
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              {t("premium.paymentDescription")}
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                <CreditCard className="h-4 w-4" />
+                {language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
+              </Button>
+              <Button className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700">
+                <Smartphone className="h-4 w-4" />
+                {language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-border/60 bg-muted/70 p-6 shadow-sm">
+            <p className="text-sm font-semibold text-foreground mb-2">
+              {language === "en" ? "How payment works" : "ክፍያ እንዴት እንደሚሰራ"}
+            </p>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>• {language === "en" ? "Choose your plan and payment method." : "እቅድዎን ይምረጡ እና የክፍያ ዘዴን ይምረጡ።"}</li>
+              <li>• {language === "en" ? "Chapa is ideal for online card and bank payments." : "ቻፓ ለቀርድ እና ባንክ ክፍያዎች ተስማሚ ነው።"}</li>
+              <li>• {language === "en" ? "TeleBirr offers fast mobile money checkout." : "ቴሌቢር ፈጣን የሞባይል ገንዘብ ክፍያ ይሰጣል።"}</li>
+              <li>• {language === "en" ? "Your phone number is required to complete TeleBirr payments." : "የቴሌቢር ክፍያ ለማጠናቀቅ የስልክ ቁጥርዎ ያስፈልጋል።"}</li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>

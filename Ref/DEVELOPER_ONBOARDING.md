@@ -183,6 +183,23 @@ npm run preview
 - Add new shared UI: add component under `src/components/ui/`
 - Add new hooks: add under `src/hooks/`
 
+## Current Project Status
+
+- ✅ Supabase migrations completed and schema deployed
+- ✅ Seed data imported and verified in Supabase
+- ✅ Premium content gating is implemented in UI sections
+- ✅ Auth state hook added for Supabase login flows
+- ✅ Modern login panel available in the navbar
+- ✅ Local payment UI placeholders included for Chapa and TeleBirr
+
+## Next Development Sprint
+
+- Implement Supabase Auth signup and session handling for users
+- Enable RLS and policy enforcement for production
+- Add TeleBirr checkout integration and payment callback handling
+- Add premium/role-aware routing and dashboard features
+- Add admin moderation tools for listing reviews and user management
+
 ## Notes for Contributors
 
 - Keep the `Ref/` directory updated with new docs

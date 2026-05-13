@@ -107,6 +107,8 @@ The following documents are the primary references for YeBetWeg:
 - `subscribers`
 - `inquiries`
 - `premium_subscriptions`
+- `users`
+- `subscription_payments`
 
 ### Sample Data Summary
 
@@ -116,6 +118,17 @@ The following documents are the primary references for YeBetWeg:
 - 12 marketplace listings
 - 6 professional profiles
 - 3 advertisements
+- 3 seeded user accounts (including 2 admin accounts)
+- 1 sample premium subscription
+- 1 sample payment record
+
+### New Data Model Enhancements
+
+- `users` stores login-ready account metadata, role, provider, and language preference
+- `subscription_payments` tracks payment history and transaction references
+- `market_prices.access_level` enables free vs premium data gating
+- `listings`, `inquiries`, `professionals`, and `subscribers` can optionally link to a user account
+- `premium_subscriptions` now includes explicit status tracking and stronger foreign key ownership
 
 ## Runtime Configuration
 

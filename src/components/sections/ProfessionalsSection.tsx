@@ -29,6 +29,8 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
   const { t, language } = useLanguage()
   const [hireOpen, setHireOpen] = useState(false)
   const [inquirySent, setInquirySent] = useState(false)
+  const [hireError, setHireError] = useState("")
+  const [hireData, setHireData] = useState({ name: "", phone: "" })
 
   const initials = professional.name
     .split(" ")
@@ -36,16 +38,29 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
     .join("")
 
   const handleInquiry = async () => {
-    await supabase.from("inquiries").insert({
-      name: "Hiring inquiry",
+    if (!hireData.name || !hireData.phone) {
+      setHireError(language === "en" ? "Please fill in all fields" : "እባክዎ ሁሉንም መስኮቶችን ይሙሉ")
+      return
+    }
+
+    const { error } = await supabase.from("inquiries").insert({
+      name: sanitizeText(hireData.name, 100),
       email: "hire@yebetweg.com",
+      phone: hireData.phone,
       subject: `Hiring inquiry for ${professional.name}`,
-      message: `Request to hire ${professional.name} - ${professional.specialty}`,
+      message: `Hiring request from ${hireData.name} - Phone: ${hireData.phone} - Professional ID: ${professional.id}`,
     })
+
+    if (error) {
+      setHireError(language === "en" ? "Failed to send request" : "ጥያቄን ለማስገባ አልተሳካም ነው")
+      return
+    }
+
     setInquirySent(true)
     setTimeout(() => {
       setHireOpen(false)
       setInquirySent(false)
+      setHireData({ name: "", phone: "" })
     }, 2000)
   }
 
@@ -116,20 +131,31 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
                   {language === "en" ? "Request sent!" : "ጥያቄ ተልኳል!"}
                 </p>
               </div>
-            ) : (
+) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
                   {language === "en"
                     ? `Submit a hiring request for ${professional.name}. They will contact you within 24 hours.`
                     : `${professional.name} ለማስተኳከው ጥያቄ ያስገቡ። በ24 ሰዓት ውስጥ ያገኙዎታል።`}
                 </p>
+                {hireError && (
+                  <p className="text-xs text-destructive">{hireError}</p>
+                )}
                 <div className="space-y-1.5">
                   <Label>{t("contact.name")}</Label>
-                  <Input placeholder={language === "en" ? "Your name" : "ስምዎ"} />
+                  <Input
+                    placeholder={language === "en" ? "Your name" : "ስምዎ"}
+                    value={hireData.name}
+                    onChange={(e) => setHireData({ ...hireData, name: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>{t("contact.phone")}</Label>
-                  <Input placeholder="+251..." />
+                  <Input
+                    placeholder="+251..."
+                    value={hireData.phone}
+                    onChange={(e) => setHireData({ ...hireData, phone: e.target.value })}
+                  />
                 </div>
                 <Button onClick={handleInquiry} className="w-full">{t("contact.send")}</Button>
               </div>
