@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useAuthContext } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
+import type { Subscription } from "@/types/payment"
 
 export interface UserProfile {
   id: string
@@ -14,7 +15,7 @@ export interface UserProfile {
   language_preference: string
   status: string
   profile_image: string
-  metadata: Record<string, any> | null
+  metadata: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }
@@ -37,7 +38,6 @@ export function useUserProfile() {
         setLoading(true)
         setError(null)
 
-        // Fetch user profile by auth_uid
         const { data, error: fetchError } = await supabase
           .from("users")
           .select("*")
@@ -49,7 +49,6 @@ export function useUserProfile() {
         }
 
         if (!data) {
-          // Create profile if it doesn't exist
           const username = user.email?.split("@")[0] || `user_${user.id.slice(0, 8)}`
           const newProfile: Partial<UserProfile> = {
             auth_uid: user.id,
@@ -76,8 +75,8 @@ export function useUserProfile() {
         } else {
           setProfile(data)
         }
-      } catch (err: any) {
-        setError(err.message)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unknown error")
       } finally {
         setLoading(false)
       }
@@ -106,13 +105,92 @@ export function useUserProfile() {
       if (updateError) throw updateError
       setProfile(data)
       return { data }
-    } catch (err: any) {
-      setError(err.message)
-      return { error: err.message }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error"
+      setError(message)
+      return { error: message }
     } finally {
       setLoading(false)
     }
   }
 
   return { profile, loading, error, updateProfile }
+}
+
+type SubscriptionRow = {
+  id: string
+  user_id: string
+  tier: Subscription["tier"]
+  payment_method: Subscription["paymentMethod"]
+  chapa_reference?: string | null
+  telebirr_reference?: string | null
+  starts_at: string
+  expires_at: string
+  is_active: boolean
+  status: Subscription["status"]
+  created_at: string
+  updated_at: string
+}
+
+function mapSubscription(row: SubscriptionRow): Subscription {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    tier: row.tier,
+    paymentMethod: row.payment_method,
+    chapaReference: row.chapa_reference ?? undefined,
+    telebirrReference: row.telebirr_reference ?? undefined,
+    startsAt: row.starts_at,
+    expiresAt: row.expires_at,
+    isActive: row.is_active,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function useSubscription() {
+  const { profile } = useUserProfile()
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!profile) {
+      setSubscription(null)
+      setLoading(false)
+      return
+    }
+
+    const fetchSubscription = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const { data, error: fetchError } = await supabase
+          .from("premium_subscriptions")
+          .select("*")
+          .eq("user_id", profile.id)
+          .eq("is_active", true)
+          .gte("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single()
+
+        if (fetchError && fetchError.code !== "PGRST116") {
+          throw fetchError
+        }
+
+        setSubscription(data ? mapSubscription(data as SubscriptionRow) : null)
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unknown error")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSubscription()
+  }, [profile])
+
+  return { subscription, loading, error }
 }

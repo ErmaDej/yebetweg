@@ -13,6 +13,8 @@ import { SocialBridgeSection } from "@/components/sections/SocialBridgeSection"
 import { ContactSection } from "@/components/sections/ContactSection"
 import { AdSlot, AdvertiseWithUs } from "@/components/sections/AdsSection"
 import { Dashboard } from "@/pages/Dashboard"
+import { SearchResults } from "@/pages/SearchResults"
+import { PaymentSuccessPage } from "@/pages/PaymentSuccessPage"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 function HomePage() {
@@ -63,13 +65,19 @@ function HomePage() {
 }
 
 export function App() {
-  const [currentPage, setCurrentPage] = useState<"home" | "dashboard">("home")
+  const [currentPage, setCurrentPage] = useState<"home" | "dashboard" | "search" | "payment">("home")
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.pathname
-      if (hash.includes("/dashboard")) {
+      const pathname = window.location.pathname
+      const search = window.location.search
+      
+      if (pathname.includes("/dashboard")) {
         setCurrentPage("dashboard")
+      } else if (pathname.includes("/search") || search.includes("q=")) {
+        setCurrentPage("search")
+      } else if (pathname.includes("/payment/success")) {
+        setCurrentPage("payment")
       } else {
         setCurrentPage("home")
       }
@@ -90,6 +98,20 @@ export function App() {
         <Footer />
       </div>
     )
+  }
+
+  if (currentPage === "search") {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Navbar />
+        <SearchResults />
+        <Footer />
+      </div>
+    )
+  }
+
+  if (currentPage === "payment") {
+    return <PaymentSuccessPage />
   }
 
   return <HomePage />

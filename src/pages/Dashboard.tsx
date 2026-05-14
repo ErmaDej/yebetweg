@@ -1,22 +1,24 @@
 import { useState } from "react"
 import { useRequireAuth } from "@/components/ProtectedRoute"
-import { useUserProfile } from "@/hooks/useUserProfile"
+import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { useLanguage } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { User, Settings, Heart, LogOut } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Calendar, CreditCard, Crown, Heart, LogOut, Settings, User } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
+import { navigateTo } from "@/lib/navigation"
 
 export function Dashboard() {
   const { language } = useLanguage()
   const { isAuthenticated, loading: authLoading } = useRequireAuth()
   const { profile, loading: profileLoading, error, updateProfile } = useUserProfile()
+  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription()
   const { signOut } = useAuthContext()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -76,8 +78,15 @@ export function Dashboard() {
 
   const handleSignOut = async () => {
     await signOut()
-    window.location.href = "/"
+    navigateTo("/")
   }
+
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString(language === "en" ? "en-US" : "am-ET", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-12">
@@ -305,14 +314,65 @@ export function Dashboard() {
                     : "ከወቅታዊ ተግባር እና ምዝገባ"}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    {language === "en"
-                      ? "No activity yet. Start exploring YeBetWeg!"
-                      : "ገና ምንም ተግባር የለም። YeBetWeg አሰሳ ጀምር!"}
-                  </p>
-                </div>
+              <CardContent className="space-y-4">
+                {subscriptionError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{subscriptionError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {subscriptionLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : subscription ? (
+                  <div className="rounded-lg border border-border/60 bg-muted p-6">
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                            <Crown className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              {language === "en" ? "Current Plan" : "የአሁኑ እቅድ"}
+                            </p>
+                            <p className="text-xl font-semibold capitalize">{subscription.tier}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>
+                              {language === "en" ? "Renews/ends " : "ያበቃል "}
+                              {formatDate(subscription.expiresAt)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 capitalize">
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            <span>{subscription.paymentMethod}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Badge variant={subscription.status === "active" ? "default" : "secondary"}>
+                        {subscription.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">
+                      {language === "en"
+                        ? "No active subscription yet. Choose a Premium or Pro plan to unlock more tools."
+                        : "ንቁ ምዝገባ ገና የለም። ተጨማሪ መሳሪያዎችን ለመክፈት Premium ወይም Pro እቅድ ይምረጡ።"}
+                    </p>
+                    <Button className="mt-4" onClick={() => navigateTo("/#premium")}>
+                      {language === "en" ? "View Plans" : "እቅዶችን ይመልከቱ"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

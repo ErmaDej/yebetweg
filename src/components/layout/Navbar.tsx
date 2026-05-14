@@ -1,12 +1,22 @@
 import { useState, useEffect } from "react"
-import { Menu, Globe, UserCircle2 } from "lucide-react"
+import { Globe, LayoutDashboard, LogOut, Menu, UserCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ModeToggle } from "@/components/mode-toggle"
+import { SearchBar } from "@/components/SearchBar"
 import { useLanguage } from "@/lib/i18n"
 import { useAuthContext } from "@/context/AuthContext"
 import { AuthSheet } from "@/components/layout/AuthSheet"
 import { cn } from "@/lib/utils"
+import { navigateTo } from "@/lib/navigation"
 import { YeBetWegLogoMarkOnly } from "@/components/icons/logo-image"
 
 const navLinks = [
@@ -21,7 +31,7 @@ const navLinks = [
 
 export function Navbar() {
   const { t, language, setLanguage } = useLanguage()
-  const { user } = useAuthContext()
+  const { user, signOut } = useAuthContext()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
@@ -31,6 +41,17 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  const goToDashboard = () => {
+    setMobileOpen(false)
+    navigateTo("/dashboard")
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+    setMobileOpen(false)
+    navigateTo("/")
+  }
 
   return (
     <header
@@ -64,6 +85,10 @@ export function Navbar() {
           ))}
         </div>
 
+        <div className="hidden md:flex items-center gap-2 shrink-0">
+          <SearchBar />
+        </div>
+
         <div className="flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
@@ -79,16 +104,28 @@ export function Navbar() {
           </Button>
           <ModeToggle />
           {user ? (
-            <a href="/dashboard">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-9 px-3"
-              >
-                <UserCircle2 className="h-4 w-4 mr-2" />
-                <span className="hidden xs:inline">{user.email?.split("@")[0]}</span>
-              </Button>
-            </a>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-9 px-3">
+                  <UserCircle2 className="h-4 w-4 mr-2" />
+                  <span className="hidden xs:inline">{user.email?.split("@")[0]}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="truncate">
+                  {user.email}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={goToDashboard}>
+                  <LayoutDashboard className="h-4 w-4" />
+                  {language === "en" ? "Dashboard" : "ዳሽቦርድ"}
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4" />
+                  {language === "en" ? "Sign Out" : "ውጣ"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button
               size="sm"
@@ -142,12 +179,16 @@ export function Navbar() {
                   {language === "en" ? "ወደ አማርኛ ይለውጡ" : "Switch to English"}
                 </Button>
                 {user ? (
-                  <a href="/dashboard" onClick={() => setMobileOpen(false)}>
-                    <Button className="w-full justify-start">
-                      <UserCircle2 className="h-4 w-4 mr-2" />
+                  <>
+                    <Button className="w-full justify-start" onClick={goToDashboard}>
+                      <LayoutDashboard className="h-4 w-4 mr-2" />
                       {language === "en" ? "Dashboard" : "ዳሽቦርድ"}
                     </Button>
-                  </a>
+                    <Button className="w-full justify-start" variant="outline" onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {language === "en" ? "Sign Out" : "ውጣ"}
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     className="w-full justify-start"

@@ -1,7 +1,11 @@
 # YeBetWeg Database Migration to YeBetWegProj1x
 
+## ⚠️ UPDATE (May 14, 2026)
+
+**✅ Supabase CLI has been set up and linked!** All unnecessary SQL scripts have been removed. See [MIGRATION_WORKFLOW.md](MIGRATION_WORKFLOW.md) for the new migration management process.
+
 ## Quick Summary
-Your YeBetWeg application is connected to the new Supabase project and migrations have been executed successfully. The `.env` file has been updated with your new credentials, and all migration files are prepared.
+Your YeBetWeg application is connected to the new Supabase project and migrations have been executed successfully. The `.env` file has been updated with your new credentials, and all migration files are properly organized.
 
 ## ✅ Completed Tasks
 
@@ -19,17 +23,19 @@ Your YeBetWeg application is connected to the new Supabase project and migration
 - ✓ All images optimized for web (800x500 for articles, 600x400 for listings)
 
 ### 3. Database Migrations Ready
-Ten migration files are prepared in `supabase/migrations/`:
+
+**11 migration files** are prepared and organized in `supabase/migrations/`:
 - `20260508182213_001_yebetweg_schema.sql` - Full database schema with RLS
-- `20260508182337_002_yebetweg_seed_data.sql` - Initial seed data for blogs, tips, market prices, listings, professionals, ads, subscribers, and inquiries
-- `003_unsplash_images_and_migration.sql` - Unsplash image data and index improvements
+- `20260508182337_002_yebetweg_seed_data.sql` - Initial seed data
+- `20260508183000_003_unsplash_images.sql` - Unsplash image data and index improvements
 - `20260508193022_004_add_unsplash_images.sql` - Additional Unsplash image updates
-- `20260508193509_005_update_listing_professional_images.sql` - More listing/professional image updates
+- `20260508193509_005_update_listing_professional_images.sql` - Listing/professional image updates
 - `20260510130523_006_security_rls_policy_fixes.sql` - RLS and policy hardening
-- `20260510130544_007_security_check_constraints.sql` - Data integrity constraints and validation
+- `20260510130544_007_security_check_constraints.sql` - Data integrity constraints
 - `20260510145818_20260510_001_fix_image_urls.sql` - Image URL refresh and cleanup
-- `20260511120000_008_add_users_and_auth_schema.sql` - Auth/user schema, premium/pro model, and permissions
-- `20260511120001_009_seed_user_auth_and_premium_data.sql` - Seed admin users, premium/pro test accounts, and subscription payments
+- `20260511120000_008_add_users_and_auth_schema.sql` - Auth/user schema, premium/pro model
+- `20260511120001_009_seed_user_auth_and_premium_data.sql` - Admin and test accounts
+- `20260512000000_telebirr_reference_column.sql` - Telebirr payment reference
 
 ## 📋 Migration Steps
 
@@ -259,7 +265,25 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 4. **Deploy to production** (Vercel, Netlify, or your preferred host)
 5. **(Optional) Configure custom domain** in Supabase settings
 
-## 📞 Support
+## � Using Supabase CLI (Recommended for Future Migrations)
+
+The Supabase CLI is now set up and linked to your project. For creating and applying new migrations:
+
+```bash
+# The project is already linked to jxyavtdmcloxnhuavokc
+# To create a new migration:
+supabase migration new add_new_table
+
+# To apply migrations to remote database:
+supabase db push
+
+# To pull schema changes made in dashboard:
+supabase db pull
+```
+
+**See [MIGRATION_WORKFLOW.md](MIGRATION_WORKFLOW.md) for complete migration management guide.**
+
+## �📞 Support
 
 If you encounter issues during migration:
 1. Check the Supabase dashboard SQL Editor for error messages
