@@ -47,6 +47,13 @@ export function Navbar() {
     navigateTo("/dashboard")
   }
 
+  const goToSection = (href: string) => {
+    setMobileOpen(false)
+    const hash = href.startsWith("#") ? href : `#${href}`
+    const path = window.location.pathname === "/" ? hash : `/${hash}`
+    navigateTo(path)
+  }
+
   const handleSignOut = async () => {
     await signOut()
     setMobileOpen(false)
@@ -56,14 +63,18 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-border/10",
         scrolled
-          ? "bg-background/80 backdrop-blur-md border-b border-border shadow-sm"
+          ? "bg-background/80 backdrop-blur-md shadow-sm"
           : "bg-transparent"
       )}
     >
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-3 sm:px-4 md:px-6 lg:px-8">
-        <a href="#hero" className="flex items-center gap-2 group shrink-0">
+        <button
+          type="button"
+          onClick={() => goToSection("#hero")}
+          className="flex items-center gap-2 group shrink-0 text-left"
+        >
           <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105 overflow-hidden">
             <YeBetWegLogoMarkOnly size="md" />
           </div>
@@ -71,17 +82,18 @@ export function Navbar() {
             <span className="text-lg font-bold tracking-tight text-foreground">YeBetWeg</span>
             <span className="text-[10px] text-muted-foreground">የቤት-ወግ</span>
           </div>
-        </a>
+        </button>
 
         <div className="hidden lg:flex items-center gap-0.5 flex-1">
           {navLinks.map((link) => (
-            <a
+            <button
+              type="button"
               key={link.key}
-              href={link.href}
+              onClick={() => goToSection(link.href)}
               className="px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground rounded-md hover:bg-accent/10 whitespace-nowrap"
             >
               {t(link.key)}
-            </a>
+            </button>
           ))}
         </div>
 
@@ -116,11 +128,11 @@ export function Navbar() {
                   {user.email}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={goToDashboard}>
+                <DropdownMenuItem onSelect={goToDashboard}>
                   <LayoutDashboard className="h-4 w-4" />
                   {language === "en" ? "Dashboard" : "ዳሽቦርድ"}
                 </DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
+                <DropdownMenuItem variant="destructive" onSelect={handleSignOut}>
                   <LogOut className="h-4 w-4" />
                   {language === "en" ? "Sign Out" : "ውጣ"}
                 </DropdownMenuItem>
@@ -155,14 +167,14 @@ export function Navbar() {
               </SheetTitle>
               <nav className="flex flex-col gap-1 mb-6">
                 {navLinks.map((link) => (
-                  <a
+                  <button
+                    type="button"
                     key={link.key}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground rounded-md hover:bg-accent/10"
+                    onClick={() => goToSection(link.href)}
+                    className="px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:text-foreground rounded-md hover:bg-accent/10"
                   >
                     {t(link.key)}
-                  </a>
+                  </button>
                 ))}
               </nav>
               <div className="border-t pt-4 space-y-2">

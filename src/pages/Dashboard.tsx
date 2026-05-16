@@ -9,16 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, CreditCard, Crown, Heart, LogOut, Settings, User } from "lucide-react"
+import { Calendar, CreditCard, Crown, Heart, LogOut, Settings, User, ShieldCheck } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 import { navigateTo } from "@/lib/navigation"
+import { AdminDashboardTab } from "./AdminDashboardTab"
 
 export function Dashboard() {
   const { language } = useLanguage()
   const { isAuthenticated, loading: authLoading } = useRequireAuth()
   const { profile, loading: profileLoading, error, updateProfile } = useUserProfile()
-  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription()
+  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription(profile)
   const { signOut } = useAuthContext()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -112,7 +113,7 @@ export function Dashboard() {
         )}
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">{language === "en" ? "Profile" : "ገለጻ"}</span>
@@ -125,6 +126,12 @@ export function Dashboard() {
               <Heart className="h-4 w-4" />
               <span className="hidden sm:inline">{language === "en" ? "Activity" : "እንቅስቃሴ"}</span>
             </TabsTrigger>
+            {profile.role === "admin" && (
+              <TabsTrigger value="admin" className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">{language === "en" ? "Admin" : "አስተዳዳሪ"}</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -376,6 +383,12 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {profile.role === "admin" && (
+            <TabsContent value="admin">
+              <AdminDashboardTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

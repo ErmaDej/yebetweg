@@ -1,10 +1,18 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Clock, ArrowRight, BookOpen } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useBlogs } from "@/hooks/useBlogs"
 import { useInView } from "@/hooks/useInView"
@@ -26,6 +34,13 @@ const categoryColors: Record<string, string> = {
   materials: "bg-chart-3/10 text-chart-3",
 }
 
+const BLOGS_PER_PAGE = 6
+
+function getVisiblePages(currentPage: number, pageCount: number) {
+  const start = Math.max(1, Math.min(currentPage - 1, pageCount - 2))
+  return Array.from({ length: Math.min(3, pageCount) }, (_, index) => start + index)
+}
+
 function BlogCard({ blog, featured, index }: { blog: any; featured?: boolean; index: number }) {
   const { language, t } = useLanguage()
   const title = language === "am" ? blog.title_am : blog.title_en
@@ -33,10 +48,10 @@ function BlogCard({ blog, featured, index }: { blog: any; featured?: boolean; in
 
   return (
     <Card
-      className={`group overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:shadow-lg ${featured ? "sm:col-span-2 sm:row-span-2" : ""}`}
+      className="group flex h-full flex-col overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      <div className={`relative ${featured ? "h-64 sm:h-80" : "h-40"} overflow-hidden`}>
+      <div className="relative h-48 overflow-hidden">
         {blog.image_url ? (
           <img
             src={blog.image_url}
@@ -54,28 +69,28 @@ function BlogCard({ blog, featured, index }: { blog: any; featured?: boolean; in
         <Badge className={`absolute top-3 left-3 ${categoryColors[blog.category] || "bg-muted text-muted-foreground"}`}>
           {t(categories.find(c => c.value === blog.category)?.key || "blog.filter.all")}
         </Badge>
-        {blog.is_featured && (
+        {featured && (
           <Badge variant="default" className="absolute top-3 right-3 bg-accent text-accent-foreground">
             Featured
           </Badge>
         )}
       </div>
-      <CardContent className="p-4">
-        <h3 className={`font-semibold text-foreground group-hover:text-accent transition-colors line-clamp-2 ${featured ? "text-xl" : "text-base"}`}>
+      <CardContent className="flex-1 p-4">
+        <h3 className="font-semibold text-base text-foreground group-hover:text-accent transition-colors line-clamp-2">
           {title}
         </h3>
-        <p className={`mt-2 text-muted-foreground line-clamp-2 ${featured ? "text-sm" : "text-xs"}`}>
-          {blog.content.slice(0, featured ? 200 : 100)}...
+        <p className="mt-2 text-xs leading-5 text-muted-foreground line-clamp-3">
+          {blog.content.slice(0, 150)}...
         </p>
       </CardContent>
       <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" />
-          <span>{readTime} {t("blog.minRead")}</span>
+          <span className="shrink-0">{readTime} {t("blog.minRead")}</span>
           <span className="text-border">|</span>
-          <span>{blog.author}</span>
+          <span className="truncate">{blog.author}</span>
         </div>
-        <Button variant="ghost" size="sm" className="gap-1 text-xs group-hover:text-accent">
+        <Button variant="ghost" size="sm" className="shrink-0 gap-1 text-xs group-hover:text-accent">
           {t("blog.readMore")}
           <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
         </Button>
@@ -84,10 +99,10 @@ function BlogCard({ blog, featured, index }: { blog: any; featured?: boolean; in
   )
 }
 
-function BlogSkeleton({ featured }: { featured?: boolean }) {
+function BlogSkeleton() {
   return (
-    <Card className={`overflow-hidden ${featured ? "sm:col-span-2 sm:row-span-2" : ""}`}>
-      <Skeleton className={featured ? "h-64 sm:h-80" : "h-40"} />
+    <Card className="overflow-hidden">
+      <Skeleton className="h-48" />
       <div className="p-4 space-y-2">
         <Skeleton className="h-5 w-3/4" />
         <Skeleton className="h-4 w-full" />
@@ -100,8 +115,20 @@ function BlogSkeleton({ featured }: { featured?: boolean }) {
 export function BlogSection() {
   const { t } = useLanguage()
   const [category, setCategory] = useState("all")
-  const { blogs, loading } = useBlogs(category)
+  const [page, setPage] = useState(1)
+  const { blogs, loading, total } = useBlogs(category, page, BLOGS_PER_PAGE)
   const { ref, isInView } = useInView()
+  const pageCount = Math.max(1, Math.ceil(total / BLOGS_PER_PAGE))
+  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+
+  useEffect(() => {
+    setPage(1)
+  }, [category])
+
+  const goToPage = (nextPage: number) => {
+    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    document.getElementById("knowledge")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   return (
     <section id="knowledge" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -123,19 +150,59 @@ export function BlogSection() {
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <BlogSkeleton featured />
-            <BlogSkeleton />
-            <BlogSkeleton />
-            <BlogSkeleton />
-            <BlogSkeleton />
-            <BlogSkeleton />
+            {Array.from({ length: BLOGS_PER_PAGE }).map((_, i) => <BlogSkeleton key={i} />)}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogs.map((blog, i) => (
-              <BlogCard key={blog.id} blog={blog} featured={blog.is_featured} index={i} />
-            ))}
-          </div>
+          <>
+            <div key={`${category}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
+              {blogs.map((blog, i) => (
+                <BlogCard key={blog.id} blog={blog} featured={blog.is_featured && page === 1} index={i} />
+              ))}
+            </div>
+
+            {pageCount > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#knowledge"
+                      aria-disabled={page === 1}
+                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page - 1)
+                      }}
+                    />
+                  </PaginationItem>
+                  {visiblePages.map((pageNumber) => (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#knowledge"
+                        isActive={pageNumber === page}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#knowledge"
+                      aria-disabled={page === pageCount}
+                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page + 1)
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </div>
     </section>

@@ -18,25 +18,37 @@ export type Listing = {
   created_at: string
 }
 
-export function useListings(listingType?: string) {
+export function useListings(listingType?: string, page = 1, pageSize = 6) {
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
+  const [total, setTotal] = useState(0)
 
   useEffect(() => {
     async function fetchListings() {
       setLoading(true)
-      let query = supabase.from("listings").select("*").order("created_at", { ascending: false })
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      let query = supabase
+        .from("listings")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to)
+
       if (listingType && listingType !== "all") {
         query = query.eq("listing_type", listingType)
       }
-      const { data, error } = await query
+      const { data, error, count } = await query
       if (!error && data) {
         setListings(data as Listing[])
+        setTotal(count ?? 0)
+      } else {
+        setListings([])
+        setTotal(0)
       }
       setLoading(false)
     }
     fetchListings()
-  }, [listingType])
+  }, [listingType, page, pageSize])
 
-  return { listings, loading }
+  return { listings, loading, total }
 }

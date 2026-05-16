@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Star, MapPin, Phone, Plus, Award } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useProfessionals } from "@/hooks/useProfessionals"
 import { useInView } from "@/hooks/useInView"
@@ -24,6 +32,13 @@ const specialties = [
   { value: "plumber", key: "professionals.plumber" as const },
   { value: "surveyor", key: "professionals.surveyor" as const },
 ]
+
+const PROFESSIONALS_PER_PAGE = 6
+
+function getVisiblePages(currentPage: number, pageCount: number) {
+  const start = Math.max(1, Math.min(currentPage - 1, pageCount - 2))
+  return Array.from({ length: Math.min(3, pageCount) }, (_, index) => start + index)
+}
 
 function ProfessionalCard({ professional, index }: { professional: any; index: number }) {
   const { t, language } = useLanguage()
@@ -66,10 +81,10 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
 
   return (
     <Card
-      className="group overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:shadow-lg"
+      className="group h-full overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <CardContent className="p-5">
+      <CardContent className="flex h-full flex-col p-5">
         <div className="flex items-start gap-3">
           {professional.portfolio_images && professional.portfolio_images.length > 0 ? (
             <img
@@ -107,7 +122,7 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
             </div>
             <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3" />
-              <span>{professional.location}</span>
+              <span className="line-clamp-1">{professional.location}</span>
             </div>
           </div>
         </div>
@@ -170,10 +185,28 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
 export function ProfessionalsSection() {
   const { t, language } = useLanguage()
   const [specialty, setSpecialty] = useState("all")
-  const { professionals, loading } = useProfessionals(specialty)
+  const [page, setPage] = useState(1)
+  const { professionals, loading, total } = useProfessionals(specialty, page, PROFESSIONALS_PER_PAGE)
   const { ref, isInView } = useInView()
   const [joinOpen, setJoinOpen] = useState(false)
   const [joinError, setJoinError] = useState("")
+  const pageCount = Math.max(1, Math.ceil(total / PROFESSIONALS_PER_PAGE))
+  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+
+  useEffect(() => {
+    setPage(1)
+  }, [specialty])
+
+  useEffect(() => {
+    if (page > pageCount) {
+      setPage(pageCount)
+    }
+  }, [page, pageCount])
+
+  const goToPage = (nextPage: number) => {
+    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    document.getElementById("professionals")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   return (
     <section id="professionals" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -286,7 +319,7 @@ export function ProfessionalsSection() {
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: PROFESSIONALS_PER_PAGE }).map((_, i) => (
               <Card key={i} className="overflow-hidden">
                 <CardContent className="p-5">
                   <div className="flex items-start gap-3">
@@ -302,11 +335,56 @@ export function ProfessionalsSection() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {professionals.map((pro, i) => (
-              <ProfessionalCard key={pro.id} professional={pro} index={i} />
-            ))}
-          </div>
+          <>
+            <div key={`${specialty}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
+              {professionals.map((pro, i) => (
+                <ProfessionalCard key={pro.id} professional={pro} index={i} />
+              ))}
+            </div>
+
+            {pageCount > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#professionals"
+                      aria-disabled={page === 1}
+                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page - 1)
+                      }}
+                    />
+                  </PaginationItem>
+                  {visiblePages.map((pageNumber) => (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#professionals"
+                        isActive={pageNumber === page}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#professionals"
+                      aria-disabled={page === pageCount}
+                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page + 1)
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </div>
     </section>

@@ -35,15 +35,15 @@ export function FloatingSocialBar() {
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "group flex h-10 w-10 items-center justify-center rounded-full bg-card/80 backdrop-blur-sm border border-border shadow-sm transition-all duration-200 hover:scale-110 hover:shadow-lg",
+              "group flex h-12 w-12 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm border border-border/75 shadow-lg transition-all duration-200 hover:scale-110 hover:shadow-2xl",
               link.color
             )}
             title={link.label}
           >
             {typeof IconComp === "function" && "displayName" in IconComp ? (
-              <IconComp className="h-4 w-4" />
+              <IconComp className="h-5 w-5" />
             ) : (
-              <IconComp className="h-4 w-4" />
+              <IconComp className="h-5 w-5" />
             )}
           </a>
         )

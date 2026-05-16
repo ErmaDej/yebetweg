@@ -23,6 +23,8 @@ import { useLanguage } from "@/lib/i18n"
 import { useInView } from "@/hooks/useInView"
 import { usePayment } from "@/hooks/usePayment"
 import { useState } from "react"
+import type { Subscription } from "@/types/payment"
+import { navigateTo } from "@/lib/navigation"
 
 type PremiumTier = "free" | "premium" | "pro"
 
@@ -93,13 +95,25 @@ const featureKeys = [
   "premium.feature.report",
 ] as const
 
+const tierRank: Record<PremiumTier, number> = {
+  free: 0,
+  premium: 1,
+  pro: 2,
+}
+
 function FeatureCell({ value }: { value: boolean | string }) {
   if (value === true) return <Check className="h-4 w-4 text-green-500 mx-auto" />
   if (value === false) return <X className="h-4 w-4 text-muted-foreground/40 mx-auto" />
   return <span className="text-xs text-muted-foreground">{value === "limited" ? "Limited" : value}</span>
 }
 
-export function PremiumSection() {
+export function PremiumSection({
+  activePlan = "free",
+  subscription,
+}: {
+  activePlan?: PremiumTier
+  subscription?: Subscription | null
+}) {
   const { t, language } = useLanguage()
   const { ref, isInView } = useInView()
   const { loading, error, initiatePayment, tierPrices } = usePayment()
@@ -138,11 +152,18 @@ export function PremiumSection() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-            {tiers.map((tier) => (
+            {tiers.map((tier) => {
+              const isCurrentPlan = activePlan === tier.key
+              const isLowerPlan = tierRank[tier.key] < tierRank[activePlan]
+              const isPaidPlan = tier.price > 0
+
+              return (
               <Card
                 key={tier.key}
                 className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
-                  tier.highlight
+                  isCurrentPlan
+                    ? "border-primary shadow-md"
+                    : tier.highlight
                     ? "border-accent shadow-md scale-[1.02]"
                     : "border-border/50"
                 }`}
@@ -172,6 +193,11 @@ export function PremiumSection() {
                   {tier.highlight && (
                     <Badge className="mt-2 bg-accent text-accent-foreground">Popular</Badge>
                   )}
+                  {isCurrentPlan && (
+                    <Badge variant="outline" className="mt-2 border-primary text-primary">
+                      {language === "en" ? "Current plan" : "የአሁኑ እቅድ"}
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent className="pt-4">
                   <ul className="space-y-2">
@@ -190,7 +216,11 @@ export function PremiumSection() {
                       </li>
                     ))}
                   </ul>
-                  {tier.price > 0 ? (
+                  {isCurrentPlan ? (
+                    <Button className="w-full mt-4" variant="outline" disabled>
+                      {language === "en" ? "Active" : "ንቁ"}
+                    </Button>
+                  ) : isPaidPlan ? (
                     <div className="flex flex-col gap-2 mt-4">
                       <Button
                         className={`w-full ${
@@ -199,15 +229,21 @@ export function PremiumSection() {
                             : ""
                         }`}
                         variant={tier.highlight ? "default" : "outline"}
+                        disabled={isLowerPlan}
                         onClick={() => handleChoosePlan(tier.key, "chapa")}
                       >
-                        {language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
+                        {isLowerPlan
+                          ? language === "en" ? "Included" : "ተካቷል"
+                          : language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
                       </Button>
                       <Button
                         className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                        disabled={isLowerPlan}
                         onClick={() => handleChoosePlan(tier.key, "telebirr")}
                       >
-                        {language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
+                        {isLowerPlan
+                          ? language === "en" ? "Included" : "ተካቷል"
+                          : language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
                       </Button>
                     </div>
                   ) : (
@@ -220,7 +256,8 @@ export function PremiumSection() {
                   )}
                 </CardContent>
               </Card>
-            ))}
+              )
+            })}
           </div>
 
           <Card className="overflow-hidden border-border/50">
@@ -261,19 +298,38 @@ export function PremiumSection() {
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-3xl border border-border/60 bg-white/90 p-6 shadow-sm">
               <p className="text-sm font-semibold text-foreground mb-2">
-                {t("premium.paymentHeadline")}
+                {activePlan === "free"
+                  ? t("premium.paymentHeadline")
+                  : language === "en"
+                    ? `Your ${activePlan} plan is active`
+                    : `የ${activePlan} እቅድዎ ንቁ ነው`}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                {t("premium.paymentDescription")}
+                {activePlan === "free"
+                  ? t("premium.paymentDescription")
+                  : subscription
+                    ? language === "en"
+                      ? `Renews or ends on ${new Date(subscription.expiresAt).toLocaleDateString("en-US")}. Premium features on this page now follow your session.`
+                      : `${new Date(subscription.expiresAt).toLocaleDateString("am-ET")} ይታደሳል ወይም ያበቃል። የፕሪሚየም ባህሪዎች አሁን እንደ ክፍለጊዜዎ ይሰራሉ።`
+                    : language === "en"
+                      ? "Premium features on this page now follow your session."
+                      : "የፕሪሚየም ባህሪዎች አሁን እንደ ክፍለጊዜዎ ይሰራሉ።"}
               </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                <Button variant="outline" className="gap-2 w-full sm:w-auto" onClick={() => handleChoosePlan("premium", "chapa")}>
+                <Button
+                  variant="outline"
+                  className="gap-2 w-full sm:w-auto"
+                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "chapa") : navigateTo("/dashboard")}
+                >
                   <CreditCard className="h-4 w-4" />
-                  {language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
+                  {activePlan === "free" ? language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ" : language === "en" ? "Manage from dashboard" : "ከዳሽቦርድ ያስተዳድሩ"}
                 </Button>
-                <Button className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleChoosePlan("premium", "telebirr")}>
+                <Button
+                  className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigateTo("/dashboard")}
+                >
                   <Smartphone className="h-4 w-4" />
-                  {language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
+                  {activePlan === "free" ? language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ" : language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ"}
                 </Button>
               </div>
             </div>

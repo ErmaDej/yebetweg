@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/lib/i18n"
 import { useTips } from "@/hooks/useTips"
 import { useInView } from "@/hooks/useInView"
+import { navigateTo } from "@/lib/navigation"
+import type { PremiumTier } from "@/types/payment"
 
 const iconMap: Record<string, any> = {
   shield: Shield,
@@ -20,24 +22,29 @@ const iconMap: Record<string, any> = {
   "hard-hat": HardHat,
 }
 
-function TipCard({ tip, index }: { tip: any; index: number }) {
+function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canReadPremium: boolean }) {
   const { language, t } = useLanguage()
   const title = language === "am" ? tip.title_am : tip.title_en
   const IconComponent = iconMap[tip.icon] || Shield
+  const isLocked = tip.is_premium && !canReadPremium
 
   return (
     <Card
       className={`group relative overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:shadow-lg ${tip.is_premium ? "" : ""}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      {tip.is_premium && (
+      {isLocked && (
         <div className="absolute inset-0 z-10 glassmorphism flex flex-col items-center justify-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/20">
             <Lock className="h-6 w-6 text-accent" />
           </div>
           <p className="text-sm font-semibold text-foreground">{t("tips.unlockPremium")}</p>
-          <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-            <a href="#premium">{t("premium.choosePlan")}</a>
+          <Button
+            size="sm"
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
+            onClick={() => navigateTo("/#premium")}
+          >
+            {t("premium.choosePlan")}
           </Button>
         </div>
       )}
@@ -78,10 +85,11 @@ function TipSkeleton() {
   )
 }
 
-export function TipsSection() {
+export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
   const { t, language } = useLanguage()
   const { tips, loading } = useTips()
   const { ref, isInView } = useInView()
+  const canReadPremium = activePlan === "premium" || activePlan === "pro"
 
   const tickerItems = [
     { text: language === "en" ? "Derba Cement: 8,200 ETB/Qtl" : "ዲርባ ሲሚንቶ: 8,200 ብር/ቆል", change: "+3.5%" },
@@ -119,7 +127,7 @@ export function TipsSection() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {tips.map((tip, i) => (
-              <TipCard key={tip.id} tip={tip} index={i} />
+              <TipCard key={tip.id} tip={tip} index={i} canReadPremium={canReadPremium} />
             ))}
           </div>
         )}

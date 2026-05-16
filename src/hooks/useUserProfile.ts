@@ -21,7 +21,7 @@ export interface UserProfile {
 }
 
 export function useUserProfile() {
-  const { user } = useAuthContext()
+  const { user, session } = useAuthContext()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -38,17 +38,37 @@ export function useUserProfile() {
         setLoading(true)
         setError(null)
 
-        const { data, error: fetchError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("auth_uid", user.id)
-          .single()
+        if (!session) {
+          setProfile({
+            id: user.id,
+            auth_uid: null,
+            username: user.user_metadata?.username || user.email?.split("@")[0] || "user",
+            email: user.email || "",
+            full_name: user.user_metadata?.full_name || user.user_metadata?.username || null,
+            phone: "",
+            role: user.user_metadata?.role || "user",
+            provider: "local",
+            language_preference: "en",
+            status: "active",
+            profile_image: "",
+            metadata: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          return
+        }
 
-        if (fetchError && fetchError.code !== "PGRST116") {
+        const { data, error: fetchError } = await supabase.rpc("ensure_auth_user_profile")
+
+        if (fetchError) {
           throw fetchError
         }
 
         if (!data) {
+          if (!session) {
+            throw new Error("Custom authenticated user profile was not found.")
+          }
+
           const username = user.email?.split("@")[0] || `user_${user.id.slice(0, 8)}`
           const newProfile: Partial<UserProfile> = {
             auth_uid: user.id,
@@ -57,7 +77,7 @@ export function useUserProfile() {
             full_name: user.user_metadata?.full_name || null,
             phone: "",
             role: "user",
-            provider: "supabase_auth",
+            provider: "supabase",
             language_preference: "en",
             status: "active",
             profile_image: user.user_metadata?.avatar_url || "",
@@ -76,14 +96,15 @@ export function useUserProfile() {
           setProfile(data)
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Unknown error")
+        setProfile(null)
+        setError(getErrorMessage(err))
       } finally {
         setLoading(false)
       }
     }
 
     fetchProfile()
-  }, [user])
+  }, [session, user])
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!profile) return { error: "No profile loaded" }
@@ -106,7 +127,7 @@ export function useUserProfile() {
       setProfile(data)
       return { data }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error"
+      const message = getErrorMessage(err)
       setError(message)
       return { error: message }
     } finally {
@@ -115,6 +136,14 @@ export function useUserProfile() {
   }
 
   return { profile, loading, error, updateProfile }
+}
+
+function getErrorMessage(err: unknown) {
+  if (err instanceof Error) return err.message
+  if (err && typeof err === "object" && "message" in err && typeof err.message === "string") {
+    return err.message
+  }
+  return "Unknown error"
 }
 
 type SubscriptionRow = {
@@ -149,8 +178,7 @@ function mapSubscription(row: SubscriptionRow): Subscription {
   }
 }
 
-export function useSubscription() {
-  const { profile } = useUserProfile()
+export function useSubscription(profile: UserProfile | null) {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -175,15 +203,15 @@ export function useSubscription() {
           .gte("expires_at", new Date().toISOString())
           .order("created_at", { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
 
-        if (fetchError && fetchError.code !== "PGRST116") {
+        if (fetchError) {
           throw fetchError
         }
 
         setSubscription(data ? mapSubscription(data as SubscriptionRow) : null)
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Unknown error")
+        setError(getErrorMessage(err))
       } finally {
         setLoading(false)
       }

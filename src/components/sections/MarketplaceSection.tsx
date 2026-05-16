@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { MapPin, Phone, Plus, Info } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Lock, MapPin, Phone, Plus, Info } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,11 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useListings } from "@/hooks/useListings"
 import { useInView } from "@/hooks/useInView"
 import { supabase } from "@/lib/supabase"
 import { validateListingForm, sanitizeText } from "@/lib/validation"
+import { navigateTo } from "@/lib/navigation"
+import type { PremiumTier } from "@/types/payment"
 
 const listingTabs = [
   { value: "all", key: "blog.filter.all" as const },
@@ -24,7 +34,14 @@ const listingTabs = [
   { value: "professional_service", key: "marketplace.services" as const },
 ]
 
-function ListingCard({ listing, index }: { listing: any; index: number }) {
+const LISTINGS_PER_PAGE = 6
+
+function getVisiblePages(currentPage: number, pageCount: number) {
+  const start = Math.max(1, Math.min(currentPage - 1, pageCount - 2))
+  return Array.from({ length: Math.min(3, pageCount) }, (_, index) => start + index)
+}
+
+function ListingCard({ listing, index, canContact }: { listing: any; index: number; canContact: boolean }) {
   const { language, t } = useLanguage()
   const title = language === "am" ? listing.title_am : listing.title_en
   const [contactOpen, setContactOpen] = useState(false)
@@ -116,7 +133,18 @@ function ListingCard({ listing, index }: { listing: any; index: number }) {
         )}
       </CardContent>
       <CardFooter className="px-4 pb-4 pt-0">
-        <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+        {!canContact ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => navigateTo("/#premium")}
+          >
+            <Lock className="h-3.5 w-3.5" />
+            {language === "en" ? "Unlock contact" : "ግንኙነት ይክፈቱ"}
+          </Button>
+        ) : (
+          <Dialog open={contactOpen} onOpenChange={setContactOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="w-full gap-2">
               <Phone className="h-3.5 w-3.5" />
@@ -165,7 +193,8 @@ function ListingCard({ listing, index }: { listing: any; index: number }) {
               </div>
             )}
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </CardFooter>
     </Card>
   )
@@ -184,13 +213,26 @@ function ListingSkeleton() {
   )
 }
 
-export function MarketplaceSection() {
+export function MarketplaceSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
   const { t, language } = useLanguage()
   const [tab, setTab] = useState("all")
-  const { listings, loading } = useListings(tab)
+  const [page, setPage] = useState(1)
+  const { listings, loading, total } = useListings(tab, page, LISTINGS_PER_PAGE)
   const { ref, isInView } = useInView()
   const [listDialogOpen, setListDialogOpen] = useState(false)
   const [listingError, setListingError] = useState("")
+  const pageCount = Math.max(1, Math.ceil(total / LISTINGS_PER_PAGE))
+  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+  const canContact = activePlan === "premium" || activePlan === "pro"
+
+  useEffect(() => {
+    setPage(1)
+  }, [tab])
+
+  const goToPage = (nextPage: number) => {
+    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    document.getElementById("marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   return (
     <section id="marketplace" ref={ref} className="py-16 sm:py-24 bg-muted/30">
@@ -315,11 +357,56 @@ export function MarketplaceSection() {
             {Array.from({ length: 6 }).map((_, i) => <ListingSkeleton key={i} />)}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing, i) => (
-              <ListingCard key={listing.id} listing={listing} index={i} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {listings.map((listing, i) => (
+                <ListingCard key={listing.id} listing={listing} index={i} canContact={canContact} />
+              ))}
+            </div>
+
+            {pageCount > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#marketplace"
+                      aria-disabled={page === 1}
+                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page - 1)
+                      }}
+                    />
+                  </PaginationItem>
+                  {visiblePages.map((pageNumber) => (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#marketplace"
+                        isActive={pageNumber === page}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#marketplace"
+                      aria-disabled={page === pageCount}
+                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page + 1)
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </div>
     </section>

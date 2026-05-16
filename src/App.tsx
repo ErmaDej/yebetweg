@@ -16,8 +16,19 @@ import { Dashboard } from "@/pages/Dashboard"
 import { SearchResults } from "@/pages/SearchResults"
 import { PaymentSuccessPage } from "@/pages/PaymentSuccessPage"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
+import type { PremiumTier } from "@/types/payment"
 
 function HomePage() {
+  const { profile } = useUserProfile()
+  const { subscription } = useSubscription(profile)
+  const activePlan: PremiumTier =
+    profile?.role === "admin"
+      ? "pro"
+      : subscription?.status === "active" && subscription.isActive
+        ? subscription.tier
+        : "free"
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
@@ -30,19 +41,19 @@ function HomePage() {
 
         <BlogSection />
 
-        <TipsSection />
+        <TipsSection activePlan={activePlan} />
 
         <AdSlot position="leaderboard" />
 
-        <MarketPricesSection />
+        <MarketPricesSection activePlan={activePlan} />
 
         <AdSlot position="leaderboard" />
 
-        <MarketplaceSection />
+        <MarketplaceSection activePlan={activePlan} />
 
         <ProfessionalsSection />
 
-        <PremiumSection />
+        <PremiumSection activePlan={activePlan} subscription={subscription} />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -87,6 +98,16 @@ export function App() {
     window.addEventListener("popstate", handleHashChange)
     return () => window.removeEventListener("popstate", handleHashChange)
   }, [])
+
+  useEffect(() => {
+    if (currentPage !== "home" || !window.location.hash) return
+
+    window.setTimeout(() => {
+      document
+        .getElementById(window.location.hash.slice(1))
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 0)
+  }, [currentPage])
 
   if (currentPage === "dashboard") {
     return (

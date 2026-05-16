@@ -16,6 +16,8 @@ import {
 import { useLanguage } from "@/lib/i18n"
 import { useMarketPrices } from "@/hooks/useMarketPrices"
 import { useInView } from "@/hooks/useInView"
+import { navigateTo } from "@/lib/navigation"
+import type { PremiumTier } from "@/types/payment"
 
 const priceCategories = [
   { value: "all", label_en: "All", label_am: "ሁሉም" },
@@ -29,11 +31,12 @@ const priceCategories = [
 
 const FREE_ROWS = 5
 
-export function MarketPricesSection() {
+export function MarketPricesSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const { prices, loading } = useMarketPrices(category)
   const { ref, isInView } = useInView()
+  const canReadPremium = activePlan === "premium" || activePlan === "pro"
 
   return (
     <section id="market" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -91,7 +94,7 @@ export function MarketPricesSection() {
                   </TableHeader>
                   <TableBody>
                     {prices.map((price, i) => {
-                      const isLocked = i >= FREE_ROWS
+                      const isLocked = !canReadPremium && i >= FREE_ROWS
                       return (
                         <TableRow
                           key={price.id}
@@ -122,14 +125,17 @@ export function MarketPricesSection() {
                   </TableBody>
                 </Table>
 
-                {prices.length > FREE_ROWS && (
+                {!canReadPremium && prices.length > FREE_ROWS && (
                   <div className="absolute bottom-0 left-0 right-0 h-48 glassmorphism flex flex-col items-center justify-center gap-3 z-10">
                     <Lock className="h-8 w-8 text-accent" />
                     <p className="text-sm font-medium text-foreground text-center max-w-sm">
                       {t("market.unlock")}
                     </p>
-                    <Button className="bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                      <a href="#premium">{t("premium.choosePlan")}</a>
+                    <Button
+                      className="bg-accent text-accent-foreground hover:bg-accent/90"
+                      onClick={() => navigateTo("/#premium")}
+                    >
+                      {t("premium.choosePlan")}
                     </Button>
                   </div>
                 )}

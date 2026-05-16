@@ -9,7 +9,7 @@ interface AuthContextProps {
   loading: boolean
   error: string | null
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>
+  signUp: (email: string, password: string, fullName?: string, role?: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error?: string }>
   updatePassword: (newPassword: string) => Promise<{ error?: string }>
@@ -44,6 +44,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initAuth() {
       try {
+        // First check for custom auth (seeded users)
+        const storedCustomAuth = localStorage.getItem("custom_auth_user")
+        if (storedCustomAuth && isMounted) {
+          try {
+            const customUser = JSON.parse(storedCustomAuth)
+            setUser(customUser)
+            setLoading(false)
+            return
+          } catch (e) {
+            localStorage.removeItem("custom_auth_user")
+          }
+        }
+
+        // Then check Supabase session
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession()
@@ -78,17 +92,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setError(null)
     try {
+      // Try Supabase auth first
       const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-      if (error) {
-        setError(error.message)
-        return { error: error.message }
+
+      if (!error) {
+        setSession(data.session)
+        setUser(data.session?.user ?? null)
+        return {}
       }
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
-      return {}
+
+      // Fallback: Try custom user authentication via RPC
+      try {
+        const { data: authResult, error: rpcError } = await supabase.rpc("login", {
+          p_email: email,
+          p_password: password,
+        })
+
+        if (rpcError || !authResult?.success) {
+          setError(error.message || "Invalid email or password")
+          return { error: error.message || "Invalid email or password" }
+        }
+
+        // Create a mock session/user object from RPC result for custom auth
+        const customUser = {
+          id: authResult.user_id,
+          email: email,
+          user_metadata: {
+            username: authResult.username,
+            role: authResult.role,
+            full_name: authResult.username,
+          },
+          aud: "authenticated",
+          role: "authenticated",
+        }
+
+        setUser(customUser as any)
+        // Store custom auth flag in session
+        localStorage.setItem("custom_auth_user", JSON.stringify(customUser))
+        return {}
+      } catch (rpcError: any) {
+        setError(error.message || "Invalid email or password")
+        return { error: error.message || "Invalid email or password" }
+      }
     } catch (e: any) {
       setError(e.message)
       return { error: e.message }
@@ -97,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function signUp(email: string, password: string, fullName?: string) {
+  async function signUp(email: string, password: string, fullName?: string, role: string = "user") {
     setLoading(true)
     setError(null)
     try {
@@ -107,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             full_name: fullName,
+            role: role, // Assign role during signup
           },
         },
       })
@@ -129,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       await supabase.auth.signOut()
+      localStorage.removeItem("custom_auth_user")
       setSession(null)
       setUser(null)
     } catch (e: any) {
