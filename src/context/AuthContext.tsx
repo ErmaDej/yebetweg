@@ -45,25 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function initAuth() {
       try {
         // First check for custom auth (seeded users)
-        const storedCustomAuth = localStorage.getItem("custom_auth_user")
-        if (storedCustomAuth && isMounted) {
-          try {
-            const customUser = JSON.parse(storedCustomAuth)
-            setUser(customUser)
-            setLoading(false)
-            return
-          } catch (e) {
-            localStorage.removeItem("custom_auth_user")
-          }
-        }
-
-        // Then check Supabase session
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession()
         if (!isMounted) return
         setSession(currentSession)
         setUser(currentSession?.user ?? null)
+        setLoading(false)
+
+        // No return here, allow the onAuthStateChange listener to handle subsequent state updates.
+        // If there's an active session, the listener will be triggered right after this.
+        // If there's no session, user and session will be null, and loading will be false.
       } catch (e: any) {
         if (isMounted) setError(e.message)
       } finally {
@@ -104,39 +96,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return {}
       }
 
-      // Fallback: Try custom user authentication via RPC
-      try {
-        const { data: authResult, error: rpcError } = await supabase.rpc("login", {
-          p_email: email,
-          p_password: password,
-        })
+      // If Supabase auth fails, try custom user authentication via RPC
+      const { data: authResult, error: rpcError } = await supabase.rpc("login", {
+        p_email: email,
+        p_password: password,
+      })
 
-        if (rpcError || !authResult?.success) {
-          setError(error.message || "Invalid email or password")
-          return { error: error.message || "Invalid email or password" }
-        }
-
-        // Create a mock session/user object from RPC result for custom auth
-        const customUser = {
-          id: authResult.user_id,
-          email: email,
-          user_metadata: {
-            username: authResult.username,
-            role: authResult.role,
-            full_name: authResult.username,
-          },
-          aud: "authenticated",
-          role: "authenticated",
-        }
-
-        setUser(customUser as any)
-        // Store custom auth flag in session
-        localStorage.setItem("custom_auth_user", JSON.stringify(customUser))
-        return {}
-      } catch (rpcError: any) {
-        setError(error.message || "Invalid email or password")
-        return { error: error.message || "Invalid email or password" }
+      if (rpcError || !authResult?.success) {
+        setError(error.message || rpcError?.message || "Invalid email or password")
+        return { error: error.message || rpcError?.message || "Invalid email or password" }
       }
+
+      // Create a mock session/user object from RPC result for custom auth
+      const customUser = {
+        id: authResult.user_id,
+        email: email,
+        user_metadata: {
+          username: authResult.username,
+          role: authResult.role,
+          full_name: authResult.username,
+        },
+        aud: "authenticated",
+        role: "authenticated",
+      }
+      setUser(customUser as any)
+      // Custom auth users are not currently persisted across sessions without additional backend work.
+      // For now, if a custom user logs in, we'll keep them in the state but won't persist them via localStorage.
+      // This means custom auth users will need to log in again if they close the browser.
+      // For persistent login, we would need to implement a token-based system or similar for custom auth.
+      return {}
     } catch (e: any) {
       setError(e.message)
       return { error: e.message }
@@ -178,9 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       await supabase.auth.signOut()
-      localStorage.removeItem("custom_auth_user")
       setSession(null)
       setUser(null)
+      // No need to remove custom_auth_user from localStorage as it's no longer being used for persistence.
     } catch (e: any) {
       setError(e.message)
     } finally {

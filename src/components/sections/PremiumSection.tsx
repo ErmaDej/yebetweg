@@ -267,6 +267,7 @@ export function PremiumSection({
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -292,11 +293,12 @@ export function PremiumSection({
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
 
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-3xl border border-border/60 bg-white/90 p-6 shadow-sm">
+            <div className="rounded-3xl border border-border/60 bg-card/90 p-6 shadow-sm">
               <p className="text-sm font-semibold text-foreground mb-2">
                 {activePlan === "free"
                   ? t("premium.paymentHeadline")
@@ -390,7 +392,7 @@ export function PremiumSection({
           )}
 
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
               {error}
             </div>
           )}

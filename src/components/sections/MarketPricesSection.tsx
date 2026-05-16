@@ -82,7 +82,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                 ))}
               </div>
             ) : (
-              <div className="relative">
+              <div className="relative overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

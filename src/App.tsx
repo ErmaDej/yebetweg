@@ -10,6 +10,7 @@ import { MarketplaceSection } from "@/components/sections/MarketplaceSection"
 import { ProfessionalsSection } from "@/components/sections/ProfessionalsSection"
 import { PremiumSection } from "@/components/sections/PremiumSection"
 import { SocialBridgeSection } from "@/components/sections/SocialBridgeSection"
+import { VideoShowcaseSection } from "@/components/sections/VideoShowcaseSection"
 import { ContactSection } from "@/components/sections/ContactSection"
 import { AdSlot, AdvertiseWithUs } from "@/components/sections/AdsSection"
 import { Dashboard } from "@/pages/Dashboard"
@@ -36,6 +37,8 @@ function HomePage() {
 
       <main>
         <HeroSection />
+
+        <VideoShowcaseSection />
 
         <AdSlot position="leaderboard" />
 

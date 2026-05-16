@@ -345,3 +345,50 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Video showcase section */
+@keyframes video-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-video-reveal {
+  animation: video-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Gradient text utility */
+@utility text-gradient-brand {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(135deg, var(--primary), var(--accent), var(--primary));
+  background-size: 200% auto;
+  animation: gradient-shift 4s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+/* Section reveal animation helper */
+.section-reveal {
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.section-reveal.hidden-below {
+  opacity: 0;
+  transform: translateY(32px);
+}
+
+.section-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}

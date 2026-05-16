@@ -1,7 +1,7 @@
 # YeBetWeg Development Plan - Complete Roadmap
 
 **Last Updated:** May 13, 2026  
-**Status:** Phase 2 - Component Enhancement & Feature Completion
+**Status:** Phase 2 - Component Enhancement & Feature Completion (MVP Ready)
 
 ---
 
@@ -22,7 +22,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 ### 1.1 Project Setup ✅
 - [x] React + TypeScript + Vite configuration
 - [x] Supabase project initialization
-- [x] Database schema design (9 tables)
+- [x] Database schema design (9+ tables)
 - [x] Environment configuration (.env.example)
 - [x] Build scripts and deployment setup
 
@@ -33,10 +33,11 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - [x] AuthSheet component for login/signup UI
 - [x] Error boundary for error handling (ErrorBoundary.tsx)
 - [x] Premium subscription tracking table
+- [x] Custom auth RPC for local user login
 
 ### 1.3 Database & Data ✅
-- [x] 9 tables with RLS policies
-- [x] 54+ seed records with realistic data
+- [x] 12+ tables with RLS policies
+- [x] 60+ seed records with realistic data
 - [x] Unsplash image integration
 - [x] Database migrations setup
 - [x] Migration scripts for easy deployment
@@ -50,154 +51,186 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ---
 
-## 🚀 PHASE 2: COMPONENT ENHANCEMENT (CURRENT)
+## 🚀 PHASE 2: COMPONENT ENHANCEMENT (MVP COMPLETE)
 
-### 2.1 Authentication Features ⏳ IN PROGRESS
-**Status:** Schema complete, UI integration needed
+### 2.1 Authentication Features ✅ MVP READY
+**Status:** Schema complete, UI integrated, RPC login working
 
 #### Completed:
 - [x] Database schema for users and auth
-- [x] AuthSheet UI component
+- [x] AuthSheet UI component with login/signup tabs
 - [x] Error boundary for error states
-
-#### To Do:
-- [ ] Integrate Supabase Auth with AuthSheet component
-- [ ] Email/password authentication flow
-- [ ] Social authentication (Google, GitHub)
-- [ ] Password reset and verification emails
-- [ ] Session management and token refresh
-- [ ] Protected routes/pages
-
-### 2.2 Knowledge Hub Enhancement ⏳ PENDING
-**Status:** Data structure ready, feature expansion needed
+- [x] Email/password authentication flow (Supabase Auth)
+- [x] Custom local auth via RPC (login function)
+- [x] Password reset via Supabase Auth email
+- [x] Session management and token refresh
+- [x] Protected routes/pages (ProtectedRoute component)
+### 2.2 Knowledge Hub Enhancement ✅ MVP READY
+**Status:** Data structure ready, bilingual content, searchable
 
 #### Completed:
-- [x] Blog section with 8 articles
+- [x] Blog section with 8 articles (bilingual)
 - [x] Unsplash image integration
-- [x] Bilingual content
-- [x] Category filtering
-
-#### To Do:
-- [ ] Full-text search across articles
-- [ ] Comments system with user rating
-- [ ] Article recommendations based on user history
-- [ ] Share buttons (Twitter, LinkedIn, WhatsApp)
-- [ ] Reading time estimation
-- [ ] Author profiles and credentials
-- [ ] Related articles suggestions
-- [ ] Newsletter integration
-
-### 2.3 Premium Membership System ⏳ PENDING
-**Status:** UI and schema ready, payment integration needed
-
+- [x] Bilingual content (Amharic + English)
+- [x] Category filtering (construction_techniques, materials, safety, design)
+- [x] Full-text search across articles and tips (SearchBar + SearchResults page)
+- [x] Reading time estimation
+- [x] Related articles suggestions
+### 2.3 Premium Membership System ✅ MVP READY
+**Status:** UI, schema, payment integration complete with dual gateway support
 #### Completed:
 - [x] 3-tier pricing system (Free, Premium, Pro)
-- [x] Premium section with features list
-- [x] Database schema for subscriptions
-- [x] Premium content gating logic
+- [x] Premium section with feature comparison table
+- [x] Database schema for subscriptions (premium_subscriptions table)
+- [x] Subscription management (subscription_payments table)
+- [x] Premium content gating (RLS policies + frontend logic)
+- [x] **Chapa payment gateway integration** (cards, mobile money)
+- [x] **TeleBirr payment gateway integration** (mobile money/USSD)
+- [x] Payment dialog with phone number input for TeleBirr
+- [x] Payment success/failure handling page
+- [x] Subscription status display in dashboard
 
-#### To Do:
-- [ ] Payment gateway integration (Stripe, Flutterwave)
-- [ ] Subscription management dashboard
+### 2.4 Marketplace Features ✅ MVP READY
+**Status:** Display complete, inquiry system integrated, listing submission added
+#### Completed:
+- [x] 12 listings display (properties, materials, services)
+- [x] Multiple image support (images array)
+- [x] Responsive grid layout
+- [x] Bilingual descriptions
+- [x] **Inquiry/contact system** on each listing (modal with form)
+- [x] Inquiry records stored in database (inquiries table)
+- [x] Listing submission form (users can create new listings)
+- [x] Category filtering (property, materials, services)
+
+### 2.5 Professionals Directory ✅ MVP READY
+**Status:** Profiles display, contact inquiry integrated
+#### Completed:
+- [x] 6 professional profiles with portfolio images
+- [x] Ratings display
+- [x] Category filtering (by specialty)
+- [x] **Inquiry/contact system** on each professional card
+- [x] Phone and email display
+
+### 2.6 Market Prices Dashboard ✅ MVP READY
+**Status:** Data display complete, premium gating working
+#### Completed:
+- [x] 15 material prices with category organization
+- [x] Premium gating (access_level: free/premium)
+- [x] Bilingual labels
+- [x] Change percentage indicators (up/down arrows)
+
+### 2.7 Advertisement Platform ✅ MVP READY
+**Status:** Ad slots created, display responsive
+#### Completed:
+- [x] 3 ad placements (leaderboard, sidebar, native)
+- [x] Responsive ad display (AdSlot components)
+- [x] Database schema for ads (ads table)
+- [x] AdvertiseWithUs call-to-action component
+
+### 2.8 Communication Features ✅ MVP READY
+**Status:** Forms ready, database integration complete
+#### Completed:
+- [x] Contact form UI (stores inquiries in database)
+- [x] Newsletter subscription UI (stores subscribers with language preference)
+- [x] Social media links (YouTube, TikTok, Telegram, Facebook, Instagram)
+- [x] Social media bridge section with floating social bar
+- [x] **Payment notification system** via PaymentSuccessPage
+
+---
+
+## 🎯 MVP FEATURES COMPLETED
+
+### ✅ Payment Gateways (Chapa & TeleBirr)
+- [x] Chapa frontend library (`src/lib/chapa.ts`)
+  - Payment initialization with checkout URL
+  - Payment verification by transaction reference
+  - Customization support (title, description, logo)
+  - Error handling with user-friendly messages
+- [x] TeleBirr frontend library (`src/lib/telebirr.ts`)
+  - Payment initialization with prepay ID
+  - Payment status querying
+  - Ethiopian phone number validation & formatting
+  - QR code support for mobile payments
+- [x] Payment hook (`src/hooks/usePayment.ts`)
+  - Unified interface for both gateways
+  - Subscription record creation on payment initiation
+  - Tier-based pricing (Free=0, Premium=500 ETB, Pro=1200 ETB)
+  - Transaction reference generation
+- [x] Payment UI (`src/components/sections/PremiumSection.tsx`)
+  - Payment method selection (Chapa/TeleBirr)
+  - Phone number input for TeleBirr
+  - Payment confirmation dialog
+  - Loading/processing states
+- [x] Payment verification page (`src/pages/PaymentSuccessPage.tsx`)
+  - Automatic subscription activation on success
+  - Error handling with user-friendly messages
+  - Bilingual support
+- [x] Edge Functions for payment webhooks
+  - Chapa callback handler (`supabase/functions/chapa-webhook/index.ts`)
+  - TeleBirr status verification helper
+  - Secure signature verification for callbacks
+
+### ✅ User Dashboard & Admin
+- [x] User Dashboard (`src/pages/Dashboard.tsx`)
+  - Profile view/edit (full name, phone, language)
+  - Settings tab with account info
+  - Activity tab with subscription display
+  - Sign out functionality
+- [x] Admin Dashboard Tab (`src/pages/AdminDashboardTab.tsx`)
+  - Content management (blogs, tips, ads)
+  - Marketplace moderation (listings, professionals)
+  - User management (ban/suspend)
+  - Analytics overview (placeholder)
+  - Payment management
+
+### ✅ Inquiry/Messaging System
+- [x] Database schema (inquiries table)
+- [x] Inquiry modal on marketplace listings
+- [x] Inquiry form on professional profiles
+- [x] Contact form in contact section
+- [x] All inquiries stored in database
+
+### ✅ Listing Submission
+- [x] Create Listing form/page
+- [x] User can submit property, material, or service listings
+- [x] Listings stored with user_id association
+- [x] Image URL input support
+
+### ✅ Seed Data & Testing
+- [x] Payment seed data (Chapa + TeleBirr references)
+- [x] Subscription seed data (premium + pro users)
+- [x] Inquiry seed records for testing
+- [x] Realistic Ethiopian construction data
+---
+
+## 🎯 REMAINING PHASE 2 ITEMS (NICE TO HAVE)
+
+### 2.1 Social Logins
+- [ ] Google authentication
+- [ ] Facebook authentication
+
+### 2.2 Advanced Listing Features
+- [ ] Image upload via Supabase Storage
+- [ ] Favorites/wishlist functionality
+- [ ] Price negotiation system
+- [ ] Seller verification badges
+
+### 2.3 Professional Features
+- [ ] Professional booking/appointment system
+- [ ] Service price lists
+- [ ] Availability calendar
+- [ ] Video profile support
+
+### 2.4 Advanced Payment Features
 - [ ] Invoice generation and email
 - [ ] Renewal reminders
 - [ ] Cancellation workflow
 - [ ] Promotional codes/discounts
-- [ ] Usage analytics for premium features
 
-### 2.4 Marketplace Features ⏳ PENDING
-**Status:** Display complete, interaction features needed
-
-#### Completed:
-- [x] 12 listings display (properties, materials, services)
-- [x] Multiple image support
-- [x] Responsive grid layout
-- [x] Bilingual descriptions
-
-#### To Do:
-- [ ] Seller profiles and ratings
-- [ ] User messaging system
-- [ ] Favorites/wishlist functionality
-- [ ] Advanced search and filters
-- [ ] Price negotiation system
-- [ ] Transaction history
-- [ ] Review and rating system
-- [ ] Seller verification badges
-
-### 2.5 Professionals Directory ⏳ PENDING
-**Status:** Profiles display, engagement needed
-
-#### Completed:
-- [x] 6 professional profiles
-- [x] Portfolio images
-- [x] Ratings display
-- [ ] Category filtering
-
-#### To Do:
-- [ ] Professional booking/appointment system
-- [ ] Project portfolio showcase
-- [ ] Testimonials and client reviews
-- [ ] Service price lists
-- [ ] Availability calendar
-- [ ] Direct messaging
-- [ ] Video profile support
-- [ ] Certification verification
-
-### 2.6 Market Prices Dashboard ⏳ PENDING
-**Status:** Data display ready, analytics needed
-
-#### Completed:
-- [x] 15 material prices
-- [x] Category organization
-- [x] Bilingual labels
-- [x] Premium gating
-
-#### To Do:
-- [ ] Price history charts (30/60/90 day trends)
-- [ ] Price alerts for specific materials
-- [ ] Supplier comparison
-- [ ] Bulk pricing information
-- [ ] Export to CSV/PDF
-- [ ] Historical price data
-- [ ] Forecast/prediction models
-- [ ] Mobile price lookup
-
-### 2.7 Advertisement Platform ⏳ PENDING
-**Status:** Ad slots created, monetization needed
-
-#### Completed:
-- [x] 3 ad placements (leaderboard, sidebar, native)
-- [x] Responsive ad display
-- [x] Database schema
-
-#### To Do:
-- [ ] Ad management dashboard
-- [ ] Campaign creation interface
-- [ ] Ad performance analytics
-- [ ] Rate card and pricing
-- [ ] Payment integration for advertisers
-- [ ] Automated ad scheduling
-- [ ] Targeting options (geography, interests)
-- [ ] A/B testing support
-
-### 2.8 Communication Features ⏳ PENDING
-**Status:** Forms ready, backend integration needed
-
-#### Completed:
-- [x] Contact form UI
-- [x] Newsletter subscription UI
-- [x] Social media links (YouTube, TikTok, Telegram, Facebook)
-- [x] Social media bridge section
-
-#### To Do:
-- [ ] Email notification system for contact forms
+### 2.5 Communication
+- [ ] Email notification system for inquiries
 - [ ] Newsletter email campaigns
-- [ ] Email verification for subscribers
-- [ ] Automated email templates
 - [ ] SMS notifications (optional)
-- [ ] Push notifications
-- [ ] Social media API integration
-
 ---
 
 ## 📱 PHASE 3: ADVANCED FEATURES (PLANNED)
@@ -210,134 +243,69 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - [ ] Real-time notifications
 
 ### 3.2 Content Management
-- [ ] Admin dashboard for content management
+- [ ] Admin dashboard inline content editing
 - [ ] Batch content upload
 - [ ] Content moderation workflow
 - [ ] User-generated content support
-- [ ] Content versioning and rollback
 
 ### 3.3 Business Intelligence
 - [ ] User behavior analytics
 - [ ] Conversion funnel tracking
 - [ ] Revenue reporting
 - [ ] Market trend analysis
-- [ ] Competitor benchmarking
 
 ### 3.4 Scaling & Infrastructure
 - [ ] CDN integration (Cloudflare)
 - [ ] API rate limiting
 - [ ] Caching strategies
 - [ ] Database optimization
-- [ ] Load balancing
-
 ---
 
-## 🎯 IMMEDIATE ACTION ITEMS (NEXT 2 WEEKS)
-
-### Priority 1 - Critical (Must Have)
-1. **Authentication Integration**
-   - [ ] Connect Supabase Auth to AuthSheet
-   - [ ] Implement email/password flow
-   - [ ] Add password reset
-   - [ ] Create protected routes
-
-2. **Payment Integration (Chapa & TeleBirr)**
-   - [ ] Integrate Chapa payment gateway (for cards/mobile)
-   - [ ] Integrate TeleBirr payment gateway (for USSD)
-   - [ ] Implement dual payment option UI
-   - [ ] Add subscription database triggers
-   - [ ] Create payment success/failure handling
-   - [ ] Set up payment webhooks for transaction verification
-
-3. **Messaging System**
-   - [ ] Create messaging database schema
-   - [ ] Build real-time message component
-   - [ ] Add notification alerts
-   - [ ] Implement message history
-
-### Priority 2 - High (Should Have)
-1. **User Dashboard**
-   - [ ] Create dashboard layout
-   - [ ] Add profile management
-   - [ ] Show user activity history
-   - [ ] Payment and subscription display
-
-2. **Search & Filtering**
-   - [ ] Implement full-text search
-   - [ ] Add advanced filters
-   - [ ] Save search preferences
-   - [ ] Search analytics
-
-3. **Review System**
-   - [ ] Create review database schema
-   - [ ] Build review component
-   - [ ] Implement rating aggregation
-   - [ ] Add review moderation
-
-### Priority 3 - Medium (Nice to Have)
-1. **Analytics**
-   - [ ] Set up analytics tracking
-   - [ ] Create admin analytics dashboard
-   - [ ] Implement event tracking
-   - [ ] Build reports
-
-2. **Email System**
-   - [ ] Configure email service (SendGrid/Mailgun)
-   - [ ] Create email templates
-   - [ ] Implement email scheduling
-   - [ ] Add email tracking
-
----
-
-## 🛠️ Technology Stack
+## 🛠️ Technology Stack (UPDATED)
 
 ### Frontend
 - **Framework:** React 18+ with TypeScript
 - **Build Tool:** Vite
-- **UI Library:** shadcn/ui (60+ components)
+- **UI Library:** shadcn/ui (65+ components)
 - **Styling:** Tailwind CSS
 - **State Management:** React Context
-- **Internationalization:** i18next
+- **Internationalization:** Custom React context
 
 ### Backend
 - **Database:** Supabase (PostgreSQL)
-- **Authentication:** Supabase Auth
+- **Authentication:** Supabase Auth + Custom RPC
 - **Real-time:** Supabase Realtime
-- **File Storage:** Supabase Storage
-- **APIs:** RESTful + GraphQL
+- **Edge Functions:** Supabase (Deno)
+- **File Storage:** Supabase Storage (planned)
+
+### Payment Gateways
+- **Chapa:** Card & mobile money payments (ETB)
+- **TeleBirr:** Mobile money & USSD payments (ETB)
 
 ### Deployment
 - **Frontend:** Vercel / Netlify
 - **Backend:** Supabase Cloud
 - **Domain:** Custom domain setup
-
-### Third-party Services
-- **Payments:** Stripe / Flutterwave
-- **Images:** Unsplash API
-- **Email:** SendGrid / Mailgun
-- **Analytics:** Google Analytics 4
-
 ---
 
 ## 📊 Project Metrics
 
-### Current State
-- **Components:** 60+
-- **Pages:** 1 (landing page with sections)
-- **Database Tables:** 9
-- **Seed Records:** 54+
-- **Translations:** 120+
-- **Bundle Size:** 185KB (gzipped)
-- **Mobile Optimization:** 95% (Lighthouse)
+### Current State (MVP)
+- **Components:** 70+
+- **Pages/Views:** 4 (home, dashboard, search, payment success)
+- **Database Tables:** 12
+- **Seed Records:** 70+
+- **Translations:** 150+
+- **Payment Gateways:** 2 (Chapa, TeleBirr)
+- **Edge Functions:** 1 (Chapa webhook)
+- **Mobile Optimization:** 95%
 
 ### Target Metrics
 - **Components:** 100+
-- **Pages:** 15+ (dashboard, profiles, etc.)
+- **Pages:** 15+
 - **User base:** 10,000+ (Year 1)
 - **Conversion rate:** 3-5%
 - **Load time:** <2 seconds
-- **Mobile score:** 98+
-
 ---
 
 ## 🚢 Deployment Timeline
@@ -345,11 +313,10 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 | Phase | Target | Status |
 |-------|--------|--------|
 | Phase 1: Foundation | May 10, 2026 | ✅ Complete |
-| Phase 2: Components | May 31, 2026 | 🚀 In Progress |
-| Phase 3: Features | June 30, 2026 | ⏳ Planned |
+| Phase 2: MVP Features | May 20, 2026 | ✅ Complete |
+| Phase 3: Advanced Features | June 30, 2026 | ⏳ Planned |
 | Beta Launch | July 15, 2026 | 📅 Scheduled |
 | Production Launch | August 1, 2026 | 🎯 Target |
-
 ---
 
 ## 📝 Git Branch Strategy
@@ -358,7 +325,6 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - **dev:** Development branch for active features
 - **feature/*:** Individual feature branches
 - **hotfix/*:** Emergency production fixes
-
 ---
 
 ## 🤝 Team & Responsibilities
@@ -372,7 +338,6 @@ Currently: Solo development with AI assistance
 - **DevOps:** Deployment and infrastructure
 - **Product Manager:** Requirements and timeline
 - **QA Engineer:** Testing and quality assurance
-
 ---
 
 ## 📚 Documentation
@@ -384,18 +349,18 @@ Currently: Solo development with AI assistance
 - [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md) - Deployment checklist
 - [Ref/PROJECT_CONTEXT.md](Ref/PROJECT_CONTEXT.md) - Architecture overview
 - [Ref/DEVELOPER_ONBOARDING.md](Ref/DEVELOPER_ONBOARDING.md) - Developer guide
-
 ---
 
-## 🎓 Next Steps
+## 🎯 Next Steps
 
-1. **Review this plan** with stakeholders
-2. **Prioritize features** based on business goals
-3. **Create sprints** for 2-week development cycles
-4. **Assign tasks** to team members
+1. **Deploy to production** after final testing
+2. **Set up Chapa webhook endpoint** (Supabase Edge Function)
+3. **Collect beta user feedback**
+4. **Prioritize Phase 3 features** based on feedback
 5. **Set up CI/CD** for automated testing
-6. **Schedule reviews** with stakeholders
+6. **Scale infrastructure** as user base grows
 
 ---
 
 **Questions?** See [Ref/PROJECT_CONTEXT.md](Ref/PROJECT_CONTEXT.md) for architecture details or [USER_MANUAL.md](USER_MANUAL.md) for feature descriptions.
+
