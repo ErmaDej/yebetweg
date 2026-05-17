@@ -145,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             full_name: fullName,
             role: role, // Assign role during signup
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       })
       if (error) {
@@ -181,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       })
       if (error) {
         setError(error.message)

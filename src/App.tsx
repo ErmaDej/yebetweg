@@ -16,6 +16,8 @@ import { AdSlot, AdvertiseWithUs } from "@/components/sections/AdsSection"
 import { Dashboard } from "@/pages/Dashboard"
 import { SearchResults } from "@/pages/SearchResults"
 import { PaymentSuccessPage } from "@/pages/PaymentSuccessPage"
+import { AuthCallbackPage } from "@/pages/AuthCallbackPage"
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import type { PremiumTier } from "@/types/payment"
@@ -79,14 +81,18 @@ function HomePage() {
 }
 
 export function App() {
-  const [currentPage, setCurrentPage] = useState<"home" | "dashboard" | "search" | "payment">("home")
+  const [currentPage, setCurrentPage] = useState<"home" | "dashboard" | "search" | "payment" | "auth-callback" | "reset-password">("home")
 
   useEffect(() => {
     const handleHashChange = () => {
       const pathname = window.location.pathname
       const search = window.location.search
       
-      if (pathname.includes("/dashboard")) {
+      if (pathname.includes("/auth/callback") || search.includes("token=")) {
+        setCurrentPage("auth-callback")
+      } else if (pathname.includes("/reset-password")) {
+        setCurrentPage("reset-password")
+      } else if (pathname.includes("/dashboard")) {
         setCurrentPage("dashboard")
       } else if (pathname.includes("/search") || search.includes("q=")) {
         setCurrentPage("search")
@@ -111,6 +117,14 @@ export function App() {
         ?.scrollIntoView({ behavior: "smooth", block: "start" })
     }, 0)
   }, [currentPage])
+
+  if (currentPage === "auth-callback") {
+    return <AuthCallbackPage />
+  }
+
+  if (currentPage === "reset-password") {
+    return <ResetPasswordPage />
+  }
 
   if (currentPage === "dashboard") {
     return (
@@ -142,3 +156,4 @@ export function App() {
 }
 
 export default App
+
