@@ -100,7 +100,8 @@ export function usePayment() {
 
       const amount = TIER_PRICES[tier]
       const txRef = generateTxRef()
-      const callbackUrl = `${window.location.origin}/api/payment/callback`
+      const projectUrl = import.meta.env.VITE_SUPABASE_URL || window.location.origin
+      const callbackUrl = `${projectUrl.replace(/\/$/, "")}/functions/v1/${method}-webhook`
       const returnUrl = `${window.location.origin}/payment/success?reference=${txRef}`
 
       try {

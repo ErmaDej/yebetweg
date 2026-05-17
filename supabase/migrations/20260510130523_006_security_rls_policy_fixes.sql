@@ -31,28 +31,33 @@ DROP POLICY IF EXISTS "Anyone can subscribe" ON subscribers;
 DROP POLICY IF EXISTS "Anyone can submit inquiries" ON inquiries;
 
 -- Add secure INSERT policies (authenticated users only)
+DROP POLICY IF EXISTS "Authenticated users can submit listings" ON listings;
 CREATE POLICY "Authenticated users can submit listings"
   ON listings FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Authenticated users can subscribe" ON subscribers;
 CREATE POLICY "Authenticated users can subscribe"
   ON subscribers FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Authenticated users can submit inquiries" ON inquiries;
 CREATE POLICY "Authenticated users can submit inquiries"
   ON inquiries FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
 -- Add professional registration policy
+DROP POLICY IF EXISTS "Authenticated users can register as professionals" ON professionals;
 CREATE POLICY "Authenticated users can register as professionals"
   ON professionals FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
 -- Add admin-only write policies for ads table
+DROP POLICY IF EXISTS "Admins can insert ads" ON ads;
 CREATE POLICY "Admins can insert ads"
   ON ads FOR INSERT
   TO authenticated
@@ -64,6 +69,7 @@ CREATE POLICY "Admins can insert ads"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can update ads" ON ads;
 CREATE POLICY "Admins can update ads"
   ON ads FOR UPDATE
   TO authenticated
@@ -82,6 +88,7 @@ CREATE POLICY "Admins can update ads"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can delete ads" ON ads;
 CREATE POLICY "Admins can delete ads"
   ON ads FOR DELETE
   TO authenticated

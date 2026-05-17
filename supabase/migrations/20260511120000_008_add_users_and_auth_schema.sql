@@ -160,9 +160,11 @@ DROP POLICY IF EXISTS "Public can read free tips" ON tips;
 DROP POLICY IF EXISTS "Public can read all market prices" ON market_prices;
 DROP POLICY IF EXISTS "Public can read all tips" ON tips;
 
+DROP POLICY IF EXISTS "Public can read free market prices" ON market_prices;
 CREATE POLICY "Public can read free market prices"
   ON market_prices FOR SELECT TO anon USING (access_level = 'free');
 
+DROP POLICY IF EXISTS "Authenticated users can read market prices" ON market_prices;
 CREATE POLICY "Authenticated users can read market prices"
   ON market_prices FOR SELECT TO authenticated USING (
     access_level = 'free'
@@ -170,16 +172,18 @@ CREATE POLICY "Authenticated users can read market prices"
       SELECT 1
       FROM users u
       JOIN premium_subscriptions s ON s.user_id = u.id
-      WHERE u.auth_uid::text = auth.uid()
+      WHERE u.auth_uid = auth.uid()
         AND s.is_active
         AND s.starts_at <= now()
         AND s.expires_at >= now()
     )
   );
 
+DROP POLICY IF EXISTS "Public can read free tips" ON tips;
 CREATE POLICY "Public can read free tips"
   ON tips FOR SELECT TO anon USING (is_premium = false);
 
+DROP POLICY IF EXISTS "Authenticated users can read tips" ON tips;
 CREATE POLICY "Authenticated users can read tips"
   ON tips FOR SELECT TO authenticated USING (
     is_premium = false
@@ -187,13 +191,14 @@ CREATE POLICY "Authenticated users can read tips"
       SELECT 1
       FROM users u
       JOIN premium_subscriptions s ON s.user_id = u.id
-      WHERE u.auth_uid::text = auth.uid()
+      WHERE u.auth_uid = auth.uid()
         AND s.is_active
         AND s.starts_at <= now()
         AND s.expires_at >= now()
     )
   );
 
+DROP POLICY IF EXISTS "Anonymous users can create local user accounts" ON users;
 CREATE POLICY "Anonymous users can create local user accounts"
   ON users FOR INSERT TO anon WITH CHECK (
     provider = 'local'
@@ -202,29 +207,34 @@ CREATE POLICY "Anonymous users can create local user accounts"
     AND email IS NOT NULL
   );
 
+DROP POLICY IF EXISTS "Authenticated users can read own profile" ON users;
 CREATE POLICY "Authenticated users can read own profile"
-  ON users FOR SELECT TO authenticated USING (auth_uid::text = auth.uid());
+  ON users FOR SELECT TO authenticated USING (auth_uid = auth.uid());
 
+DROP POLICY IF EXISTS "Authenticated users can update own profile" ON users;
 CREATE POLICY "Authenticated users can update own profile"
-  ON users FOR UPDATE TO authenticated USING (auth_uid::text = auth.uid()) WITH CHECK (auth_uid::text = auth.uid());
+  ON users FOR UPDATE TO authenticated USING (auth_uid = auth.uid()) WITH CHECK (auth_uid = auth.uid());
 
+DROP POLICY IF EXISTS "Authenticated users can read own subscription" ON premium_subscriptions;
 CREATE POLICY "Authenticated users can read own subscription"
   ON premium_subscriptions FOR SELECT TO authenticated USING (
     EXISTS (
-      SELECT 1 FROM users u WHERE u.id = premium_subscriptions.user_id AND u.auth_uid::text = auth.uid()
+      SELECT 1 FROM users u WHERE u.id = premium_subscriptions.user_id AND u.auth_uid = auth.uid()
     )
   );
 
+DROP POLICY IF EXISTS "Authenticated users can insert payments" ON subscription_payments;
 CREATE POLICY "Authenticated users can insert payments"
   ON subscription_payments FOR INSERT TO authenticated WITH CHECK (
     EXISTS (
-      SELECT 1 FROM users u WHERE u.id = subscription_payments.user_id AND u.auth_uid::text = auth.uid()
+      SELECT 1 FROM users u WHERE u.id = subscription_payments.user_id AND u.auth_uid = auth.uid()
     )
   );
 
+DROP POLICY IF EXISTS "Authenticated users can read their payments" ON subscription_payments;
 CREATE POLICY "Authenticated users can read their payments"
   ON subscription_payments FOR SELECT TO authenticated USING (
     EXISTS (
-      SELECT 1 FROM users u WHERE u.id = subscription_payments.user_id AND u.auth_uid::text = auth.uid()
+      SELECT 1 FROM users u WHERE u.id = subscription_payments.user_id AND u.auth_uid = auth.uid()
     )
   );

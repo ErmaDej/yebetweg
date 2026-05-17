@@ -70,7 +70,7 @@ BEGIN
   -- Get the user_id from the current auth user
   SELECT u.id INTO v_user_id
   FROM users u
-  WHERE u.auth_uid::text = auth.uid();
+  WHERE u.auth_uid = auth.uid();
 
   IF v_user_id IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'User not found. Please ensure your profile is set up.');
@@ -100,8 +100,8 @@ CREATE OR REPLACE FUNCTION submit_inquiry(
   p_name text,
   p_email text,
   p_phone text DEFAULT '',
-  p_subject text,
-  p_message text,
+  p_subject text DEFAULT '',
+  p_message text DEFAULT '',
   p_listing_id uuid DEFAULT NULL,
   p_professional_id uuid DEFAULT NULL
 )
@@ -116,7 +116,7 @@ BEGIN
   -- Try to get the user_id if authenticated
   SELECT u.id INTO v_user_id
   FROM users u
-  WHERE u.auth_uid::text = auth.uid();
+  WHERE u.auth_uid = auth.uid();
 
   INSERT INTO inquiries (
     name, email, phone, subject, message,
@@ -263,15 +263,15 @@ END $$;
 DROP POLICY IF EXISTS "Users can update own listings" ON listings;
 CREATE POLICY "Users can update own listings"
   ON listings FOR UPDATE TO authenticated
-  USING (user_id IN (SELECT id FROM users WHERE auth_uid::text = auth.uid()))
-  WITH CHECK (user_id IN (SELECT id FROM users WHERE auth_uid::text = auth.uid()));
+  USING (user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid()))
+  WITH CHECK (user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid()));
 
 DROP POLICY IF EXISTS "Users can delete own pending listings" ON listings;
 CREATE POLICY "Users can delete own pending listings"
   ON listings FOR DELETE TO authenticated
   USING (
     status = 'pending'
-    AND user_id IN (SELECT id FROM users WHERE auth_uid::text = auth.uid())
+    AND user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid())
   );
 
 -- Admin can see all listings including pending
@@ -280,9 +280,9 @@ CREATE POLICY "Admin can read all listings"
   ON listings FOR SELECT TO authenticated
   USING (
     status = 'approved'
-    OR user_id IN (SELECT id FROM users WHERE auth_uid::text = auth.uid())
+    OR user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid())
     OR EXISTS (
-      SELECT 1 FROM users WHERE auth_uid::text = auth.uid() AND role = 'admin'
+      SELECT 1 FROM users WHERE auth_uid = auth.uid() AND role = 'admin'
     )
   );
 
@@ -291,9 +291,9 @@ DROP POLICY IF EXISTS "Users can read own inquiries" ON inquiries;
 CREATE POLICY "Users can read own inquiries"
   ON inquiries FOR SELECT TO authenticated
   USING (
-    user_id IN (SELECT id FROM users WHERE auth_uid::text = auth.uid())
+    user_id IN (SELECT id FROM users WHERE auth_uid = auth.uid())
     OR EXISTS (
-      SELECT 1 FROM users WHERE auth_uid::text = auth.uid() AND role = 'admin'
+      SELECT 1 FROM users WHERE auth_uid = auth.uid() AND role = 'admin'
     )
   );
 

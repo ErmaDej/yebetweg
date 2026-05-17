@@ -30,10 +30,11 @@ interface ChapaWebhookPayload {
 
 serve(async (req: Request) => {
   try {
-    // 1. Verify webhook signature if secret is configured
+    // 1. Read raw body once and verify webhook signature if secret is configured
+    const bodyText = await req.text()
+
     if (CHAPA_WEBHOOK_SECRET) {
       const signature = req.headers.get("x-chapa-signature")
-      const body = await req.text()
 
       if (!signature) {
         return new Response(JSON.stringify({ error: "Missing signature" }), {
@@ -52,7 +53,7 @@ serve(async (req: Request) => {
         ["verify"]
       )
       const expectedSignature = Array.from(
-        new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(body)))
+        new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(bodyText)))
       )
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("")
@@ -64,7 +65,7 @@ serve(async (req: Request) => {
     }
 
     // 2. Parse the webhook payload
-    const payload: ChapaWebhookPayload = await req.json()
+    const payload: ChapaWebhookPayload = JSON.parse(bodyText)
     const { event, data } = payload
 
     console.log(`Received Chapa webhook: ${event} for reference ${data.tx_ref || data.reference}`)

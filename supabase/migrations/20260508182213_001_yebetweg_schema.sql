@@ -171,17 +171,27 @@ ALTER TABLE inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE premium_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Public read policies
+DROP POLICY IF EXISTS "Public can read blogs" ON blogs;
 CREATE POLICY "Public can read blogs" ON blogs FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Public can read free tips" ON tips;
 CREATE POLICY "Public can read free tips" ON tips FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Public can read market prices" ON market_prices;
 CREATE POLICY "Public can read market prices" ON market_prices FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Public can read listings" ON listings;
 CREATE POLICY "Public can read listings" ON listings FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Public can read professionals" ON professionals;
 CREATE POLICY "Public can read professionals" ON professionals FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "Public can read active ads" ON ads;
 CREATE POLICY "Public can read active ads" ON ads FOR SELECT TO anon, authenticated USING (is_active = true);
 
 -- Public insert policies
+DROP POLICY IF EXISTS "Anyone can submit listings" ON listings;
 CREATE POLICY "Anyone can submit listings" ON listings FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Anyone can subscribe" ON subscribers;
 CREATE POLICY "Anyone can subscribe" ON subscribers FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Anyone can submit inquiries" ON inquiries;
 CREATE POLICY "Anyone can submit inquiries" ON inquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
 
 -- Authenticated user policies for own data
+DROP POLICY IF EXISTS "Users can read own subscription" ON premium_subscriptions;
 CREATE POLICY "Users can read own subscription" ON premium_subscriptions FOR SELECT TO authenticated USING (auth.uid() = user_id);

@@ -82,11 +82,15 @@ export async function initializeTeleBirrPayment(
       returnUrl: params.returnUrl,
     }
 
+    const authHeader = TELEBIRR_API_KEY?.startsWith("Bearer ")
+      ? TELEBIRR_API_KEY
+      : `Bearer ${TELEBIRR_API_KEY}`
+
     const response = await fetch(`${TELEBIRR_BASE_URL}/payment/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: TELEBIRR_API_KEY,
+        Authorization: authHeader,
       },
       body: JSON.stringify(requestBody),
     })
@@ -125,13 +129,17 @@ export async function queryTeleBirrPayment(
   reference: string,
 ): Promise<QueryTeleBirrResult> {
   try {
+    const authHeader = TELEBIRR_API_KEY?.startsWith("Bearer ")
+      ? TELEBIRR_API_KEY
+      : `Bearer ${TELEBIRR_API_KEY}`
+
     const response = await fetch(
       `${TELEBIRR_BASE_URL}/payment/query?reference=${reference}`,
       {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          Authorization: TELEBIRR_API_KEY,
+          Authorization: authHeader,
         },
       },
     )
