@@ -240,7 +240,7 @@ function ListingSkeleton() {
 }
 
 export function MarketplaceSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const [tab, setTab] = useState("all")
   const [page, setPage] = useState(1)
   const { listings, loading, total } = useListings(tab, page, LISTINGS_PER_PAGE)

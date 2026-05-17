@@ -13,7 +13,7 @@ export function AuthCallbackPage() {
   const { clearError } = useAuthContext()
   const [message, setMessage] = useState("Processing authentication...")
   const [error, setError] = useState<string | null>(null)
-  const [redirectPath, setRedirectPath] = useState<string>("/")
+  const [redirectPath] = useState<string>("/")
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -25,7 +25,6 @@ export function AuthCallbackPage() {
 
         if (!token || !type) {
           setError("Invalid or missing authentication parameters")
-          setRedirectPath("/")
           setTimeout(() => window.location.href = "/", 3000)
           return
         }
@@ -46,13 +45,11 @@ export function AuthCallbackPage() {
 
             if (recoveryError) {
               setError(recoveryError.message || "Failed to verify recovery token")
-              setRedirectPath("/")
               setTimeout(() => window.location.href = "/", 3000)
               return
             }
           } else {
             setError(sessionError?.message || "Failed to verify authentication")
-            setRedirectPath("/")
             setTimeout(() => window.location.href = "/", 3000)
             return
           }
@@ -63,7 +60,6 @@ export function AuthCallbackPage() {
           case "signup":
             setMessage("Email verified successfully! Redirecting...")
             clearError()
-            setRedirectPath("/dashboard")
             setTimeout(() => window.location.href = "/dashboard", 2000)
             break
 
@@ -71,27 +67,23 @@ export function AuthCallbackPage() {
             setMessage("Password reset link verified. Redirecting to reset password...")
             clearError()
             // Redirect to a password reset page where the user can set a new password
-            setRedirectPath("/reset-password")
             setTimeout(() => window.location.href = "/reset-password", 2000)
             break
 
           case "email_change":
             setMessage("Email change confirmed! Redirecting...")
             clearError()
-            setRedirectPath("/dashboard")
             setTimeout(() => window.location.href = "/dashboard", 2000)
             break
 
           default:
             setMessage("Authentication verified! Redirecting...")
             clearError()
-            setRedirectPath("/")
             setTimeout(() => window.location.href = "/", 2000)
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred"
         setError(errorMessage)
-        setRedirectPath("/")
         setTimeout(() => window.location.href = "/", 3000)
       }
     }
