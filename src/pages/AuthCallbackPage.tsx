@@ -13,7 +13,6 @@ export function AuthCallbackPage() {
   const { clearError } = useAuthContext()
   const [message, setMessage] = useState("Processing authentication...")
   const [error, setError] = useState<string | null>(null)
-  const [redirectPath] = useState<string>("/")
 
   useEffect(() => {
     const handleAuthCallback = async () => {
