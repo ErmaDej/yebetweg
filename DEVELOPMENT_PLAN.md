@@ -1,6 +1,6 @@
 # YeBetWeg Development Plan - Complete Roadmap
 
-**Last Updated:** May 13, 2026  
+**Last Updated:** May 19, 2026  
 **Status:** Phase 2 - Component Enhancement & Feature Completion (MVP Ready)
 
 ---
@@ -14,6 +14,9 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - Material suppliers
 - Property investors
 - Knowledge seekers in construction
+
+### Legal & Compliance Notes
+⚠️ **Trademark Concerns**: The name "YeBetWeg" may have trademark implications. Consider alternative branding before production launch. Current placeholder name used for development only.
 
 ---
 
@@ -65,6 +68,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - [x] Password reset via Supabase Auth email
 - [x] Session management and token refresh
 - [x] Protected routes/pages (ProtectedRoute component)
+
 ### 2.2 Knowledge Hub Enhancement ✅ MVP READY
 **Status:** Data structure ready, bilingual content, searchable
 
@@ -76,8 +80,10 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - [x] Full-text search across articles and tips (SearchBar + SearchResults page)
 - [x] Reading time estimation
 - [x] Related articles suggestions
+
 ### 2.3 Premium Membership System ✅ MVP READY
 **Status:** UI, schema, payment integration complete with dual gateway support
+
 #### Completed:
 - [x] 3-tier pricing system (Free, Premium, Pro)
 - [x] Premium section with feature comparison table
@@ -92,6 +98,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ### 2.4 Marketplace Features ✅ MVP READY
 **Status:** Display complete, inquiry system integrated, listing submission added
+
 #### Completed:
 - [x] 12 listings display (properties, materials, services)
 - [x] Multiple image support (images array)
@@ -104,6 +111,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ### 2.5 Professionals Directory ✅ MVP READY
 **Status:** Profiles display, contact inquiry integrated
+
 #### Completed:
 - [x] 6 professional profiles with portfolio images
 - [x] Ratings display
@@ -113,6 +121,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ### 2.6 Market Prices Dashboard ✅ MVP READY
 **Status:** Data display complete, premium gating working
+
 #### Completed:
 - [x] 15 material prices with category organization
 - [x] Premium gating (access_level: free/premium)
@@ -121,6 +130,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ### 2.7 Advertisement Platform ✅ MVP READY
 **Status:** Ad slots created, display responsive
+
 #### Completed:
 - [x] 3 ad placements (leaderboard, sidebar, native)
 - [x] Responsive ad display (AdSlot components)
@@ -129,6 +139,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ### 2.8 Communication Features ✅ MVP READY
 **Status:** Forms ready, database integration complete
+
 #### Completed:
 - [x] Contact form UI (stores inquiries in database)
 - [x] Newsletter subscription UI (stores subscribers with language preference)
@@ -138,69 +149,28 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 
 ---
 
-## 🎯 MVP FEATURES COMPLETED
+## 🎯 FIXES & ENHANCEMENTS (RECENT)
 
-### ✅ Payment Gateways (Chapa & TeleBirr)
-- [x] Chapa frontend library (`src/lib/chapa.ts`)
-  - Payment initialization with checkout URL
-  - Payment verification by transaction reference
-  - Customization support (title, description, logo)
-  - Error handling with user-friendly messages
-- [x] TeleBirr frontend library (`src/lib/telebirr.ts`)
-  - Payment initialization with prepay ID
-  - Payment status querying
-  - Ethiopian phone number validation & formatting
-  - QR code support for mobile payments
-- [x] Payment hook (`src/hooks/usePayment.ts`)
-  - Unified interface for both gateways
-  - Subscription record creation on payment initiation
-  - Tier-based pricing (Free=0, Premium=500 ETB, Pro=1200 ETB)
-  - Transaction reference generation
-- [x] Payment UI (`src/components/sections/PremiumSection.tsx`)
-  - Payment method selection (Chapa/TeleBirr)
-  - Phone number input for TeleBirr
-  - Payment confirmation dialog
-  - Loading/processing states
-- [x] Payment verification page (`src/pages/PaymentSuccessPage.tsx`)
-  - Automatic subscription activation on success
-  - Error handling with user-friendly messages
-  - Bilingual support
-- [x] Edge Functions for payment webhooks
-  - Chapa callback handler (`supabase/functions/chapa-webhook/index.ts`)
-  - TeleBirr status verification helper
-  - Secure signature verification for callbacks
+### ✅ Navigation "Illegal Invocation" Error
+- **Problem**: Clicking navbar links threw "Illegal invocation" error at `window.history.pushState()`
+- **Root Cause**: History API calls without proper error handling
+- **Solution**: Added try/catch blocks, context binding checks, fallback to `window.location.href`
+- **File Modified**: `src/lib/navigation.ts`
+- **Status**: ✅ Fixed & Tested
 
-### ✅ User Dashboard & Admin
-- [x] User Dashboard (`src/pages/Dashboard.tsx`)
-  - Profile view/edit (full name, phone, language)
-  - Settings tab with account info
-  - Activity tab with subscription display
-  - Sign out functionality
-- [x] Admin Dashboard Tab (`src/pages/AdminDashboardTab.tsx`)
-  - Content management (blogs, tips, ads)
-  - Marketplace moderation (listings, professionals)
-  - User management (ban/suspend)
-  - Analytics overview (placeholder)
-  - Payment management
+### ✅ Radix UI Dialog Accessibility Warnings
+- **Problem**: Multiple dialogs showed warning: `Missing 'Description' or 'aria-describedby' for DialogContent`
+- **Root Cause**: Missing `DialogDescription` element in several components
+- **Solution**: Added `DialogDescription` with descriptive text for all dialogs
+- **Files Modified**: `src/components/sections/ProfessionalsSection.tsx`, `src/components/sections/MarketplaceSection.tsx`
+- **Status**: ✅ Fixed & Validated
 
-### ✅ Inquiry/Messaging System
-- [x] Database schema (inquiries table)
-- [x] Inquiry modal on marketplace listings
-- [x] Inquiry form on professional profiles
-- [x] Contact form in contact section
-- [x] All inquiries stored in database
+### ✅ TeleBirr Backend Service Implementation
+- **Problem**: Direct browser-to-TeleBirr API calls exposed API keys
+- **Solution**: Created secure backend service following demo architecture pattern
+- **Files Created**: `supabase/functions/telebirr-service/index.ts`
+- **Status**: ✅ Implemented, **NOT DEPLOYED**
 
-### ✅ Listing Submission
-- [x] Create Listing form/page
-- [x] User can submit property, material, or service listings
-- [x] Listings stored with user_id association
-- [x] Image URL input support
-
-### ✅ Seed Data & Testing
-- [x] Payment seed data (Chapa + TeleBirr references)
-- [x] Subscription seed data (premium + pro users)
-- [x] Inquiry seed records for testing
-- [x] Realistic Ethiopian construction data
 ---
 
 ## 🎯 REMAINING PHASE 2 ITEMS (NICE TO HAVE)
@@ -231,6 +201,60 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - [ ] Email notification system for inquiries
 - [ ] Newsletter email campaigns
 - [ ] SMS notifications (optional)
+
+---
+
+## ⚠️ CRITICAL PAYMENT INTEGRATION REMAINING TASKS
+
+### TELEBIRR PAYMENT FINALIZATION (MUST DEPLOY)
+
+#### 1. Deploy TeleBirr Service Function
+**Action**: Deploy the new TeleBirr service edge function
+```bash
+supabase functions deploy telebirr-service
+```
+**Note**: Must be done from project root directory
+
+#### 2. Configure TeleBirr Service Secrets
+**Action**: Set required environment variables in Supabase
+```bash
+supabase secrets set VITE_TELEBIRR_API_KEY="Bearer 94cc42bee412696d754508c06ca1db20"
+supabase secrets set VITE_TELEBIRR_MERCHANT_APP_ID="1504661904051204"
+supabase secrets set VITE_TELEBIRR_FABRIC_APP_ID="c4182ef8-9249-458a-985e-06d191f4d505"
+supabase secrets set VITE_TELEBIRR_SHORT_CODE="2159"
+```
+**Note**: Use Supabase CLI or dashboard
+
+#### 3. Validate Domain & Configure CORS
+**Action**: Configure CORS for payment webhooks
+```bash
+# Set CORS headers for edge functions
+supabase functions env set --project-ref jxyavtdmcloxnhuavokc --key SUPABASE_CORS_ORIGINS --value "https://your-domain.com,https://www.your-domain.com"
+```
+**Note**: Replace `your-domain.com` with actual production domain. For development, use `http://localhost:5173` or `http://localhost:3000`
+
+#### 4. Deploy Chapa Webhook (if not already)
+**Action**: Ensure Chapa webhook is deployed and configured
+```bash
+supabase functions deploy chapa-webhook
+```
+**Note**: Already deployed but verify configuration
+
+#### 5. Test End-to-End Payment Flow
+**Action**: Test TeleBirr payment with test phone number
+- Navigate to Premium section
+- Click "Pay with TeleBirr"
+- Enter test phone: `+251911234567`
+- Verify network request to `/functions/v1/telebirr-service`
+- Check for successful response with `prepayId` and `qrCode`
+
+#### 6. Verify Webhook Callbacks
+**Action**: Test payment success webhook handling
+- Complete a test payment
+- Verify `PaymentSuccessPage` receives callback
+- Confirm subscription activation via `activate_subscription` RPC
+- Check database for subscription record
+
 ---
 
 ## 📱 PHASE 3: ADVANCED FEATURES (PLANNED)
@@ -259,6 +283,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - [ ] API rate limiting
 - [ ] Caching strategies
 - [ ] Database optimization
+
 ---
 
 ## 🛠️ Technology Stack (UPDATED)
@@ -286,6 +311,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - **Frontend:** Vercel / Netlify
 - **Backend:** Supabase Cloud
 - **Domain:** Custom domain setup
+
 ---
 
 ## 📊 Project Metrics
@@ -297,7 +323,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - **Seed Records:** 70+
 - **Translations:** 150+
 - **Payment Gateways:** 2 (Chapa, TeleBirr)
-- **Edge Functions:** 1 (Chapa webhook)
+- **Edge Functions:** 2 (chapa-webhook, telebirr-webhook)
 - **Mobile Optimization:** 95%
 
 ### Target Metrics
@@ -306,6 +332,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - **User base:** 10,000+ (Year 1)
 - **Conversion rate:** 3-5%
 - **Load time:** <2 seconds
+
 ---
 
 ## 🚢 Deployment Timeline
@@ -317,6 +344,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 | Phase 3: Advanced Features | June 30, 2026 | ⏳ Planned |
 | Beta Launch | July 15, 2026 | 📅 Scheduled |
 | Production Launch | August 1, 2026 | 🎯 Target |
+
 ---
 
 ## 📝 Git Branch Strategy
@@ -325,6 +353,7 @@ YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and ma
 - **dev:** Development branch for active features
 - **feature/*:** Individual feature branches
 - **hotfix/*:** Emergency production fixes
+
 ---
 
 ## 🤝 Team & Responsibilities
@@ -338,6 +367,7 @@ Currently: Solo development with AI assistance
 - **DevOps:** Deployment and infrastructure
 - **Product Manager:** Requirements and timeline
 - **QA Engineer:** Testing and quality assurance
+
 ---
 
 ## 📚 Documentation
@@ -349,18 +379,21 @@ Currently: Solo development with AI assistance
 - [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md) - Deployment checklist
 - [Ref/PROJECT_CONTEXT.md](Ref/PROJECT_CONTEXT.md) - Architecture overview
 - [Ref/DEVELOPER_ONBOARDING.md](Ref/DEVELOPER_ONBOARDING.md) - Developer guide
+
 ---
 
 ## 🎯 Next Steps
 
-1. **Deploy to production** after final testing
-2. **Set up Chapa webhook endpoint** (Supabase Edge Function)
-3. **Collect beta user feedback**
-4. **Prioritize Phase 3 features** based on feedback
-5. **Set up CI/CD** for automated testing
-6. **Scale infrastructure** as user base grows
+1. **Deploy TeleBirr service function** (`telebirr-service`)
+2. **Configure CORS and domain validation** for payment webhooks
+3. **Set TeleBirr service secrets** in Supabase
+4. **Test end-to-end TeleBirr payment flow** with test phone number
+5. **Verify webhook callbacks** and subscription activation
+6. **Collect beta user feedback** on payment experience
+7. **Prioritize Phase 3 features** based on feedback
+8. **Set up CI/CD** for automated testing
+9. **Scale infrastructure** as user base grows
 
 ---
 
 **Questions?** See [Ref/PROJECT_CONTEXT.md](Ref/PROJECT_CONTEXT.md) for architecture details or [USER_MANUAL.md](USER_MANUAL.md) for feature descriptions.
-

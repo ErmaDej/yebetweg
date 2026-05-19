@@ -1,8 +1,33 @@
 const TELEBIRR_API_KEY = import.meta.env.VITE_TELEBIRR_API_KEY
-const TELEBIRR_APP_ID = import.meta.env.VITE_TELEBIRR_APP_ID
+const TELEBIRR_MERCHANT_APP_ID = import.meta.env.VITE_TELEBIRR_MERCHANT_APP_ID
 const TELEBIRR_FABRIC_APP_ID = import.meta.env.VITE_TELEBIRR_FABRIC_APP_ID
 const TELEBIRR_SHORT_CODE = import.meta.env.VITE_TELEBIRR_SHORT_CODE
+const TELEBIRR_APP_SECRET = import.meta.env.VITE_TELEBIRR_APP_SECRET
 const TELEBIRR_BASE_URL = "https://api.telebirr.com/v1"
+
+// Validate required environment variables
+function validateTeleBirrConfig(): string | null {
+  if (!TELEBIRR_API_KEY) {
+    return "VITE_TELEBIRR_API_KEY is not configured"
+  }
+  if (!TELEBIRR_MERCHANT_APP_ID) {
+    return "VITE_TELEBIRR_MERCHANT_APP_ID is not configured"
+  }
+  if (!TELEBIRR_FABRIC_APP_ID) {
+    return "VITE_TELEBIRR_FABRIC_APP_ID is not configured"
+  }
+  if (!TELEBIRR_SHORT_CODE) {
+    return "VITE_TELEBIRR_SHORT_CODE is not configured"
+  }
+  return null
+}
+
+if (typeof window !== "undefined") {
+  const configError = validateTeleBirrConfig()
+  if (configError) {
+    console.warn(`[TeleBirr Config Warning] ${configError}`)
+  }
+}
 
 export interface TeleBirrPaymentRequest {
   appId: string
@@ -68,59 +93,97 @@ export async function initializeTeleBirrPayment(
   params: InitializeTeleBirrPaymentParams,
 ): Promise<InitializeTeleBirrResult> {
   try {
-    const requestBody: TeleBirrPaymentRequest = {
-      appId: TELEBIRR_APP_ID,
-      fabricAppId: TELEBIRR_FABRIC_APP_ID,
-      shortCode: TELEBIRR_SHORT_CODE,
-      amount: params.amount,
-      phoneNumber: params.phoneNumber,
-      subject: params.subject || "YeBetWeg Premium Subscription",
-      description:
-        params.description || "Payment for YeBetWeg premium membership",
-      reference: params.reference,
-      notifyUrl: params.notifyUrl,
-      returnUrl: params.returnUrl,
+    // Validate input parameters
+    if (!params.phoneNumber || !params.amount || !params.reference) {
+      return {
+        success: false,
+        error: "Missing required payment parameters",
+      }
     }
 
-    const authHeader = TELEBIRR_API_KEY?.startsWith("Bearer ")
-      ? TELEBIRR_API_KEY
-      : `Bearer ${TELEBIRR_API_KEY}`
+    if (params.amount <= 0) {
+      return {
+        success: false,
+        error: "Amount must be greater than zero",
+      }
+    }
 
-    const response = await fetch(`${TELEBIRR_BASE_URL}/payment/create`, {
+    console.debug("[TeleBirr Client] Initializing payment:", {
+      reference: params.reference,
+      amount: params.amount,
+      phone: params.phoneNumber.replace(/(?<=.{3}).(?=.*(?:.{3})+$)/g, "X"), // Mask phone for security
+    })
+
+    // Call backend service instead of direct API call
+    const serviceUrl = `${window.location.origin}/functions/v1/telebirr-service`
+    
+    console.debug("[TeleBirr Client] Calling backend service:", serviceUrl)
+
+    const response = await fetch(serviceUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: authHeader,
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        amount: params.amount,
+        phoneNumber: params.phoneNumber,
+        subject: params.subject || "YeBetWeg Premium Subscription",
+        description:
+          params.description || "Payment for YeBetWeg premium membership",
+        reference: params.reference,
+        notifyUrl: params.notifyUrl,
+        returnUrl: params.returnUrl,
+      }),
     })
 
-    const data: TeleBirrPaymentResponse = await response.json()
+    const data = await response.json()
 
-    if (!response.ok || data.code !== "0000") {
+    console.debug("[TeleBirr Client] Service response received:", {
+      status: response.status,
+      success: data.success,
+      hasData: !!data.prepayId,
+    })
+
+    if (!response.ok || !data.success) {
+      console.error("[TeleBirr Client] Service error:", {
+        status: response.status,
+        message: data.error,
+        code: data.code,
+      })
       return {
         success: false,
-        error: data.msg || "Failed to initialize TeleBirr payment",
+        error: data.error || `Service error: ${response.status}`,
       }
     }
 
-    if (data.data) {
+    if (!data.prepayId) {
+      console.error("[TeleBirr Client] Invalid response: missing prepayId")
       return {
-        success: true,
-        prepayId: data.data.prepayId,
-        reference: data.data.reference,
-        qrCode: data.data.qrCode,
+        success: false,
+        error: "Invalid response from payment service",
       }
     }
+
+    console.info("[TeleBirr Client] Payment initialized successfully:", {
+      reference: params.reference,
+      prepayId: data.prepayId?.substring(0, 8) + "...",
+    })
 
     return {
-      success: false,
-      error: "Invalid response from TeleBirr",
+      success: true,
+      prepayId: data.prepayId,
+      reference: data.reference,
+      qrCode: data.qrCode || data.codeUrl,
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    console.error("[TeleBirr Client] Payment initialization error:", errorMessage)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Network error",
+      error:
+        error instanceof Error
+          ? `Network error: ${error.message}`
+          : "Network error occurred while initializing payment",
     }
   }
 }
@@ -129,12 +192,31 @@ export async function queryTeleBirrPayment(
   reference: string,
 ): Promise<QueryTeleBirrResult> {
   try {
+    // Validate configuration
+    const configError = validateTeleBirrConfig()
+    if (configError) {
+      console.error(`[TeleBirr] Configuration error: ${configError}`)
+      return {
+        success: false,
+        error: "Payment service is not properly configured",
+      }
+    }
+
+    if (!reference) {
+      return {
+        success: false,
+        error: "Reference is required to query payment status",
+      }
+    }
+
+    console.debug("[TeleBirr] Querying payment status:", { reference })
+
     const authHeader = TELEBIRR_API_KEY?.startsWith("Bearer ")
       ? TELEBIRR_API_KEY
       : `Bearer ${TELEBIRR_API_KEY}`
 
     const response = await fetch(
-      `${TELEBIRR_BASE_URL}/payment/query?reference=${reference}`,
+      `${TELEBIRR_BASE_URL}/payment/query?reference=${encodeURIComponent(reference)}`,
       {
         method: "GET",
         headers: {
@@ -146,29 +228,61 @@ export async function queryTeleBirrPayment(
 
     const data: TeleBirrQueryResult = await response.json()
 
-    if (!response.ok || data.code !== "0000") {
+    console.debug("[TeleBirr] Query response received:", {
+      code: data.code,
+      msg: data.msg,
+      status: data.data?.status,
+    })
+
+    if (!response.ok) {
+      console.error("[TeleBirr] Query HTTP error:", {
+        status: response.status,
+        message: data.msg,
+      })
       return {
         success: false,
-        error: data.msg || "Failed to query TeleBirr payment",
+        error: data.msg || `HTTP ${response.status}: Failed to query payment`,
       }
     }
 
-    if (data.data) {
+    if (data.code !== "0000") {
+      console.error("[TeleBirr] Query API error:", {
+        code: data.code,
+        message: data.msg,
+      })
       return {
-        success: true,
-        status: data.data.status,
-        data: data.data,
+        success: false,
+        error: data.msg || `Error code ${data.code}: Failed to query payment status`,
       }
     }
+
+    if (!data.data) {
+      console.warn("[TeleBirr] Query returned no data:", { reference })
+      return {
+        success: false,
+        error: "Invalid response from TeleBirr: missing payment data",
+      }
+    }
+
+    console.info("[TeleBirr] Payment status queried successfully:", {
+      reference,
+      status: data.data.status,
+    })
 
     return {
-      success: false,
-      error: "Invalid response from TeleBirr",
+      success: true,
+      status: data.data.status,
+      data: data.data,
     }
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    console.error("[TeleBirr] Query error:", errorMessage)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Network error",
+      error:
+        error instanceof Error
+          ? `Network error: ${error.message}`
+          : "Network error occurred while querying payment status",
     }
   }
 }

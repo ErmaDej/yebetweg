@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -94,7 +94,10 @@ function InquiryModal({
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-          <DialogTitle>{listingTitle}</DialogTitle>
+              <DialogTitle>{listingTitle}</DialogTitle>
+              <DialogDescription>
+                {language === "en" ? "Submit an inquiry to connect with the listing owner." : "ከዝርዝር ባለቤት ጋር ለመገናኘት ጥያቄ ያስገቡ።"}
+              </DialogDescription>
             </DialogHeader>
             {inquirySent ? (
               <div className="py-8 text-center">

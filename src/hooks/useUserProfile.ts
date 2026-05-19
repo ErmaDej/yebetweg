@@ -38,7 +38,13 @@ export function useUserProfile() {
         setLoading(true)
         setError(null)
 
-        if (!session) {
+        const {
+          data: { session: activeSession },
+        } = await supabase.auth.getSession()
+
+        const currentSession = activeSession ?? session
+
+        if (!currentSession) {
           setProfile({
             id: user.id,
             auth_uid: null,
@@ -58,43 +64,62 @@ export function useUserProfile() {
           return
         }
 
-        const { data, error: fetchError } = await supabase.rpc("ensure_auth_user_profile")
+        const normalizedProfile = async (): Promise<UserProfile | null> => {
+          try {
+            const { data, error: fetchError } = await supabase.rpc("ensure_auth_user_profile")
+            if (fetchError) {
+              throw fetchError
+            }
 
-        if (fetchError) {
-          throw fetchError
+            const profileRow = Array.isArray(data) ? data[0] : data
+            return profileRow ?? null
+          } catch (rpcError) {
+            console.warn("[useUserProfile] RPC fallback triggered:", rpcError)
+
+            const { data: manualProfile, error: selectError } = await supabase
+              .from("users")
+              .select("*")
+              .eq("auth_uid", user.id)
+              .single()
+
+            if (!selectError && manualProfile) {
+              return manualProfile as UserProfile
+            }
+
+            return null
+          }
         }
 
-        if (!data) {
-          if (!session) {
-            throw new Error("Custom authenticated user profile was not found.")
-          }
+        const profileData = await normalizedProfile()
 
-          const username = user.email?.split("@")[0] || `user_${user.id.slice(0, 8)}`
-          const newProfile: Partial<UserProfile> = {
-            auth_uid: user.id,
-            username: username,
-            email: user.email || "",
-            full_name: user.user_metadata?.full_name || null,
-            phone: "",
-            role: "user",
-            provider: "supabase",
-            language_preference: "en",
-            status: "active",
-            profile_image: user.user_metadata?.avatar_url || "",
-            metadata: {},
-          }
-
-          const { data: insertedData, error: insertError } = await supabase
-            .from("users")
-            .insert([newProfile])
-            .select()
-            .single()
-
-          if (insertError) throw insertError
-          setProfile(insertedData)
-        } else {
-          setProfile(data)
+        if (profileData) {
+          setProfile(profileData)
+          return
         }
+
+        const username = user.email?.split("@")[0] || `user_${user.id.slice(0, 8)}`
+        const newProfile: Partial<UserProfile> = {
+          auth_uid: user.id,
+          username,
+          email: user.email || "",
+          full_name: user.user_metadata?.full_name || null,
+          phone: "",
+          role: "user",
+          provider: "supabase",
+          language_preference: "en",
+          status: "active",
+          profile_image: user.user_metadata?.avatar_url || "",
+          metadata: {},
+        }
+
+        const { data: insertedData, error: insertError } = await supabase
+          .from("users")
+          .insert([newProfile])
+          .select()
+          .single()
+
+        if (insertError) throw insertError
+        setProfile(insertedData)
       } catch (err: unknown) {
         setProfile(null)
         setError(getErrorMessage(err))

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -139,6 +139,9 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
               <DialogTitle>
                 {language === "en" ? `Hire ${professional.name}` : `${professional.name} ያስተኳክው`}
               </DialogTitle>
+              <DialogDescription>
+                {language === "en" ? `Submit a hiring request for ${professional.name}` : `${professional.name} ለማስተኳከው ጥያቄ ያስገቡ`}
+              </DialogDescription>
             </DialogHeader>
             {inquirySent ? (
               <div className="py-8 text-center">
@@ -226,6 +229,9 @@ export function ProfessionalsSection() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>{t("professionals.join")}</DialogTitle>
+                <DialogDescription>
+                  {language === "en" ? "Fill out the form below to join our professional network." : "ለሙያ ቅደም ተከተል ውስጥ ለመግባት ከዚህ በታች ያለውን ቅጽ ይሙሉ።"}
+                </DialogDescription>
               </DialogHeader>
               {joinError && (
                 <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">

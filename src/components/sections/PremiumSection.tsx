@@ -121,10 +121,12 @@ export function PremiumSection({
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"chapa" | "telebirr">("chapa")
+  const [teleBirrResult, setTeleBirrResult] = useState<{ qrCode?: string; reference?: string } | null>(null)
 
   const handleChoosePlan = (tier: PremiumTier, method: "chapa" | "telebirr") => {
     setSelectedTier(tier)
     setPaymentMethod(method)
+    setTeleBirrResult(null)
     setPaymentDialogOpen(true)
   }
 
@@ -136,6 +138,13 @@ export function PremiumSection({
       paymentMethod,
       paymentMethod === "telebirr" ? phoneNumber : undefined,
     )
+
+    if (paymentMethod === "telebirr") {
+      if (result.success) {
+        setTeleBirrResult({ qrCode: result.qrCode, reference: result.reference })
+      }
+      return
+    }
 
     if (result.success && result.redirectUrl) {
       window.location.href = result.redirectUrl
@@ -396,6 +405,30 @@ export function PremiumSection({
               {error}
             </div>
           )}
+
+          {teleBirrResult?.qrCode && (
+            <div className="space-y-3 p-3 rounded-lg border border-border/70 bg-muted/80">
+              <p className="text-sm font-semibold">
+                {language === "en"
+                  ? "TeleBirr payment initialized. Scan the QR code with your TeleBirr app."
+                  : "ቴሌቢር ክፍያ ተጀምሯል። ከቴሌቢር አፕ ጋር QR ኮድን ይቅረፁ።"}
+              </p>
+              <img
+                src={teleBirrResult.qrCode}
+                alt={language === "en" ? "TeleBirr QR code" : "የቴሌቢር QR ኮድ"}
+                className="mx-auto max-h-72 rounded-lg border border-border/50"
+              />
+              {teleBirrResult.reference && (
+                <p className="text-xs text-muted-foreground">
+                  {language === "en"
+                    ? `Reference: ${teleBirrResult.reference}`
+                    : `የማገናኘያ መለያ: ${teleBirrResult.reference}`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {teleBirrResult?.qrCode && <div className="h-2" />}
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setPaymentDialogOpen(false)}>
