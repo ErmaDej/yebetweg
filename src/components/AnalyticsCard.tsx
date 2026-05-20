@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 // TODO: replace with actual chart library
 export function AnalyticsCard() {
-  const [data, setData] = useState([{}]);
-  useEffect(() => {
-    // fetch analytics data from your API
-    // setData(...)
-  }, []);
+  // Placeholder for analytics data fetching and state management
   return (
     <Card>
       <CardHeader>
