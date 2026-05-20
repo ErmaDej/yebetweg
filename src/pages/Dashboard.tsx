@@ -185,7 +185,7 @@ export function Dashboard() {
                           <p className="text-sm font-medium text-muted-foreground">
                             {language === "en" ? "Status" : "ሁኔታ"}
                           </p>
-                          <p className="text-base font-semibold capitalize">{profile.status}</p>
+                          <p className="text-base font-semibold">{profile.status}</p>
                         </div>
                       </div>
                     </div>
@@ -259,6 +259,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
 
           {/* Settings Tab */}
           <TabsContent value="settings">
@@ -375,7 +376,7 @@ export function Dashboard() {
                         ? "No active subscription yet. Choose a Premium or Pro plan to unlock more tools."
                         : "ንቁ ምዝገባ ገና የለም። ተጨማሪ መሳሪያዎችን ለመክፈት Premium ወይም Pro እቅድ ይምረጡ።"}
                     </p>
-                    <Button className="mt-4" onClick={() => navigateTo("/#premium")}>
+                    <Button className="mt-4" onClick={() => window.location.href = "/#premium"}>
                       {language === "en" ? "View Plans" : "እቅዶችን ይመልከቱ"}
                     </Button>
                   </div>

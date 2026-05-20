@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/lib/i18n"
 import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck } from "lucide-react"
+import { callAdminAction } from "@/lib/api"
 
 export function AdminDashboardTab() {
   const { language } = useLanguage()
@@ -11,43 +12,20 @@ export function AdminDashboardTab() {
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const handleAction = async (action: string) => {
-    setLoading(true)
-    setError(null)
-    setSuccessMessage(null)
-
-    try {
-      // This is a placeholder for actual admin actions
-      // In a real application, these would interact with Supabase functions or RLS-protected tables
-      let message = ""
-      switch (action) {
-        case "manage_blogs":
-          message = language === "en" ? "Managing Blogs..." : "ብሎጎችን በማስተዳደር ላይ..."
-          break
-        case "moderate_listings":
-          message = language === "en" ? "Moderating Listings..." : "ዝርዝሮችን በማጣራት ላይ..."
-          break
-        case "manage_users":
-          message = language === "en" ? "Managing Users..." : "ተጠቃሚዎችን በማስተዳደር ላይ..."
-          break
-        case "view_analytics":
-          message = language === "en" ? "Fetching Analytics..." : "ትንታኔዎችን በማውጣት ላይ..."
-          break
-        case "manage_payments":
-          message = language === "en" ? "Managing Payments..." : "ክፍያዎችን በማስተዳደር ላይ..."
-          break
-        default:
-          message = language === "en" ? "Unknown action" : "ያልታወቀ እርምጃ"
-      }
-      setSuccessMessage(message + (language === "en" ? " (Simulated)" : " (የተቀረጸ)"))
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-    } catch (err: any) {
-      setError(err.message || (language === "en" ? "An unexpected error occurred." : "ያልተጠበቀ ስህተት ተከስቷል"))
-    } finally {
-      setLoading(false)
-    }
+const handleAction = async (action: string) => {
+  setLoading(true);
+  setError(null);
+  setSuccessMessage(null);
+  try {
+    const result = await callAdminAction(action);
+    const message = language === "en" ? `Successfully performed ${action.replace("_", " ")}` : `ተገቢው እርምጃ ${action} ተፈጸመ`;
+    setSuccessMessage(message);
+  } catch (err: any) {
+    setError(err.message ?? "An unexpected error occurred.");
+  } finally {
+    setLoading(false);
   }
+}; // Closing brace and semicolon for handleAction
 
   return (
     <div className="space-y-6">

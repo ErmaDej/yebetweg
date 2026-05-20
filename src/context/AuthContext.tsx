@@ -16,6 +16,38 @@ interface AuthContextProps {
   clearError: () => void
 }
 
+const CUSTOM_AUTH_USER_KEY = "yebetweg-custom-auth-user"
+
+function loadCustomAuthUser(): User | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    const stored = window.localStorage.getItem(CUSTOM_AUTH_USER_KEY)
+    if (!stored) return null
+    return JSON.parse(stored) as User
+  } catch {
+    return null
+  }
+}
+
+function saveCustomAuthUser(user: User) {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(CUSTOM_AUTH_USER_KEY, JSON.stringify(user))
+  } catch {
+    // Ignore storage failures
+  }
+}
+
+function clearCustomAuthUser() {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.removeItem(CUSTOM_AUTH_USER_KEY)
+  } catch {
+    // Ignore storage failures
+  }
+}
+
 export const AuthContext = createContext<AuthContextProps>({
   user: null,
   session: null,
@@ -45,17 +77,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function initAuth() {
       try {
         // First check for custom auth (seeded users)
+        const storedCustomUser = loadCustomAuthUser()
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession()
         if (!isMounted) return
-        setSession(currentSession)
-        setUser(currentSession?.user ?? null)
-        setLoading(false)
+
+        if (currentSession) {
+          setSession(currentSession)
+          setUser(currentSession.user)
+          clearCustomAuthUser()
+        } else if (storedCustomUser) {
+          setSession(null)
+          setUser(storedCustomUser)
+        } else {
+          setSession(null)
+          setUser(null)
+        }
 
         // No return here, allow the onAuthStateChange listener to handle subsequent state updates.
-        // If there's an active session, the listener will be triggered right after this.
-        // If there's no session, user and session will be null, and loading will be false.
+        // If there\"s an active session, the listener will be triggered right after this.
+        // If there\"s no session, user and session will be null, and loading will be false.
       } catch (e: any) {
         if (isMounted) setError(e.message)
       } finally {
@@ -66,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth()
 
     const {
-      data: { subscription },
+      data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!isMounted) return
       setSession(currentSession)
@@ -76,9 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isMounted = false
-      subscription.unsubscribe()
+      authSubscription.unsubscribe()
     }
   }, [])
+
 
   async function signInWithPassword(email: string, password: string) {
     setLoading(true)
@@ -120,10 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: "authenticated",
       }
       setUser(customUser as any)
-      // Custom auth users are not currently persisted across sessions without additional backend work.
-      // For now, if a custom user logs in, we'll keep them in the state but won't persist them via localStorage.
-      // This means custom auth users will need to log in again if they close the browser.
-      // For persistent login, we would need to implement a token-based system or similar for custom auth.
+      setSession(null)
+      saveCustomAuthUser(customUser as any)
       return {}
     } catch (e: any) {
       setError(e.message)
@@ -167,9 +208,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       await supabase.auth.signOut()
+      clearCustomAuthUser()
       setSession(null)
       setUser(null)
-      // No need to remove custom_auth_user from localStorage as it's no longer being used for persistence.
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -236,3 +277,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
+

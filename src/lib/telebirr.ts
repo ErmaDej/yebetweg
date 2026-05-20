@@ -3,6 +3,8 @@ const TELEBIRR_MERCHANT_APP_ID = import.meta.env.VITE_TELEBIRR_MERCHANT_APP_ID
 const TELEBIRR_FABRIC_APP_ID = import.meta.env.VITE_TELEBIRR_FABRIC_APP_ID
 const TELEBIRR_SHORT_CODE = import.meta.env.VITE_TELEBIRR_SHORT_CODE
 const TELEBIRR_APP_SECRET = import.meta.env.VITE_TELEBIRR_APP_SECRET
+import * as CryptoJS from "crypto-js"
+
 const TELEBIRR_BASE_URL = "https://api.telebirr.com/v1"
 
 // Validate required environment variables
@@ -19,6 +21,9 @@ function validateTeleBirrConfig(): string | null {
   if (!TELEBIRR_SHORT_CODE) {
     return "VITE_TELEBIRR_SHORT_CODE is not configured"
   }
+  if (!TELEBIRR_APP_SECRET) {
+    return "VITE_TELEBIRR_APP_SECRET is not configured"
+  }
   return null
 }
 
@@ -32,25 +37,31 @@ if (typeof window !== "undefined") {
 export interface TeleBirrPaymentRequest {
   appId: string
   fabricAppId: string
+  nonce: string
+  publicKey: string
   shortCode: string
   amount: number
   phoneNumber: string
   subject: string
   description: string
-  reference: string
-  notifyUrl: string
+  outTradeNo: string // Renamed from reference to outTradeNo
+  receiveName: string
   returnUrl: string
+  timeoutExpress: string
+  sign: string
 }
 
 export interface TeleBirrPaymentResponse {
-  code: string
+  code: number
   msg: string
   data?: {
-    prepayId: string
-    codeUrl: string
-    reference: string
+    toPayUrl: string
+    payExchangeId: string
+    outTradeNo: string
     qrCode: string
   }
+  success: boolean
+  message: string
 }
 
 export interface TeleBirrQueryResult {
@@ -59,7 +70,7 @@ export interface TeleBirrQueryResult {
   data?: {
     status: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED"
     amount: string
-    reference: string
+    outTradeNo: string
     transactionId: string
   }
 }
@@ -67,7 +78,7 @@ export interface TeleBirrQueryResult {
 export interface InitializeTeleBirrPaymentParams {
   amount: number
   phoneNumber: string
-  reference: string
+  reference: string // This will be mapped to outTradeNo
   notifyUrl: string
   returnUrl: string
   subject?: string
@@ -76,8 +87,8 @@ export interface InitializeTeleBirrPaymentParams {
 
 export interface InitializeTeleBirrResult {
   success: boolean
-  prepayId?: string
-  reference?: string
+  toPayUrl?: string
+  outTradeNo?: string
   qrCode?: string
   error?: string
 }
@@ -141,39 +152,40 @@ export async function initializeTeleBirrPayment(
     console.debug("[TeleBirr Client] Service response received:", {
       status: response.status,
       success: data.success,
-      hasData: !!data.prepayId,
+      hasData: !!data.data?.payExchangeId,
     })
 
     if (!response.ok || !data.success) {
       console.error("[TeleBirr Client] Service error:", {
         status: response.status,
-        message: data.error,
+        message: data.message || data.msg,
         code: data.code,
       })
       return {
         success: false,
-        error: data.error || `Service error: ${response.status}`,
+        error: data.message || data.msg || `Service error: ${response.status}`,
       }
     }
 
-    if (!data.prepayId) {
-      console.error("[TeleBirr Client] Invalid response: missing prepayId")
+    if (!data.data?.toPayUrl) {
+      console.error("[TeleBirr Client] Invalid response: missing toPayUrl")
       return {
         success: false,
-        error: "Invalid response from payment service",
+        error: "Invalid response from payment service: missing toPayUrl",
       }
     }
 
     console.info("[TeleBirr Client] Payment initialized successfully:", {
       reference: params.reference,
-      prepayId: data.prepayId?.substring(0, 8) + "...",
+      payExchangeId: data.data.payExchangeId?.substring(0, 8) + "...",
+      toPayUrl: data.data.toPayUrl,
     })
 
     return {
       success: true,
-      prepayId: data.prepayId,
-      reference: data.reference,
-      qrCode: data.qrCode || data.codeUrl,
+      toPayUrl: data.data.toPayUrl,
+      outTradeNo: data.data.outTradeNo,
+      qrCode: data.data.qrCode,
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error"
@@ -216,7 +228,7 @@ export async function queryTeleBirrPayment(
       : `Bearer ${TELEBIRR_API_KEY}`
 
     const response = await fetch(
-      `${TELEBIRR_BASE_URL}/payment/query?reference=${encodeURIComponent(reference)}`,
+      `${TELEBIRR_BASE_URL}/payment/query?outTradeNo=${encodeURIComponent(reference)}`,
       {
         method: "GET",
         headers: {
