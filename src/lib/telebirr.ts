@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase"
+
 const TELEBIRR_API_KEY = import.meta.env.VITE_TELEBIRR_API_KEY
 const TELEBIRR_MERCHANT_APP_ID = import.meta.env.VITE_TELEBIRR_MERCHANT_APP_ID
 const TELEBIRR_FABRIC_APP_ID = import.meta.env.VITE_TELEBIRR_FABRIC_APP_ID
@@ -120,8 +122,21 @@ export async function initializeTeleBirrPayment(
       phone: params.phoneNumber.replace(/(?<=.{3}).(?=.*(?:.{3})+$)/g, "X"), // Mask phone for security
     })
 
-    // Call backend service instead of direct API call
-    const serviceUrl = `${window.location.origin}/functions/v1/telebirr-service`
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return {
+        success: false,
+        error: "Payment service is not configured",
+      }
+    }
+
+    // Call the Supabase Edge Function directly so production Vercel deploys do not need a proxy.
+    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/telebirr-service`
     
     console.debug("[TeleBirr Client] Calling backend service:", serviceUrl)
 
@@ -129,6 +144,8 @@ export async function initializeTeleBirrPayment(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
       },
       body: JSON.stringify({
         amount: params.amount,
@@ -147,7 +164,7 @@ export async function initializeTeleBirrPayment(
     console.debug("[TeleBirr Client] Service response received:", {
       status: response.status,
       success: data.success,
-      hasData: !!data.data?.payExchangeId,
+      hasData: !!(data.prepayId || data.data?.payExchangeId),
     })
 
     if (!response.ok || !data.success) {
@@ -162,25 +179,30 @@ export async function initializeTeleBirrPayment(
       }
     }
 
-    if (!data.data?.toPayUrl) {
-      console.error("[TeleBirr Client] Invalid response: missing toPayUrl")
+    const toPayUrl = data.toPayUrl || data.codeUrl || data.data?.toPayUrl
+    const qrCode = data.qrCode || data.data?.qrCode || data.codeUrl
+    const outTradeNo = data.reference || data.data?.outTradeNo || params.reference
+    const payExchangeId = data.prepayId || data.data?.payExchangeId
+
+    if (!toPayUrl && !qrCode) {
+      console.error("[TeleBirr Client] Invalid response: missing payment URL")
       return {
         success: false,
-        error: "Invalid response from payment service: missing toPayUrl",
+        error: "Invalid response from payment service: missing payment URL",
       }
     }
 
     console.info("[TeleBirr Client] Payment initialized successfully:", {
       reference: params.reference,
-      payExchangeId: data.data.payExchangeId?.substring(0, 8) + "...",
-      toPayUrl: data.data.toPayUrl,
+      payExchangeId: payExchangeId ? payExchangeId.substring(0, 8) + "..." : undefined,
+      toPayUrl,
     })
 
     return {
       success: true,
-      toPayUrl: data.data.toPayUrl,
-      outTradeNo: data.data.outTradeNo,
-      qrCode: data.data.qrCode,
+      toPayUrl,
+      outTradeNo,
+      qrCode,
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error"

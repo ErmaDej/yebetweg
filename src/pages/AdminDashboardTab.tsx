@@ -1,31 +1,133 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/lib/i18n"
-import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck } from "lucide-react"
+import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
+import { supabase } from "@/lib/supabase"
+
+type AdminMetricKey =
+  | "users"
+  | "subscriptions"
+  | "payments"
+  | "pendingListings"
+  | "professionals"
+  | "inquiries"
+  | "blogs"
+  | "ads"
+
+type AdminMetrics = Record<AdminMetricKey, number>
+
+const emptyMetrics: AdminMetrics = {
+  users: 0,
+  subscriptions: 0,
+  payments: 0,
+  pendingListings: 0,
+  professionals: 0,
+  inquiries: 0,
+  blogs: 0,
+  ads: 0,
+}
 
 export function AdminDashboardTab() {
   const { language } = useLanguage()
   const [loading, setLoading] = useState(false)
+  const [metricsLoading, setMetricsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [metrics, setMetrics] = useState<AdminMetrics>(emptyMetrics)
+  const [actionInFlight, setActionInFlight] = useState<string | null>(null)
 
-const handleAction = async (action: string) => {
-  setLoading(true);
-  setError(null);
-  setSuccessMessage(null);
-  try {
-    await callAdminAction(action);
-    const message = language === "en" ? `Successfully performed ${action.replace("_", " ")}` : `ተገቢው እርምጃ ${action} ተፈጸመ`;
-    setSuccessMessage(message);
-  } catch (err: any) {
-    setError(err.message ?? "An unexpected error occurred.");
-  } finally {
-    setLoading(false);
+  const loadMetrics = async () => {
+    setMetricsLoading(true)
+    setError(null)
+    try {
+      const [
+        users,
+        subscriptions,
+        payments,
+        pendingListings,
+        professionals,
+        inquiries,
+        blogs,
+        ads,
+      ] = await Promise.all([
+        supabase.from("users").select("id", { count: "exact", head: true }),
+        supabase.from("premium_subscriptions").select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("subscription_payments").select("id", { count: "exact", head: true }),
+        supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("professionals").select("id", { count: "exact", head: true }),
+        supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("is_read", false),
+        supabase.from("blogs").select("id", { count: "exact", head: true }),
+        supabase.from("ads").select("id", { count: "exact", head: true }),
+      ])
+
+      setMetrics({
+        users: users.count || 0,
+        subscriptions: subscriptions.count || 0,
+        payments: payments.count || 0,
+        pendingListings: pendingListings.count || 0,
+        professionals: professionals.count || 0,
+        inquiries: inquiries.count || 0,
+        blogs: blogs.count || 0,
+        ads: ads.count || 0,
+      })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Unable to load admin metrics.")
+    } finally {
+      setMetricsLoading(false)
+    }
   }
-}; // Closing brace and semicolon for handleAction
+
+  useEffect(() => {
+    loadMetrics()
+  }, [])
+
+  const operationalHealth = useMemo(() => {
+    if (metrics.pendingListings > 5 || metrics.inquiries > 10) return "attention"
+    if (metrics.subscriptions > 0 && metrics.users > 0) return "healthy"
+    return "warming"
+  }, [metrics])
+
+  const handleAction = async (action: string) => {
+    setLoading(true)
+    setActionInFlight(action)
+    setError(null)
+    setSuccessMessage(null)
+    try {
+      await callAdminAction(action)
+      const message =
+        language === "en"
+          ? `Successfully performed ${action.replaceAll("_", " ")}`
+          : `ተገቢው እርምጃ ${action} ተፈጸመ`
+      setSuccessMessage(message)
+      await loadMetrics()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.")
+    } finally {
+      setLoading(false)
+      setActionInFlight(null)
+    }
+  }
+
+  const ActionButton = ({
+    action,
+    icon: Icon,
+    label,
+    variant = "outline",
+  }: {
+    action: string
+    icon: LucideIcon
+    label: string
+    variant?: "default" | "outline" | "destructive"
+  }) => (
+    <Button onClick={() => handleAction(action)} disabled={loading} variant={variant} className="justify-start gap-2">
+      {actionInFlight === action ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+      {label}
+    </Button>
+  )
 
   return (
     <div className="space-y-6">
@@ -35,10 +137,73 @@ const handleAction = async (action: string) => {
         </Alert>
       )}
       {successMessage && (
-        <Alert className="bg-green-100 border-green-400 text-green-700">
+        <Alert className="border-green-400 bg-green-100 text-green-700">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        {[
+          { key: "users", icon: Users, label: language === "en" ? "Users" : "ተጠቃሚዎች", tone: "text-blue-500" },
+          { key: "subscriptions", icon: ShieldCheck, label: language === "en" ? "Active plans" : "ንቁ እቅዶች", tone: "text-emerald-500" },
+          { key: "pendingListings", icon: PackageCheck, label: language === "en" ? "Pending listings" : "በግምገማ ያሉ", tone: "text-amber-500" },
+          { key: "inquiries", icon: AlertTriangle, label: language === "en" ? "Unread inquiries" : "ያልተነበቡ", tone: "text-rose-500" },
+        ].map((item) => (
+          <Card key={item.key}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="rounded-lg bg-muted p-3">
+                  <item.icon className={`h-5 w-5 ${item.tone}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{item.label}</p>
+                  <p className="text-2xl font-bold">
+                    {metricsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : metrics[item.key as AdminMetricKey]}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>{language === "en" ? "Operations Overview" : "የኦፕሬሽን ግምገማ"}</CardTitle>
+            <CardDescription>
+              {language === "en" ? "Live counts for content, payments, users, and moderation queues" : "የይዘት፣ ክፍያ፣ ተጠቃሚ እና ግምገማ ቀጥታ ቁጥሮች"}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={operationalHealth === "attention" ? "destructive" : "outline"}>
+              {operationalHealth === "attention"
+                ? language === "en" ? "Needs review" : "ግምገማ ያስፈልጋል"
+                : operationalHealth === "healthy"
+                  ? language === "en" ? "Healthy" : "ጤናማ"
+                  : language === "en" ? "Warming up" : "በመነሳት ላይ"}
+            </Badge>
+            <Button variant="outline" size="sm" onClick={loadMetrics} disabled={metricsLoading} className="gap-2">
+              <RefreshCw className={`h-4 w-4 ${metricsLoading ? "animate-spin" : ""}`} />
+              {language === "en" ? "Refresh" : "አድስ"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {[
+            { label: language === "en" ? "Blogs" : "ብሎጎች", value: metrics.blogs, icon: Newspaper },
+            { label: language === "en" ? "Ads" : "ማስታወቂያ", value: metrics.ads, icon: Megaphone },
+            { label: language === "en" ? "Professionals" : "ባለሙያዎች", value: metrics.professionals, icon: UserCheck },
+            { label: language === "en" ? "Payments" : "ክፍያዎች", value: metrics.payments, icon: DollarSign },
+          ].map(({ label, value, icon: Icon }) => (
+            <div key={label} className="rounded-lg border border-border/60 p-4">
+              <Icon className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">{label}</p>
+              <p className="text-2xl font-bold">{value}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -48,18 +213,9 @@ const handleAction = async (action: string) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Button onClick={() => handleAction("manage_blogs")} disabled={loading}>
-            <Edit className="mr-2 h-4 w-4" />
-            {language === "en" ? "Manage Blogs" : "ብሎጎችን አስተዳድር"}
-          </Button>
-          <Button onClick={() => handleAction("manage_tips")} disabled={loading}>
-            <Edit className="mr-2 h-4 w-4" />
-            {language === "en" ? "Manage Tips" : "ምክሮችን አስተዳድር"}
-          </Button>
-          <Button onClick={() => handleAction("manage_ads")} disabled={loading}>
-            <Edit className="mr-2 h-4 w-4" />
-            {language === "en" ? "Manage Ads" : "ማስታወቂያዎችን አስተዳድር"}
-          </Button>
+          <ActionButton action="manage_blogs" icon={Edit} label={language === "en" ? "Manage Blogs" : "ብሎጎችን አስተዳድር"} />
+          <ActionButton action="manage_tips" icon={Edit} label={language === "en" ? "Manage Tips" : "ምክሮችን አስተዳድር"} />
+          <ActionButton action="manage_ads" icon={Edit} label={language === "en" ? "Manage Ads" : "ማስታወቂያዎችን አስተዳድር"} />
         </CardContent>
       </Card>
 
@@ -71,18 +227,9 @@ const handleAction = async (action: string) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Button onClick={() => handleAction("moderate_listings")} disabled={loading}>
-            <Eye className="mr-2 h-4 w-4" />
-            {language === "en" ? "Moderate Listings" : "ዝርዝሮችን አጣራ"}
-          </Button>
-          <Button onClick={() => handleAction("verify_professionals")} disabled={loading}>
-            <ShieldCheck className="mr-2 h-4 w-4" />
-            {language === "en" ? "Verify Professionals" : "ባለሙያዎችን አረጋግጥ"}
-          </Button>
-          <Button onClick={() => handleAction("ban_users")} disabled={loading}>
-            <Ban className="mr-2 h-4 w-4" />
-            {language === "en" ? "Ban/Suspend Users" : "ተጠቃሚዎችን አግድ/አስቁም"}
-          </Button>
+          <ActionButton action="moderate_listings" icon={Eye} label={language === "en" ? "Moderate Listings" : "ዝርዝሮችን አጣራ"} variant={metrics.pendingListings > 0 ? "default" : "outline"} />
+          <ActionButton action="verify_professionals" icon={ShieldCheck} label={language === "en" ? "Verify Professionals" : "ባለሙያዎችን አረጋግጥ"} />
+          <ActionButton action="ban_users" icon={Ban} label={language === "en" ? "Ban/Suspend Users" : "ተጠቃሚዎችን አግድ/አስቁም"} variant="destructive" />
         </CardContent>
       </Card>
 
@@ -94,18 +241,9 @@ const handleAction = async (action: string) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Button onClick={() => handleAction("manage_users")} disabled={loading}>
-            <Users className="mr-2 h-4 w-4" />
-            {language === "en" ? "Manage Users" : "ተጠቃሚዎችን አስተዳድር"}
-          </Button>
-          <Button onClick={() => handleAction("view_analytics")} disabled={loading}>
-            <TrendingUp className="mr-2 h-4 w-4" />
-            {language === "en" ? "View Analytics" : "ትንታኔዎችን እይ"}
-          </Button>
-          <Button onClick={() => handleAction("manage_payments")} disabled={loading}>
-            <DollarSign className="mr-2 h-4 w-4" />
-            {language === "en" ? "Manage Payments" : "ክፍያዎችን አስተዳድር"}
-          </Button>
+          <ActionButton action="manage_users" icon={Users} label={language === "en" ? "Manage Users" : "ተጠቃሚዎችን አስተዳድር"} />
+          <ActionButton action="view_analytics" icon={TrendingUp} label={language === "en" ? "View Analytics" : "ትንታኔዎችን እይ"} />
+          <ActionButton action="manage_payments" icon={DollarSign} label={language === "en" ? "Manage Payments" : "ክፍያዎችን አስተዳድር"} />
         </CardContent>
       </Card>
     </div>

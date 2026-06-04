@@ -65,6 +65,16 @@ export function useUserProfile() {
         }
 
         const normalizedProfile = async (): Promise<UserProfile | null> => {
+          const { data: linkedProfile, error: linkedProfileError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("auth_uid", user.id)
+            .maybeSingle()
+
+          if (!linkedProfileError && linkedProfile) {
+            return linkedProfile as UserProfile
+          }
+
           try {
             const { data, error: fetchError } = await supabase.rpc("ensure_auth_user_profile")
             if (fetchError) {
@@ -79,8 +89,8 @@ export function useUserProfile() {
             const { data: manualProfile, error: selectError } = await supabase
               .from("users")
               .select("*")
-              .eq("auth_uid", user.id)
-              .single()
+              .eq("email", user.email || "")
+              .maybeSingle()
 
             if (!selectError && manualProfile) {
               return manualProfile as UserProfile

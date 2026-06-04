@@ -31,7 +31,8 @@ serve(async (req) => {
       .from("payment_webhook_events")
       .insert({
         gateway: "telebirr",
-        external_id: body.msisdn || body.transactionId || "unknown",
+        event_type: body.status || body.code || "payment.notification",
+        reference: body.outTradeNo || body.reference || body.transactionId || "unknown",
         payload: body,
         status: "received",
       })
@@ -50,7 +51,6 @@ serve(async (req) => {
       const { data, error: rpcError } = await supabase.rpc("activate_subscription", {
         p_gateway: "telebirr",
         p_reference: reference,
-        p_external_id: body.transactionId || body.msisdn,
       })
 
       if (rpcError) {

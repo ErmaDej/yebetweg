@@ -226,6 +226,7 @@ serve(async (req) => {
         success: true,
         prepayId: telebirrData.data.prepayId,
         reference: telebirrData.data.reference,
+        toPayUrl: telebirrData.data.codeUrl,
         qrCode: telebirrData.data.qrCode || telebirrData.data.codeUrl,
         codeUrl: telebirrData.data.codeUrl,
       }),
