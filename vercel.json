@@ -3,16 +3,12 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
-  "env": [
-    {
-      "key": "VITE_SUPABASE_URL",
-      "description": "Supabase project URL (e.g., https://your-project.supabase.co)",
-      "value": ""
+  "env": {
+    "VITE_SUPABASE_URL": {
+      "description": "Supabase project URL (e.g., https://your-project.supabase.co)"
     },
-    {
-      "key": "VITE_SUPABASE_ANON_KEY",
-      "description": "Supabase anonymous/public API key for client-side usage",
-      "value": ""
+    "VITE_SUPABASE_ANON_KEY": {
+      "description": "Supabase anonymous/public API key for client-side usage"
     }
-  ]
+  }
 }
