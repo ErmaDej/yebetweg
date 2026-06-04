@@ -17,7 +17,7 @@ const handleAction = async (action: string) => {
   setError(null);
   setSuccessMessage(null);
   try {
-    const result = await callAdminAction(action);
+    await callAdminAction(action);
     const message = language === "en" ? `Successfully performed ${action.replace("_", " ")}` : `ተገቢው እርምጃ ${action} ተፈጸመ`;
     setSuccessMessage(message);
   } catch (err: any) {

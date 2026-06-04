@@ -394,6 +394,8 @@ Currently: Solo development with AI assistance
 8. **Set up CI/CD** for automated testing
 9. **Scale infrastructure** as user base grows
 
+10. **Remark:** Payment UI components and flows were enhanced in the frontend for a smoother user experience; the low-level gateway deployments and secrets remain deferred and should be completed when ready to enable sandbox/test modes.
+
 ---
 
 **Questions?** See [Ref/PROJECT_CONTEXT.md](Ref/PROJECT_CONTEXT.md) for architecture details or [USER_MANUAL.md](USER_MANUAL.md) for feature descriptions.

@@ -79,7 +79,7 @@ export function usePayment() {
       tier: PremiumTier,
       method: PaymentMethod,
       phoneNumber?: string,
-    ): Promise<{ success: boolean; redirectUrl?: string; error?: string }> => {
+    ): Promise<{ success: boolean; redirectUrl?: string; toPayUrl?: string; qrCode?: string; reference?: string; error?: string }> => {
       if (!user) {
         return { success: false, error: "User not authenticated" }
       }
@@ -186,10 +186,12 @@ export function usePayment() {
             amount,
           })
 
+          // Return TeleBirr specific data (qrCode / toPayUrl / outTradeNo)
           return {
             success: true,
-            redirectUrl: returnUrl,
-            error: undefined,
+            toPayUrl: result.toPayUrl,
+            qrCode: result.qrCode,
+            reference: result.outTradeNo,
           }
         }
 

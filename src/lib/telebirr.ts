@@ -2,8 +2,6 @@ const TELEBIRR_API_KEY = import.meta.env.VITE_TELEBIRR_API_KEY
 const TELEBIRR_MERCHANT_APP_ID = import.meta.env.VITE_TELEBIRR_MERCHANT_APP_ID
 const TELEBIRR_FABRIC_APP_ID = import.meta.env.VITE_TELEBIRR_FABRIC_APP_ID
 const TELEBIRR_SHORT_CODE = import.meta.env.VITE_TELEBIRR_SHORT_CODE
-const TELEBIRR_APP_SECRET = import.meta.env.VITE_TELEBIRR_APP_SECRET
-import * as CryptoJS from "crypto-js"
 
 const TELEBIRR_BASE_URL = "https://api.telebirr.com/v1"
 
@@ -20,9 +18,6 @@ function validateTeleBirrConfig(): string | null {
   }
   if (!TELEBIRR_SHORT_CODE) {
     return "VITE_TELEBIRR_SHORT_CODE is not configured"
-  }
-  if (!TELEBIRR_APP_SECRET) {
-    return "VITE_TELEBIRR_APP_SECRET is not configured"
   }
   return null
 }

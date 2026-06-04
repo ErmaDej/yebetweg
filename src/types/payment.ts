@@ -40,6 +40,15 @@ export interface CreateSubscriptionParams {
   amount: number
 }
 
+export interface InitiatePaymentResult {
+  success: boolean
+  redirectUrl?: string
+  toPayUrl?: string
+  qrCode?: string
+  reference?: string
+  error?: string
+}
+
 export interface PaymentHookResult {
   loading: boolean
   error: string | null
@@ -47,5 +56,5 @@ export interface PaymentHookResult {
     tier: PremiumTier,
     method: PaymentMethod,
     phoneNumber?: string,
-  ) => Promise<void>
+  ) => Promise<InitiatePaymentResult>
 }
