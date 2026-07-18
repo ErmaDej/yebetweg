@@ -49,6 +49,14 @@ This directory centralizes the YeBetWeg documentation and provides quick access 
   - Image asset inventory and optimization notes
   - Media source details and usage
 
+- `Ref/MVP_DEFINITION.md`
+  - MVP scope, exit criteria, and gap analysis
+  - Clear boundaries for what ships now vs. post-launch
+
+- `Ref/PAYMENT_INTEGRATION_GUIDE.md`
+  - Step-by-step guide for Chapa and TeleBirr payment integration
+  - Architecture, file references, API endpoints, database schema, testing
+
 ## Recommended Use
 
 - Use `Ref/PROJECT_CONTEXT.md` as the single source of truth.
