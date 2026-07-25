@@ -51,11 +51,11 @@ serve(async (req) => {
   try {
     console.log("[TeleBirr Service] Processing payment request")
 
-    // Get environment variables
-    const apiKey = Deno.env.get("VITE_TELEBIRR_API_KEY")
-    const merchantAppId = Deno.env.get("VITE_TELEBIRR_MERCHANT_APP_ID")
-    const fabricAppId = Deno.env.get("VITE_TELEBIRR_FABRIC_APP_ID")
-    const shortCode = Deno.env.get("VITE_TELEBIRR_SHORT_CODE")
+    // Get environment variables (support both server-side and VITE-prefixed names)
+    const apiKey = Deno.env.get("TELEBIRR_API_KEY") || Deno.env.get("VITE_TELEBIRR_API_KEY")
+    const merchantAppId = Deno.env.get("TELEBIRR_MERCHANT_APP_ID") || Deno.env.get("VITE_TELEBIRR_MERCHANT_APP_ID")
+    const fabricAppId = Deno.env.get("TELEBIRR_FABRIC_APP_ID") || Deno.env.get("VITE_TELEBIRR_FABRIC_APP_ID")
+    const shortCode = Deno.env.get("TELEBIRR_SHORT_CODE") || Deno.env.get("VITE_TELEBIRR_SHORT_CODE")
 
     // Validate environment variables
     if (!apiKey || !merchantAppId || !fabricAppId || !shortCode) {
