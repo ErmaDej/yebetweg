@@ -436,8 +436,9 @@ Built with:
 
 **Platform**: YeBetWeg - የቤት-ወግ  
 **Version**: 1.0.0  
-**Status**: Production Ready ✅  
-**Last Updated**: May 8, 2026
+**Status**: MVP Released ✅  
+**Live URL**: https://yebetweg.vercel.app  
+**Last Updated**: July 18, 2026
 
 ---
 

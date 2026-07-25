@@ -136,13 +136,22 @@ The following documents are the primary references for YeBetWeg:
 - `package.json` defines scripts: `dev`, `build`, `typecheck`, `preview`
 - `tsconfig.json` and `vite.config.ts` define build settings
 
-## Notes for Future Work
+## MVP Status (July 2026)
 
-- Expand marketplace listing submission workflow
-- Add user authentication beyond anonymous Supabase access
-- Create image upload support for listings and profiles
-- Implement historical market price charts
-- Add admin dashboard for content moderation
+The project is in **MVP Phase** — frontend features are ~95% complete. The critical path to shipping is deploying backend edge functions, setting secrets, and launching.
+
+See [Ref/MVP_DEFINITION.md](./MVP_DEFINITION.md) for full scope, exit criteria, and gap analysis.
+
+## Notes for Future Work (Post-MVP)
+
+- Deploy remaining edge functions and configure secrets (blocking launch)
+- Implement real DB queries in `admin_actions` edge function (currently a stub)
+- Image upload for listings and profiles via Supabase Storage
+- Email notification system for inquiries
+- Favorites / wishlist functionality
+- Social logins (Google, Facebook)
+- Historical market price charts
+- Professional booking / appointment calendar
 
 ---
 
