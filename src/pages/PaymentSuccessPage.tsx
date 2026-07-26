@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useLanguage } from "@/lib/i18n"
 import { useAuthContext } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
+import { verifyChapaPayment } from "@/lib/chapa"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 
 export function PaymentSuccessPage() {
@@ -26,58 +27,67 @@ export function PaymentSuccessPage() {
       }
 
       try {
-        const { data: subscription, error } = await supabase
+        const { data: chapaSubscription, error } = await supabase
           .from("premium_subscriptions")
-          .select("*")
+          .select("id")
           .eq("chapa_reference", reference)
           .single()
 
-        if (error || !subscription) {
-          const { data: telebirrSub } = await supabase
-            .from("premium_subscriptions")
-            .select("*")
-            .eq("telebirr_reference", reference)
-            .single()
+        if (chapaSubscription && !error) {
+          const result = await verifyChapaPayment(reference)
 
-          if (telebirrSub) {
-            await supabase
-              .from("premium_subscriptions")
-              .update({
-                is_active: true,
-                status: "active",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", telebirrSub.id)
-
-            setStatus("success")
-            setMessage(
-              language === "am"
-                ? "ክፍያዎ በተሳካይ ተጠናቅል"
-                : "Payment completed successfully"
-            )
-            return
+          if (!result.success || result.status?.toLowerCase() !== "success") {
+            throw new Error(result.error || "Chapa payment could not be verified")
           }
 
-          throw new Error("Subscription not found")
+          const { error: updateError } = await supabase
+            .from("premium_subscriptions")
+            .update({
+              is_active: true,
+              status: "active",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", chapaSubscription.id)
+
+          if (updateError) {
+            throw updateError
+          }
+
+          setStatus("success")
+          setMessage(
+            language === "am"
+              ? "ክፍያዎ በተሳካይ ተጠናቅል"
+              : "Payment completed successfully"
+          )
+          return
         }
 
-        const updateData: Record<string, unknown> = {
-          is_active: true,
-          status: "active",
-          updated_at: new Date().toISOString(),
-        }
-
-        await supabase
+        const { data: telebirrSub } = await supabase
           .from("premium_subscriptions")
-          .update(updateData)
-          .eq("id", subscription.id)
+          .select("*")
+          .eq("telebirr_reference", reference)
+          .single()
 
-        setStatus("success")
-        setMessage(
-          language === "am"
-            ? "ክፍያዎ በተሳካይ ተጠናቅል"
-            : "Payment completed successfully"
-        )
+        if (telebirrSub) {
+          await supabase
+            .from("premium_subscriptions")
+            .update({
+              is_active: true,
+              status: "active",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", telebirrSub.id)
+
+          setStatus("success")
+          setMessage(
+            language === "am"
+              ? "ክፍያዎ በተሳካይ ተጠናቅል"
+              : "Payment completed successfully"
+          )
+          return
+        }
+
+        throw new Error("Subscription not found")
       } catch (err) {
         setStatus("failed")
         setMessage(

@@ -1,5 +1,6 @@
-const CHAPA_SECRET_KEY = import.meta.env.VITE_CHAPA_SECRET_KEY
-const CHAPA_BASE_URL = "https://api.chapa.co/v1"
+import { supabase } from "@/lib/supabase"
+
+const SERVICE_PATH = "/functions/v1/chapa-service"
 
 export interface ChapaInitializeResponse {
   status: "success" | "failed"
@@ -60,52 +61,56 @@ export interface VerifyPaymentResult {
   error?: string
 }
 
+function getServiceUrl(): string | null {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  if (!supabaseUrl) return null
+  return `${supabaseUrl.replace(/\/$/, "")}${SERVICE_PATH}`
+}
+
+function getHeaders(sessionToken?: string): Record<string, string> {
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  return {
+    "Content-Type": "application/json",
+    apikey: supabaseAnonKey || "",
+    Authorization: `Bearer ${sessionToken || supabaseAnonKey || ""}`,
+  }
+}
+
 export async function initializeChapaPayment(
   params: InitializePaymentParams,
 ): Promise<InitializePaymentResult> {
   try {
-    const response = await fetch(`${CHAPA_BASE_URL}/initialize`, {
+    const serviceUrl = getServiceUrl()
+    if (!serviceUrl) {
+      return {
+        success: false,
+        error: "Payment service is not configured",
+      }
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    const response = await fetch(serviceUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
-      },
-      body: JSON.stringify({
-        amount: params.amount,
-        currency: "ETB",
-        email: params.email,
-        first_name: params.first_name,
-        last_name: params.last_name,
-        tx_ref: params.tx_ref,
-        callback_url: params.callback_url,
-        return_url: params.return_url,
-        customization: params.customization || {
-          title: "YeBetWeg Premium Subscription",
-          description: "Payment for YeBetWeg premium membership",
-        },
-      }),
+      headers: getHeaders(session?.access_token),
+      body: JSON.stringify(params),
     })
 
     const data = await response.json()
 
-    if (!response.ok) {
+    if (!response.ok || !data.success) {
       return {
         success: false,
         error: data.message || "Failed to initialize payment",
       }
     }
 
-    if (data.status === "success") {
-      return {
-        success: true,
-        checkoutUrl: data.data.checkout_url,
-        reference: data.data.reference,
-      }
-    }
-
     return {
-      success: false,
-      error: data.message || "Payment initialization failed",
+      success: true,
+      checkoutUrl: data.checkoutUrl || data.data?.checkout_url,
+      reference: data.reference || data.data?.reference,
     }
   } catch (error) {
     return {
@@ -119,37 +124,36 @@ export async function verifyChapaPayment(
   tx_ref: string,
 ): Promise<VerifyPaymentResult> {
   try {
-    const response = await fetch(
-      `${CHAPA_BASE_URL}/transaction/verify/${tx_ref}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
-        },
-      },
-    )
+    const serviceUrl = getServiceUrl()
+    if (!serviceUrl) {
+      return {
+        success: false,
+        error: "Payment service is not configured",
+      }
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    const response = await fetch(`${serviceUrl}?tx_ref=${encodeURIComponent(tx_ref)}`, {
+      method: "GET",
+      headers: getHeaders(session?.access_token),
+    })
 
     const data = await response.json()
 
-    if (!response.ok) {
+    if (!response.ok || !data.success) {
       return {
         success: false,
         error: data.message || "Failed to verify payment",
       }
     }
 
-    if (data.status === "success") {
-      return {
-        success: true,
-        status: data.data.status,
-        data: data.data,
-      }
-    }
-
     return {
-      success: false,
-      error: data.message || "Payment verification failed",
+      success: true,
+      status: data.status || data.data?.status,
+      data: data.data,
     }
   } catch (error) {
     return {

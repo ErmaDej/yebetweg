@@ -5,8 +5,6 @@ const TELEBIRR_MERCHANT_APP_ID = import.meta.env.VITE_TELEBIRR_MERCHANT_APP_ID
 const TELEBIRR_FABRIC_APP_ID = import.meta.env.VITE_TELEBIRR_FABRIC_APP_ID
 const TELEBIRR_SHORT_CODE = import.meta.env.VITE_TELEBIRR_SHORT_CODE
 
-const TELEBIRR_BASE_URL = "https://api.telebirr.com/v1"
-
 // Validate required environment variables
 function validateTeleBirrConfig(): string | null {
   if (!TELEBIRR_API_KEY) {
@@ -221,97 +219,49 @@ export async function queryTeleBirrPayment(
   reference: string,
 ): Promise<QueryTeleBirrResult> {
   try {
-    // Validate configuration
-    const configError = validateTeleBirrConfig()
-    if (configError) {
-      console.error(`[TeleBirr] Configuration error: ${configError}`)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey || !reference) {
       return {
         success: false,
-        error: "Payment service is not properly configured",
+        error: "Payment service is not configured",
       }
     }
 
-    if (!reference) {
-      return {
-        success: false,
-        error: "Reference is required to query payment status",
-      }
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    console.debug("[TeleBirr] Querying payment status:", { reference })
+    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/telebirr-service?reference=${encodeURIComponent(reference)}`
 
-    const authHeader = TELEBIRR_API_KEY?.startsWith("Bearer ")
-      ? TELEBIRR_API_KEY
-      : `Bearer ${TELEBIRR_API_KEY}`
-
-    const response = await fetch(
-      `${TELEBIRR_BASE_URL}/payment/query?outTradeNo=${encodeURIComponent(reference)}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
+    const response = await fetch(serviceUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
       },
-    )
-
-    const data: TeleBirrQueryResult = await response.json()
-
-    console.debug("[TeleBirr] Query response received:", {
-      code: data.code,
-      msg: data.msg,
-      status: data.data?.status,
     })
 
-    if (!response.ok) {
-      console.error("[TeleBirr] Query HTTP error:", {
-        status: response.status,
-        message: data.msg,
-      })
+    const data = await response.json()
+
+    if (!response.ok || !data.success) {
       return {
         success: false,
-        error: data.msg || `HTTP ${response.status}: Failed to query payment`,
+        error: data.error || "Failed to query payment status",
       }
     }
-
-    if (data.code !== "0000") {
-      console.error("[TeleBirr] Query API error:", {
-        code: data.code,
-        message: data.msg,
-      })
-      return {
-        success: false,
-        error: data.msg || `Error code ${data.code}: Failed to query payment status`,
-      }
-    }
-
-    if (!data.data) {
-      console.warn("[TeleBirr] Query returned no data:", { reference })
-      return {
-        success: false,
-        error: "Invalid response from TeleBirr: missing payment data",
-      }
-    }
-
-    console.info("[TeleBirr] Payment status queried successfully:", {
-      reference,
-      status: data.data.status,
-    })
 
     return {
       success: true,
-      status: data.data.status,
+      status: data.status,
       data: data.data,
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error"
-    console.error("[TeleBirr] Query error:", errorMessage)
     return {
       success: false,
-      error:
-        error instanceof Error
-          ? `Network error: ${error.message}`
-          : "Network error occurred while querying payment status",
+      error: error instanceof Error ? error.message : "Network error",
     }
   }
 }
