@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { TrendingUp, TrendingDown, Lock, CircleAlert as AlertCircle, MapPin, Send, ShieldCheck } from "lucide-react"
+import { useState, useMemo } from "react"
+import { TrendingUp, TrendingDown, Lock, CircleAlert as AlertCircle, MapPin, Send, ShieldCheck, SearchX } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table"
 import { useLanguage } from "@/lib/i18n"
 import { useMarketPrices, type MarketPrice } from "@/hooks/useMarketPrices"
+import { useSmartSearch } from "@/hooks/useSmartSearch"
+import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { navigateTo } from "@/lib/navigation"
 import type { PremiumTier } from "@/types/payment"
@@ -74,11 +76,60 @@ function getFreshnessVariant(status?: string) {
 export function MarketPricesSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
-  const { prices, loading } = useMarketPrices(category)
+  const { prices, loading: fetchLoading } = useMarketPrices(category)
   const { ref, isInView } = useInView()
   const canReadPremium = activePlan === "premium" || activePlan === "pro"
   const trustText = sourceLabels[language]
   const [selectedRfqPrice, setSelectedRfqPrice] = useState<MarketPrice | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Client-side smart search & filter
+  const smartSearch = useSmartSearch<MarketPrice>({
+    data: prices,
+    initialPageSize: 50,
+    defaultSortField: "price",
+    searchableFields: ["material_en", "material_am", "specification", "city", "source_name"],
+  })
+
+  const searchablePrices = smartSearch.items
+  const totalFiltered = smartSearch.totalCount
+
+  // Build filter chips from active filters
+  const activeFilterChips = useMemo(() => {
+    const chips: { key: string; label: string; value: string; onRemove: () => void }[] = []
+    const vals = smartSearch.state.filters
+
+    if (vals.source_type && vals.source_type !== "all") {
+      const srcLabel = trustText[vals.source_type as keyof typeof trustText] || vals.source_type
+      chips.push({
+        key: "source_type",
+        label: language === "en" ? "Source" : "ምንጭ",
+        value: srcLabel,
+        onRemove: () => smartSearch.setFilter("source_type", undefined),
+      })
+    }
+    if (vals.freshness_status && vals.freshness_status !== "all") {
+      const freshLabel = trustText[vals.freshness_status as keyof typeof trustText] || vals.freshness_status
+      chips.push({
+        key: "freshness_status",
+        label: language === "en" ? "Status" : "ሁኔታ",
+        value: freshLabel,
+        onRemove: () => smartSearch.setFilter("freshness_status", undefined),
+      })
+    }
+    if (vals.city) {
+      chips.push({
+        key: "city",
+        label: language === "en" ? "City" : "ከተማ",
+        value: vals.city,
+        onRemove: () => smartSearch.setFilter("city", undefined),
+      })
+    }
+
+    return chips
+  }, [smartSearch.state.filters, smartSearch.setFilter, language, trustText])
+
+  const loading = fetchLoading || smartSearch.loading
 
   return (
     <section id="market" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -88,11 +139,12 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">{t("market.subtitle")}</p>
         </div>
 
+        {/* Category Toggle */}
         <ToggleGroup
           type="single"
           value={category}
           onValueChange={(v) => v && setCategory(v)}
-          className="flex flex-wrap justify-center gap-2 mb-8"
+          className="flex flex-wrap justify-center gap-2 mb-6"
         >
           {priceCategories.map((cat) => (
             <ToggleGroupItem
@@ -104,6 +156,119 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+
+        {/* Smart Search Bar */}
+        <div className="mb-6">
+          <SmartSearchBar
+            query={smartSearch.state.query}
+            onQueryChange={smartSearch.setQuery}
+            chips={activeFilterChips}
+            onToggleFilters={() => setFiltersOpen(!filtersOpen)}
+            filtersOpen={filtersOpen}
+            totalCount={totalFiltered}
+            placeholder={language === "en" ? "Search materials, city, source..." : "ቁሶች፣ ከተማ፣ ምንጭ ይፈልጉ..."}
+            compact
+          />
+        </div>
+
+        {/* Filter Panel (collapsible) */}
+        {filtersOpen && (
+          <Card className="mb-6 border-border/50">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Source Type Filter */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {language === "en" ? "Source Type" : "የምንጭ አይነት"}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["admin_verified", "supplier_quoted", "community_reported", "telegram_observed"].map((src) => {
+                      const isActive = smartSearch.state.filters.source_type === src
+                      return (
+                        <Badge
+                          key={src}
+                          variant={isActive ? "default" : "outline"}
+                          className="cursor-pointer text-xs"
+                          onClick={() =>
+                            smartSearch.setFilter(
+                              "source_type",
+                              isActive ? undefined : src,
+                            )
+                          }
+                        >
+                          {trustText[src as keyof typeof trustText]}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Freshness Status Filter */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {language === "en" ? "Status" : "ሁኔታ"}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["verified", "supplier_quoted", "expired", "needs_confirmation"].map((status) => {
+                      const isActive = smartSearch.state.filters.freshness_status === status
+                      return (
+                        <Badge
+                          key={status}
+                          variant={isActive ? "default" : "outline"}
+                          className="cursor-pointer text-xs"
+                          onClick={() =>
+                            smartSearch.setFilter(
+                              "freshness_status",
+                              isActive ? undefined : status,
+                            )
+                          }
+                        >
+                          {trustText[status as keyof typeof trustText]}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* City Filter */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {language === "en" ? "City" : "ከተማ"}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {smartSearch.getFacets("city").slice(0, 8).map((city) => {
+                      const isActive = smartSearch.state.filters.city === city
+                      return (
+                        <Badge
+                          key={city}
+                          variant={isActive ? "default" : "outline"}
+                          className="cursor-pointer text-xs"
+                          onClick={() =>
+                            smartSearch.setFilter(
+                              "city",
+                              isActive ? undefined : city,
+                            )
+                          }
+                        >
+                          {city}
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Clear filters */}
+              {Object.keys(smartSearch.state.filters).length > 0 && (
+                <div className="mt-4 flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={() => smartSearch.clearFilters(true)} className="text-xs">
+                    {language === "en" ? "Clear filters" : "ማጣሪያዎች አጽዳ"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="overflow-hidden border-border/50">
           <CardHeader className="pb-3">
@@ -123,6 +288,18 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                   <Skeleton key={i} className="h-10 w-full" />
                 ))}
               </div>
+            ) : searchablePrices.length === 0 ? (
+              <div className="p-12 text-center">
+                <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {language === "en" ? "No matching prices" : "ምንም የሚዛመድ ዋጋ የለም"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === "en"
+                    ? "Try adjusting your search or filters"
+                    : "እባክዎ ፍለጋዎን ወይም ማጣሪያዎን ያስተካክሉ"}
+                </p>
+              </div>
             ) : (
               <div className="relative overflow-x-auto">
                 <Table>
@@ -137,7 +314,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {prices.map((price, i) => {
+                    {searchablePrices.map((price, i) => {
                       const isLocked = !canReadPremium && i >= FREE_ROWS
                       return (
                         <TableRow

@@ -11,13 +11,27 @@ import { useLanguage } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 import type { MarketPrice } from "@/hooks/useMarketPrices"
 
+export type RfqSourceType = "market_price" | "listing" | "professional" | "boq_estimate" | "manual"
+
+export type RfqContext = {
+  sourceType: RfqSourceType
+  sourceId?: string | null
+  itemName: string
+  specification?: string
+  unit?: string
+  targetPrice?: number | null
+  city?: string
+  projectType?: string
+}
+
 type RfqModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   marketPrice?: MarketPrice | null
+  rfqContext?: RfqContext | null
 }
 
-export function RfqModal({ open, onOpenChange, marketPrice }: RfqModalProps) {
+export function RfqModal({ open, onOpenChange, marketPrice, rfqContext }: RfqModalProps) {
   const { language } = useLanguage()
   const { user } = useAuthContext()
   const [name, setName] = useState("")
@@ -29,17 +43,24 @@ export function RfqModal({ open, onOpenChange, marketPrice }: RfqModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    if (open && user?.email) setEmail(user.email)
-  }, [open, user?.email])
-
-  const materialName = marketPrice
+  // Determine effective context from either marketPrice or rfqContext
+  const effectiveSourceType: RfqSourceType = marketPrice
+    ? "market_price"
+    : rfqContext?.sourceType || "manual"
+  const effectiveSourceId = marketPrice?.id || rfqContext?.sourceId || null
+  const effectiveItemName = marketPrice
     ? language === "am"
       ? marketPrice.material_am
       : marketPrice.material_en
-    : language === "en"
-      ? "Selected material"
-      : "የተመረጠ ቁሳቁስ"
+    : rfqContext?.itemName || (language === "en" ? "Selected item" : "የተመረጠ እቃ")
+  const effectiveSpec = marketPrice?.specification || rfqContext?.specification || ""
+  const effectiveUnit = marketPrice?.unit || rfqContext?.unit || ""
+  const effectivePrice = marketPrice?.price || rfqContext?.targetPrice || null
+  const effectiveCity = marketPrice?.city || rfqContext?.city || "Addis Ababa"
+
+  useEffect(() => {
+    if (open && user?.email) setEmail(user.email)
+  }, [open, user?.email])
 
   const handleClose = () => {
     onOpenChange(false)
@@ -58,16 +79,16 @@ export function RfqModal({ open, onOpenChange, marketPrice }: RfqModalProps) {
         p_requester_name: name,
         p_requester_email: email,
         p_requester_phone: phone,
-        p_city: marketPrice?.city || "Addis Ababa",
-        p_project_type: "",
+        p_city: effectiveCity,
+        p_project_type: rfqContext?.projectType || "",
         p_message: message,
-        p_source_type: marketPrice ? "market_price" : "manual",
-        p_source_id: marketPrice?.id || null,
-        p_material_name: materialName,
-        p_specification: marketPrice?.specification || "",
-        p_unit: marketPrice?.unit || "",
+        p_source_type: effectiveSourceType,
+        p_source_id: effectiveSourceId,
+        p_material_name: effectiveItemName,
+        p_specification: effectiveSpec,
+        p_unit: effectiveUnit,
         p_quantity: quantity ? Number(quantity) : null,
-        p_target_price: marketPrice?.price || null,
+        p_target_price: effectivePrice,
       })
 
       if (submitError) throw submitError
@@ -94,6 +115,17 @@ export function RfqModal({ open, onOpenChange, marketPrice }: RfqModalProps) {
     }
   }
 
+  const sourceLabel =
+    effectiveSourceType === "market_price"
+      ? language === "en" ? "material price" : "የቁሳቁስ ዋጋ"
+      : effectiveSourceType === "listing"
+        ? language === "en" ? "marketplace listing" : "የገበያ ዝርዝር"
+        : effectiveSourceType === "professional"
+          ? language === "en" ? "professional service" : "የባለሙያ አገልግሎት"
+          : effectiveSourceType === "boq_estimate"
+            ? language === "en" ? "BOQ estimate" : "የBOQ ግምት"
+            : language === "en" ? "item" : "እቃ"
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -103,8 +135,8 @@ export function RfqModal({ open, onOpenChange, marketPrice }: RfqModalProps) {
           </DialogTitle>
           <DialogDescription>
             {language === "en"
-              ? `Send an RFQ for ${materialName}. YBW can route this to verified suppliers as the supplier network grows.`
-              : `ለ ${materialName} የዋጋ ጥያቄ ይላኩ። YBW ይህንን ወደ የተረጋገጡ አቅራቢዎች ለማድረስ ይዘጋጃል።`}
+              ? `Send an RFQ for ${effectiveItemName} (from ${sourceLabel}). YBW can route this to verified suppliers as the supplier network grows.`
+              : `ለ ${effectiveItemName} (ከ${sourceLabel}) የዋጋ ጥያቄ ይላኩ። YBW ይህንን ወደ የተረጋገጡ አቅራቢዎች ለማድረስ ይዘጋጃል።`}
           </DialogDescription>
         </DialogHeader>
 
@@ -146,7 +178,7 @@ export function RfqModal({ open, onOpenChange, marketPrice }: RfqModalProps) {
                 min={0}
                 value={quantity}
                 onChange={(event) => setQuantity(event.target.value)}
-                placeholder={marketPrice?.unit || ""}
+                placeholder={effectiveUnit || (language === "en" ? "e.g. 100" : "ለምሳሌ 100")}
               />
             </div>
 

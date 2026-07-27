@@ -14,6 +14,10 @@
 - [x] Market price UI upgraded with trust, freshness, source, VAT, city, and RFQ action metadata.
 - [x] RFQ database workflow migration added.
 - [x] RFQ modal wired to market price quote requests.
+- [x] **RFQ modal upgraded to support generic sources** (listings, professionals, BOQ estimate).
+- [x] **RFQ button added to marketplace listing cards** with full context passing.
+- [x] **RFQ button added to professional profile cards** alongside existing Hire flow.
+- [x] **RFQ button wired to BOQ estimate summary** replacing placeholder #marketplace nav link.
 - [ ] New migrations applied to the target Supabase project.
 - [ ] Admin RFQ visibility and status management.
 - [ ] Verified supplier/professional trust card upgrade.

@@ -120,6 +120,31 @@ type TranslationKey =
   | "common.loading"
   | "common.etb"
   | "common.language"
+  // Smart Search & Filter
+  | "search.placeholder"
+  | "search.filters"
+  | "search.reset"
+  | "search.results"
+  | "search.noResults"
+  | "search.adjustTerms"
+  | "search.on"
+  | "search.off"
+  | "search.sortBy"
+  | "search.relevance"
+  | "search.recent"
+  | "search.popular"
+  | "search.priceLow"
+  | "search.priceHigh"
+  | "filter.category"
+  | "filter.priceRange"
+  | "filter.location"
+  | "filter.source"
+  | "filter.rating"
+  | "filter.experience"
+  | "filter.freshness"
+  | "filter.city"
+  | "filter.clear"
+  | "filter.all"
 
 const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -240,6 +265,30 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "common.loading": "Loading...",
     "common.etb": "ETB",
     "common.language": "አማ",
+    "search.placeholder": "Search... (⌘K)",
+    "search.filters": "Filters",
+    "search.reset": "Reset",
+    "search.results": "result(s)",
+    "search.noResults": "No Results",
+    "search.adjustTerms": "Try adjusting your search terms or filters",
+    "search.on": "On",
+    "search.off": "Off",
+    "search.sortBy": "Sort By",
+    "search.relevance": "Relevance",
+    "search.recent": "Recent",
+    "search.popular": "Popular",
+    "search.priceLow": "Price: Low to High",
+    "search.priceHigh": "Price: High to Low",
+    "filter.category": "Category",
+    "filter.priceRange": "Price Range",
+    "filter.location": "Location",
+    "filter.source": "Source",
+    "filter.rating": "Rating",
+    "filter.experience": "Experience",
+    "filter.freshness": "Freshness",
+    "filter.city": "City",
+    "filter.clear": "Clear All",
+    "filter.all": "All",
   },
   am: {
     "nav.knowledge": "ዕውቀት",
@@ -359,6 +408,30 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "common.loading": "እየጭነቀ ነው...",
     "common.etb": "ብር",
     "common.language": "EN",
+    "search.placeholder": "ይፈልጉ... (⌘K)",
+    "search.filters": "ማጣሪያዎች",
+    "search.reset": "አስጀምር",
+    "search.results": "ውጤት(ዎች)",
+    "search.noResults": "ምንም ውጤት የለም",
+    "search.adjustTerms": "የፍለጋ ቃላትዎን ወይም ማጣሪያዎን ይመለሱ",
+    "search.on": "በርቷል",
+    "search.off": "ጠፍቷል",
+    "search.sortBy": "አሳ ደርድር",
+    "search.relevance": "ተገቢነት",
+    "search.recent": "አዲስ",
+    "search.popular": "ታዋቂ",
+    "search.priceLow": "ዋጋ: ዝቅተኛ ወደ ከፍተኛ",
+    "search.priceHigh": "ዋጋ: ከፍተኛ ወደ ዝቅተኛ",
+    "filter.category": "ምድብ",
+    "filter.priceRange": "የዋጋ ክልል",
+    "filter.location": "ቦታ",
+    "filter.source": "ምንጭ",
+    "filter.rating": "ደረጃ",
+    "filter.experience": "ልምድ",
+    "filter.freshness": "አዲስነት",
+    "filter.city": "ከተማ",
+    "filter.clear": "ሁሉንም ሰርዝ",
+    "filter.all": "ሁሉም",
   },
 }
 

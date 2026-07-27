@@ -16,6 +16,7 @@ import {
 import { useInView } from "@/hooks/useInView"
 import { useLanguage } from "@/lib/i18n"
 import { navigateTo } from "@/lib/navigation"
+import { RfqModal, type RfqContext } from "./RfqModal"
 
 type ProjectType = "residential" | "apartment" | "commercial" | "renovation"
 type City = "addis_ababa" | "adama" | "hawassa" | "bahir_dar" | "mekelle" | "dire_dawa" | "outside_addis"
@@ -135,6 +136,7 @@ export function BoqLiteSection() {
   const [area, setArea] = useState(180)
   const [floors, setFloors] = useState(2)
   const [contingency, setContingency] = useState(10)
+  const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
 
   const estimate = useMemo(() => {
     const safeArea = Math.max(area || 0, 20)
@@ -306,7 +308,16 @@ export function BoqLiteSection() {
                   <FileText className="h-4 w-4" />
                   <span>{text.export}</span>
                 </Button>
-                <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigateTo("/#marketplace")}>
+                <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() =>
+                  setRfqContext({
+                    sourceType: "boq_estimate",
+                    itemName: `${text[projectType]} - ${text[city]}`,
+                    specification: text[finishLevel],
+                    targetPrice: estimate.total,
+                    city: labels[language][city] || "Addis Ababa",
+                    projectType: projectType,
+                  })
+                }>
                   <Send className="h-4 w-4" />
                   <span>{text.rfq}</span>
                 </Button>
@@ -319,6 +330,13 @@ export function BoqLiteSection() {
           </Card>
         </div>
       </div>
+      <RfqModal
+        open={Boolean(rfqContext)}
+        onOpenChange={(open) => {
+          if (!open) setRfqContext(null)
+        }}
+        rfqContext={rfqContext}
+      />
     </section>
   )
 }

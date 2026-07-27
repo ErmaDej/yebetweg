@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ModeToggle } from "@/components/mode-toggle"
-import { SearchBar } from "@/components/SearchBar"
+import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useLanguage } from "@/lib/i18n"
 import { useAuthContext } from "@/context/AuthContext"
 import { AuthSheet } from "@/components/layout/AuthSheet"
@@ -98,7 +98,13 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-2 shrink-0">
-          <SearchBar />
+          <SmartSearchBar
+            query=""
+            onQueryChange={(q) => {
+              if (q.trim()) navigateTo(`/search?q=${encodeURIComponent(q)}`)
+            }}
+            compact
+          />
         </div>
 
         <div className="flex items-center gap-1 shrink-0">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Star, MapPin, Phone, Plus, Award, ShieldCheck, BriefcaseBusiness, Clock3, Images } from "lucide-react"
+import { Star, MapPin, Phone, Plus, Award, ShieldCheck, BriefcaseBusiness, Clock3, Images, Send, SearchX } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,10 +18,13 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
-import { useProfessionals } from "@/hooks/useProfessionals"
+import { useProfessionals, type Professional } from "@/hooks/useProfessionals"
+import { useSmartSearch } from "@/hooks/useSmartSearch"
+import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { supabase } from "@/lib/supabase"
 import { validateProfessionalForm, sanitizeText } from "@/lib/validation"
+import { RfqModal, type RfqContext } from "./RfqModal"
 
 const specialties = [
   { value: "all", key: "blog.filter.all" as const },
@@ -40,7 +43,11 @@ function getVisiblePages(currentPage: number, pageCount: number) {
   return Array.from({ length: Math.min(3, pageCount) }, (_, index) => start + index)
 }
 
-function ProfessionalCard({ professional, index }: { professional: any; index: number }) {
+function ProfessionalCard({ professional, index, onRequestQuote }: {
+  professional: any
+  index: number
+  onRequestQuote: (ctx: RfqContext) => void
+}) {
   const { t, language } = useLanguage()
   const [hireOpen, setHireOpen] = useState(false)
   const [inquirySent, setInquirySent] = useState(false)
@@ -168,7 +175,25 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
           <span className="line-clamp-1">{responseLabel}</span>
         </div>
 
-        <Dialog open={hireOpen} onOpenChange={setHireOpen}>
+        <div className="mt-4 flex flex-col gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() =>
+              onRequestQuote({
+                sourceType: "professional",
+                sourceId: professional.id,
+                itemName: professional.name,
+                specification: professional.specialty,
+                city: professional.location,
+              })
+            }
+          >
+            <Send className="h-3.5 w-3.5" />
+            {language === "en" ? "Request Quote" : "ዋጋ ጠይቅ"}
+          </Button>
+          <Dialog open={hireOpen} onOpenChange={setHireOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="w-full mt-4 gap-2">
               <Phone className="h-3.5 w-3.5" />
@@ -221,6 +246,7 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </CardContent>
     </Card>
   )
@@ -234,7 +260,20 @@ export function ProfessionalsSection() {
   const { ref, isInView } = useInView()
   const [joinOpen, setJoinOpen] = useState(false)
   const [joinError, setJoinError] = useState("")
-  const pageCount = Math.max(1, Math.ceil(total / PROFESSIONALS_PER_PAGE))
+  const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Client-side smart search for professionals
+  const smartSearch = useSmartSearch<Professional>({
+    data: professionals,
+    initialPageSize: PROFESSIONALS_PER_PAGE,
+    defaultSortField: "rating",
+    searchableFields: ["name", "specialty", "location"],
+  })
+
+  const searchableProfessionals = smartSearch.items
+  const totalFiltered = smartSearch.totalCount
+  const pageCount = Math.max(1, Math.ceil(totalFiltered / PROFESSIONALS_PER_PAGE))
   const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
 
   useEffect(() => {
@@ -251,6 +290,31 @@ export function ProfessionalsSection() {
     setPage(Math.min(Math.max(nextPage, 1), pageCount))
     document.getElementById("professionals")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
+
+  // Build filter chips from active filters
+  const activeFilterChips = useMemo(() => {
+    const chips: { key: string; label: string; value: string; onRemove: () => void }[] = []
+    const vals = smartSearch.state.filters
+
+    if (vals.location) {
+      chips.push({
+        key: "location",
+        label: language === "en" ? "Location" : "ቦታ",
+        value: vals.location,
+        onRemove: () => smartSearch.setFilter("location", undefined),
+      })
+    }
+    if (vals.min_rating) {
+      chips.push({
+        key: "min_rating",
+        label: language === "en" ? "Min Rating" : "ዝቅተኛ ደረጃ",
+        value: `⭐ ${vals.min_rating}+`,
+        onRemove: () => smartSearch.setFilter("min_rating", undefined),
+      })
+    }
+
+    return chips
+  }, [smartSearch.state.filters, smartSearch.setFilter, language])
 
   return (
     <section id="professionals" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -351,7 +415,7 @@ export function ProfessionalsSection() {
           type="single"
           value={specialty}
           onValueChange={(v) => v && setSpecialty(v)}
-          className="flex flex-wrap justify-start gap-2 mb-8"
+          className="flex flex-wrap justify-start gap-2 mb-6"
         >
           {specialties.map((s) => (
             <ToggleGroupItem
@@ -363,6 +427,20 @@ export function ProfessionalsSection() {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+
+        {/* Smart Search Bar */}
+        <div className="mb-6">
+          <SmartSearchBar
+            query={smartSearch.state.query}
+            onQueryChange={smartSearch.setQuery}
+            chips={activeFilterChips}
+            onToggleFilters={() => setFiltersOpen(!filtersOpen)}
+            filtersOpen={filtersOpen}
+            totalCount={totalFiltered}
+            placeholder={language === "en" ? "Search professionals..." : "ሙያተኞች ይፈልጉ..."}
+            compact
+          />
+        </div>
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -381,11 +459,23 @@ export function ProfessionalsSection() {
               </Card>
             ))}
           </div>
+        ) : searchableProfessionals.length === 0 ? (
+          <div className="p-12 text-center">
+            <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {language === "en" ? "No matching professionals" : "ምንም የሚዛመድ ሙያተኛ የለም"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Try adjusting your search or filters"
+                : "እባክዎ ፍለጋዎን ወይም ማጣሪያዎን ያስተካክሉ"}
+            </p>
+          </div>
         ) : (
           <>
             <div key={`${specialty}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
-              {professionals.map((pro, i) => (
-                <ProfessionalCard key={pro.id} professional={pro} index={i} />
+              {searchableProfessionals.map((pro, i) => (
+                <ProfessionalCard key={pro.id} professional={pro} index={i} onRequestQuote={(ctx) => setRfqContext(ctx)} />
               ))}
             </div>
 
@@ -434,6 +524,13 @@ export function ProfessionalsSection() {
           </>
         )}
       </div>
+      <RfqModal
+        open={Boolean(rfqContext)}
+        onOpenChange={(open) => {
+          if (!open) setRfqContext(null)
+        }}
+        rfqContext={rfqContext}
+      />
     </section>
   )
 }

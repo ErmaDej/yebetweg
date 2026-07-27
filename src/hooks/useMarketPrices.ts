@@ -22,6 +22,16 @@ export type MarketPrice = {
   freshness_status?: "verified" | "supplier_quoted" | "community_reported" | "expired" | "needs_confirmation"
 }
 
+export interface MarketPricesFilter {
+  category?: string
+  search?: string
+  city?: string
+  source_type?: string
+  freshness_status?: string
+  price_min?: number
+  price_max?: number
+}
+
 export function useMarketPrices(category?: string) {
   const [prices, setPrices] = useState<MarketPrice[]>([])
   const [loading, setLoading] = useState(true)
