@@ -10,6 +10,16 @@ export type MarketPrice = {
   change_percent: number
   category: string
   updated_at: string
+  access_level?: "free" | "premium"
+  city?: string
+  specification?: string
+  source_type?: "admin_verified" | "supplier_quoted" | "community_reported" | "telegram_observed"
+  source_name?: string
+  vat_included?: boolean
+  confidence_score?: number
+  last_verified_at?: string
+  trend_direction?: "up" | "down" | "stable"
+  freshness_status?: "verified" | "supplier_quoted" | "community_reported" | "expired" | "needs_confirmation"
 }
 
 export function useMarketPrices(category?: string) {

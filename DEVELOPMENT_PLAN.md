@@ -1,168 +1,240 @@
 # YeBetWeg Development Plan
 
-**Last Updated:** July 16, 2026
-**Status:** MVP Phase — Frontend complete, backend services need deployment.
+**Last Updated:** July 26, 2026  
+**Status:** Strategic MVP upgrade in progress
 
----
+## Progress Snapshot
 
-## Project Overview
+- [x] Project context replaced with competitor-informed YBW positioning.
+- [x] Development plan replaced with phased execution plan.
+- [x] Phase 0 typecheck and production build verified.
+- [x] `admin_actions` edge function upgraded from fragile placeholder behavior to schema-aware database-backed actions.
+- [x] BOQ Lite estimator added to the landing flow.
+- [x] Market price intelligence migration added.
+- [x] Market price UI upgraded with trust, freshness, source, VAT, city, and RFQ action metadata.
+- [x] RFQ database workflow migration added.
+- [x] RFQ modal wired to market price quote requests.
+- [ ] New migrations applied to the target Supabase project.
+- [ ] Admin RFQ visibility and status management.
+- [ ] Verified supplier/professional trust card upgrade.
+- [ ] Site Log Lite.
+- [ ] Telegram bridge upgrade.
+- [ ] Launch polish and final deployment.
 
-YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and marketplace connector serving the Ethiopian construction industry. Built with React + TypeScript + Vite frontend and Supabase backend.
+## Product Direction
 
----
+YeBetWeg is evolving from a broad Ethiopian construction knowledge and marketplace site into a practical construction decision platform:
 
-## WHAT'S BUILT (Frontend ~95% complete)
+**Estimate, compare, quote, and build with Ethiopian construction intelligence.**
 
-### Landing Page
-- Hero section with video showcase
-- Blog section (8 bilingual articles)
-- Tips section (10 tips, 6 free + 4 premium-gated)
-- Market prices dashboard (15 materials, premium-gated)
-- Marketplace (12 listings, inquiry modal, create form)
-- Professionals directory (6 profiles, inquiry modal)
-- Premium section (3-tier pricing, Chapa + TeleBirr dialogs)
-- Social bridge + contact form + newsletter
-- Responsive ads (leaderboard, sidebar, native)
-- Navbar, footer, floating social bar, dark/light mode
+The revised MVP should focus on the smallest defensible product that can stand out against AddisBOQ, Conlink, Construction Proxy, Telegram construction channels, supplier directories, and generic construction software:
 
-### Authentication
-- Email/password signup, login, logout, password reset
-- AuthSheet component, ProtectedRoute, session management
-- AuthCallbackPage, ResetPasswordPage
+**BOQ Lite + trusted market price intelligence + RFQ workflow + verified suppliers/professionals.**
 
-### User Dashboard `/dashboard`
-- Profile view/edit, subscription status, activity overview
-- Quick stats (inquiries, listings, payments)
-- Next-best-action prompt
+## Phase 0: Stabilize Existing MVP
 
-### Admin Dashboard Tab
-- Role-gated (admin-only tab in dashboard)
-- Live metrics from DB (users, subscriptions, pending listings, unread inquiries)
-- Action buttons for content/marketplace/user management
-- Backend edge function is currently a **stub** — needs real DB logic
+Goal: make the current codebase reliable enough to extend quickly.
 
-### Payment System
-- PremiumSection with pricing comparison table
-- Chapa dialog + TeleBirr dialog with phone input
-- QR code display for TeleBirr
-- PaymentSuccessPage with callback handling
-- `usePayment` hook with dual-gateway initiation
+### Must Do
 
-### Search
-- SearchBar component in navbar
-- SearchResults page with full-text across blogs and tips
+- [x] Run TypeScript and production build checks.
+- [x] Fix all blocking type and build errors.
+- [x] Review Supabase migrations for current schema readiness.
+- [x] Implement real `admin_actions` edge function behavior instead of placeholder responses.
+- [ ] Verify Chapa, TeleBirr, auth, dashboard, search, inquiries, and premium gating code paths against deployed Supabase functions.
+- [ ] Confirm deployment prerequisites for Vercel and Supabase.
 
-### Internationalization
-- Custom React context (`useLanguage`)
-- Translation keys for all user-facing text (EN + AM)
-- Language toggle in navbar
+### Exit Criteria
 
-### Edge Functions (Written, NOT Deployed)
-- `telebirr-service/index.ts` — full implementation with TeleBirr API call
-- `telebirr-webhook/index.ts` — handles async payment notification
-- `chapa-webhook/index.ts` — signature verification + subscription activation
-- `admin_actions.ts` — **stub only** (returns placeholder success)
-- `notify_user.ts` — stub (placeholder email recipient)
+- [x] `npm run typecheck` passes.
+- [x] `npm run build` passes.
+- [x] Admin edge function has real database-backed actions for MVP admin workflows.
+- [ ] Remaining deployment-only tasks are clearly documented.
 
----
+## Phase 1: Competitive MVP Upgrade
 
-## WHAT REMAINS TO SHIP MVP
+Goal: add the product features that make YBW strategically distinct.
 
-### Must Do (Blocking Launch)
+### BOQ Lite
 
-1. **Deploy all edge functions** to Supabase
-   - `supabase functions deploy telebirr-service`
-   - `supabase functions deploy telebirr-webhook`
-   - `supabase functions deploy chapa-webhook`
-   - `supabase functions deploy admin_actions`
+- [x] Add a quick estimate workflow for Ethiopian residential and small commercial projects.
+- Inputs:
+  - project type
+  - city
+  - area in square meters
+  - number of floors
+  - finish level
+  - structural/basic assumption presets
+  - contingency percentage
+- Outputs:
+  - estimated total cost
+  - cost per square meter
+  - material/labor/overhead summary
+  - assumptions and disclaimer
+  - premium export call-to-action
 
-2. **Set environment secrets** in Supabase Dashboard
-   - TeleBirr: API key, merchant app ID, fabric app ID, short code
-   - Chapa: secret key, webhook secret
-   - Resend: API key (can skip if deferred)
+### BOQ Pro Unlock
 
-3. **Implement real `admin_actions` edge function** (replace switch stub with actual Supabase queries)
+- [x] Add premium path for detailed BOQ/export CTA.
+- [ ] Initial implementation can be a generated on-screen report with later Excel/PDF export.
+- [x] Connect unlock to existing Chapa/TeleBirr premium flow where practical.
 
-4. **Apply all Supabase migrations** (ensure schema is current)
+### Market Price Intelligence
 
-5. **TypeScript clean build** — `tsc --noEmit` must pass; fix remaining type issues
+- [x] Extend `market_prices` with:
+  - city
+  - specification/grade
+  - source type
+  - source name
+  - VAT flag
+  - confidence score
+  - last verified date
+  - trend direction
+  - freshness status
+- [x] Update UI to show trust and freshness clearly.
 
-6. **Deploy frontend** to Vercel
+### RFQ Workflow
 
-### Should Do (Before Launch)
+- [x] Add quote request flow from market price item.
+- [ ] Add quote request flow from marketplace listing.
+- [ ] Add quote request flow from supplier/professional profile.
+- [ ] Add quote request flow from BOQ estimate summary.
+- [x] Store RFQs with status tracking.
+- [ ] Add admin visibility for RFQs.
 
-7. End-to-end QA of all flows (auth, payments, search, dashboard)
-8. Responsive testing across device sizes
-9. Error state handling verification
-10. README update with live URLs
+### Verified Profiles
 
-### Can Defer (Post-MVP)
+- [ ] Upgrade supplier/professional cards with:
+  - verification badge
+  - specialty
+  - city/service area
+  - response contact
+  - portfolio or proof placeholder
+  - trust notes
 
-- Image upload (Supabase Storage)
-- Favorites / wishlist
-- Email notifications
-- Real-time updates
-- Social logins
-- Promo codes
-- PWA / offline
+### Site Log Lite
 
----
+- [ ] Add simple project log entry:
+  - date
+  - work completed
+  - labor count
+  - materials used
+  - payments
+  - delay reason
+  - optional image placeholder
 
-## Technology Stack
+### Telegram Bridge
+
+- Add UI and content hooks for:
+  - material price alert subscription
+  - Telegram channel CTA
+  - shareable material/BOQ links
+  - weekly market watch concept
+
+### Exit Criteria
+
+- [x] User can estimate a project in under 3 minutes.
+- [x] User can send an RFQ from at least one major workflow.
+- [x] Market prices display freshness and trust metadata.
+- [ ] Verified profiles show useful trust signals.
+- [ ] A basic site log entry can be created.
+
+## Phase 2: Admin and Data Trust
+
+Goal: make the new workflows maintainable by admins.
+
+### Must Do
+
+- Admin CRUD for market prices.
+- Admin CRUD for BOQ assumptions/presets.
+- Admin RFQ list and status management.
+- Admin verification workflow for suppliers and professionals.
+- Price freshness warnings and expired-price states.
+- Seed realistic Ethiopian BOQ assumptions and sample price intelligence records.
+
+### Exit Criteria
+
+- Admin can maintain the main datasets without direct database edits.
+- Users can distinguish verified, supplier-quoted, community-reported, expired, and unverified data.
+
+## Phase 3: Launch Polish
+
+Goal: prepare the upgraded MVP for public launch.
+
+### Must Do
+
+- Mobile-first UX pass.
+- Amharic copy pass for all new workflows.
+- Landing page repositioned around estimate, compare, quote, build.
+- SEO pages or sections for:
+  - BOQ calculator
+  - material prices
+  - suppliers
+  - professionals
+- Error and loading state pass.
+- Production deployment to Vercel and Supabase.
+- Update README, setup guides, and launch checklist with live URLs.
+
+### Exit Criteria
+
+- Core flows are usable on mobile.
+- No known blocking production errors.
+- Documentation reflects the deployed product.
+
+## Phase 4: Post-Launch Enhancements
+
+- Historical material price charts.
+- Supplier dashboard.
+- Telegram bot intake.
+- Advanced BOQ templates.
+- Permit checklist and document center.
+- Reviews and ratings.
+- Saved projects.
+- PWA/offline support.
+- Image uploads through Supabase Storage.
+- Professional booking calendar.
+- Email and SMS notifications.
+
+## Current Technical Foundation
 
 ### Frontend
-- **Framework:** React 19 + TypeScript
-- **Build:** Vite 7
-- **UI:** shadcn/ui (70+ components), Radix UI, Tailwind CSS v4
-- **Charts:** Recharts, Chart.js
-- **Forms:** React Hook Form + Zod
-- **Icons:** Lucide React
+
+- React 19 + TypeScript
+- Vite 7
+- Tailwind CSS v4
+- shadcn/ui, Radix UI, Lucide React
+- React Hook Form + Zod
+- Recharts and Chart.js
 
 ### Backend
-- **Database:** Supabase (PostgreSQL)
-- **Auth:** Supabase Auth + Custom RPC
-- **Edge Functions:** Supabase (Deno)
-- **Real-time:** Supabase Realtime (not yet used)
-- **Storage:** Supabase Storage (not yet used)
 
-### Payment Gateways
-- **Chapa** — cards & mobile money
-- **TeleBirr** — mobile money & USSD
+- Supabase PostgreSQL
+- Supabase Auth
+- Row Level Security
+- Supabase Edge Functions
+- Chapa and TeleBirr payment paths
 
-### Deployment
-- **Frontend:** Vercel
-- **Backend:** Supabase Cloud
+### Existing Main Views
 
----
-
-## Project Metrics
-
-| Metric | Current | Target |
-|---|---|---|
-| Components | 70+ | — |
-| Pages/Views | 7 | — |
-| Database Tables | 12 | — |
-| Seed Records | 70+ | — |
-| Translations | 150+ | — |
-| Payment Gateways | 2 | — |
-| Mobile Optimization | ~95% | 100% |
-
----
+- Landing page sections
+- Search results
+- Dashboard
+- Admin dashboard tab
+- Auth callback and password reset
+- Payment and payment success pages
 
 ## Quick Start
 
 ```bash
 npm install
-npm run dev        # local dev at localhost:5173
-npm run typecheck  # check TypeScript errors
-npm run build      # production build
+npm run dev
+npm run typecheck
+npm run build
 ```
-
----
 
 ## References
 
-- [Ref/MVP_DEFINITION.md](./Ref/MVP_DEFINITION.md) — MVP scope, exit criteria, gap analysis
-- [Ref/PROJECT_CONTEXT.md](./Ref/PROJECT_CONTEXT.md) — architecture and data model
-- [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) — deployment checklist
-- [DEVELOPMENT_ROADMAP.md](./DEVELOPMENT_ROADMAP.md) — phased roadmap to launch
+- [Ref/PROJECT_CONTEXT.md](./Ref/PROJECT_CONTEXT.md) - strategic product context
+- [Ref/MVP_DEFINITION.md](./Ref/MVP_DEFINITION.md) - previous MVP scope and gap analysis
+- [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) - deployment checklist
+- [DEVELOPMENT_ROADMAP.md](./DEVELOPMENT_ROADMAP.md) - prior phased roadmap

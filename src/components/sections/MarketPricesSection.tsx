@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { TrendingUp, TrendingDown, Lock, CircleAlert as AlertCircle } from "lucide-react"
+import { TrendingUp, TrendingDown, Lock, CircleAlert as AlertCircle, MapPin, Send, ShieldCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,10 +14,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useLanguage } from "@/lib/i18n"
-import { useMarketPrices } from "@/hooks/useMarketPrices"
+import { useMarketPrices, type MarketPrice } from "@/hooks/useMarketPrices"
 import { useInView } from "@/hooks/useInView"
 import { navigateTo } from "@/lib/navigation"
 import type { PremiumTier } from "@/types/payment"
+import { RfqModal } from "./RfqModal"
 
 const priceCategories = [
   { value: "all", label_en: "All", label_am: "ሁሉም" },
@@ -31,12 +32,53 @@ const priceCategories = [
 
 const FREE_ROWS = 5
 
+const sourceLabels = {
+  en: {
+    admin_verified: "Admin verified",
+    supplier_quoted: "Supplier quoted",
+    community_reported: "Community reported",
+    telegram_observed: "Telegram observed",
+    verified: "Verified",
+    expired: "Expired",
+    needs_confirmation: "Needs confirmation",
+    trust: "Trust",
+    source: "Source",
+    city: "City",
+    vatIncluded: "VAT incl.",
+    vatExcluded: "VAT excl.",
+    requestQuote: "Request quote",
+  },
+  am: {
+    admin_verified: "በአስተዳዳሪ የተረጋገጠ",
+    supplier_quoted: "የአቅራቢ ዋጋ",
+    community_reported: "የማህበረሰብ ሪፖርት",
+    telegram_observed: "ከቴሌግራም የታየ",
+    verified: "የተረጋገጠ",
+    expired: "ጊዜው ያለፈ",
+    needs_confirmation: "ማረጋገጫ ይፈልጋል",
+    trust: "እምነት",
+    source: "ምንጭ",
+    city: "ከተማ",
+    vatIncluded: "VAT ጨምሮ",
+    vatExcluded: "VAT ሳይጨምር",
+    requestQuote: "ዋጋ ጠይቅ",
+  },
+}
+
+function getFreshnessVariant(status?: string) {
+  if (status === "expired" || status === "needs_confirmation") return "destructive"
+  if (status === "supplier_quoted" || status === "verified") return "default"
+  return "outline"
+}
+
 export function MarketPricesSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const { prices, loading } = useMarketPrices(category)
   const { ref, isInView } = useInView()
   const canReadPremium = activePlan === "premium" || activePlan === "pro"
+  const trustText = sourceLabels[language]
+  const [selectedRfqPrice, setSelectedRfqPrice] = useState<MarketPrice | null>(null)
 
   return (
     <section id="market" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -87,9 +129,11 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("market.material")}</TableHead>
+                      <TableHead>{trustText.trust}</TableHead>
                       <TableHead>{t("market.unit")}</TableHead>
                       <TableHead className="text-right">{t("market.price")}</TableHead>
                       <TableHead className="text-right">{t("market.change")}</TableHead>
+                      <TableHead className="text-right">{language === "en" ? "Action" : "እርምጃ"}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -101,7 +145,31 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                           className={isLocked ? "relative" : ""}
                         >
                           <TableCell className={isLocked ? "premium-blur" : ""}>
-                            {language === "am" ? price.material_am : price.material_en}
+                            <div className="space-y-1">
+                              <div className="font-medium">{language === "am" ? price.material_am : price.material_en}</div>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span className="inline-flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {price.city || "Addis Ababa"}
+                                </span>
+                                {price.specification && <span>{price.specification}</span>}
+                                <span>{price.vat_included ? trustText.vatIncluded : trustText.vatExcluded}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className={isLocked ? "premium-blur" : ""}>
+                            <div className="space-y-2">
+                              <Badge variant={getFreshnessVariant(price.freshness_status)} className="whitespace-nowrap">
+                                {trustText[price.freshness_status || "verified"]}
+                              </Badge>
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <ShieldCheck className="h-3 w-3" />
+                                {price.confidence_score ?? 70}%
+                              </div>
+                              <div className="max-w-36 truncate text-xs text-muted-foreground">
+                                {price.source_name || trustText[price.source_type || "admin_verified"]}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell className={isLocked ? "premium-blur" : ""}>
                             {price.unit}
@@ -118,6 +186,18 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                               )}
                               {Math.abs(Number(price.change_percent))}%
                             </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-2"
+                              disabled={isLocked}
+                              onClick={() => setSelectedRfqPrice(price)}
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                              {trustText.requestQuote}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       )
@@ -151,6 +231,13 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
           </Button>
         </div>
       </div>
+      <RfqModal
+        open={Boolean(selectedRfqPrice)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRfqPrice(null)
+        }}
+        marketPrice={selectedRfqPrice}
+      />
     </section>
   )
 }

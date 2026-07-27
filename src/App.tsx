@@ -5,6 +5,7 @@ import { FloatingSocialBar } from "@/components/layout/FloatingSocialBar"
 import { HeroSection } from "@/components/sections/HeroSection"
 import { BlogSection } from "@/components/sections/BlogSection"
 import { TipsSection } from "@/components/sections/TipsSection"
+import { BoqLiteSection } from "@/components/sections/BoqLiteSection"
 import { MarketPricesSection } from "@/components/sections/MarketPricesSection"
 import { MarketplaceSection } from "@/components/sections/MarketplaceSection"
 import { ProfessionalsSection } from "@/components/sections/ProfessionalsSection"
@@ -47,6 +48,8 @@ function HomePage() {
         <BlogSection />
 
         <TipsSection activePlan={activePlan} />
+
+        <BoqLiteSection />
 
         <AdSlot position="leaderboard" />
 
@@ -156,4 +159,3 @@ export function App() {
 }
 
 export default App
-
