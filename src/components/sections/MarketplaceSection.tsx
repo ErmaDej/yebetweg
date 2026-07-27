@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Lock, MapPin, Phone, Plus, Info } from "lucide-react"
+import { Lock, MapPin, Phone, Plus, Info, Send, SearchX } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,12 +17,15 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
-import { useListings } from "@/hooks/useListings"
+import { useListings, type Listing } from "@/hooks/useListings"
+import { useSmartSearch } from "@/hooks/useSmartSearch"
+import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { supabase } from "@/lib/supabase"
 import { sanitizeText } from "@/lib/validation"
 import { navigateTo } from "@/lib/navigation"
 import { CreateListingForm } from "./CreateListingForm"
+import { RfqModal, type RfqContext } from "./RfqModal"
 import type { PremiumTier } from "@/types/payment"
 
 const listingTabs = [
@@ -141,7 +144,12 @@ function InquiryModal({
   )
 }
 
-function ListingCard({ listing, index, canContact }: { listing: any; index: number; canContact: boolean }) {
+function ListingCard({ listing, index, canContact, onRequestQuote }: {
+  listing: any
+  index: number
+  canContact: boolean
+  onRequestQuote: (ctx: RfqContext) => void
+}) {
   const { language, t } = useLanguage()
   const title = language === "am" ? listing.title_am : listing.title_en
   const [contactOpen, setContactOpen] = useState(false)
@@ -205,25 +213,44 @@ function ListingCard({ listing, index, canContact }: { listing: any; index: numb
           <span className="text-xs text-muted-foreground">/{language === "en" ? "month" : "ወር"}</span>
         )}
       </CardContent>
-      <CardFooter className="px-4 pb-4 pt-0">
-        {!canContact ? (
+      <CardFooter className="flex-col gap-2 px-4 pb-4 pt-0">
+        <div className="grid w-full grid-cols-2 gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="w-full gap-2"
-            onClick={() => navigateTo("/#premium")}
+            className="gap-2"
+            onClick={() =>
+              onRequestQuote({
+                sourceType: "listing",
+                sourceId: listing.id,
+                itemName: title,
+                city: listing.location,
+                targetPrice: listing.price || null,
+              })
+            }
           >
-            <Lock className="h-3.5 w-3.5" />
-            {language === "en" ? "Unlock contact" : "ግንኙነት ይክፈቱ"}
+            <Send className="h-3.5 w-3.5" />
+            {language === "en" ? "Request Quote" : "ዋጋ ጠይቅ"}
           </Button>
-        ) : (
-          <InquiryModal
-            open={contactOpen}
-            onOpenChange={setContactOpen}
-            listingId={listing.id}
-            listingTitle={title}
-          />
-        )}
+          {!canContact ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => navigateTo("/#premium")}
+            >
+              <Lock className="h-3.5 w-3.5" />
+              {language === "en" ? "Unlock contact" : "ግንኙነት ይክፈቱ"}
+            </Button>
+          ) : (
+            <InquiryModal
+              open={contactOpen}
+              onOpenChange={setContactOpen}
+              listingId={listing.id}
+              listingTitle={title}
+            />
+          )}
+        </div>
       </CardFooter>
     </Card>
   )
@@ -243,15 +270,28 @@ function ListingSkeleton() {
 }
 
 export function MarketplaceSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [tab, setTab] = useState("all")
   const [page, setPage] = useState(1)
-  const { listings, loading, total } = useListings(tab, page, LISTINGS_PER_PAGE)
+  const { listings, loading,  } = useListings(tab, page, LISTINGS_PER_PAGE)
   const { ref, isInView } = useInView()
   const [listDialogOpen, setListDialogOpen] = useState(false)
-  const pageCount = Math.max(1, Math.ceil(total / LISTINGS_PER_PAGE))
+  const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
+
+  // Client-side smart search for listings
+  const smartSearch = useSmartSearch<Listing>({
+    data: listings,
+    initialPageSize: LISTINGS_PER_PAGE,
+    defaultSortField: "created_at",
+    searchableFields: ["title_en", "title_am", "description", "location", "category"],
+  })
+
+  const searchableListings = smartSearch.items
+  const totalFiltered = smartSearch.totalCount
+  const pageCount = Math.max(1, Math.ceil(totalFiltered / LISTINGS_PER_PAGE))
   const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
   const canContact = activePlan === "premium" || activePlan === "pro"
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
     setPage(1)
@@ -261,6 +301,32 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
     setPage(Math.min(Math.max(nextPage, 1), pageCount))
     document.getElementById("marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
+
+  // Build filter chips from active filters
+  const activeFilterChips = useMemo(() => {
+    const chips: { key: string; label: string; value: string; onRemove: () => void }[] = []
+    const vals = smartSearch.state.filters
+
+    if (vals.location) {
+      chips.push({
+        key: "location",
+        label: language === "en" ? "Location" : "ቦታ",
+        value: vals.location,
+        onRemove: () => smartSearch.setFilter("location", undefined),
+      })
+    }
+    if (vals.price_range) {
+      const r = vals.price_range as { min?: number; max?: number }
+      chips.push({
+        key: "price_range",
+        label: language === "en" ? "Price" : "ዋጋ",
+        value: `${r.min?.toLocaleString() || "0"} - ${r.max?.toLocaleString() || "∞"} ETB`,
+        onRemove: () => smartSearch.setFilter("price_range", undefined),
+      })
+    }
+
+    return chips
+  }, [smartSearch.state.filters, smartSearch.setFilter, language])
 
   return (
     <section id="marketplace" ref={ref} className="py-16 sm:py-24 bg-muted/30">
@@ -287,7 +353,7 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
           <p className="text-xs text-muted-foreground">{t("marketplace.commission")}</p>
         </div>
 
-        <Tabs value={tab} onValueChange={setTab} className="mb-8">
+        <Tabs value={tab} onValueChange={setTab} className="mb-4">
           <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
             {listingTabs.map((lt) => (
               <TabsTrigger key={lt.value} value={lt.value} className="text-xs sm:text-sm">
@@ -297,15 +363,47 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
           </TabsList>
         </Tabs>
 
-        {loading ? (
+        {/* Smart Search Bar */}
+        <div className="mb-6">
+          <SmartSearchBar
+            query={smartSearch.state.query}
+            onQueryChange={smartSearch.setQuery}
+            chips={activeFilterChips}
+            onToggleFilters={() => setFiltersOpen(!filtersOpen)}
+            filtersOpen={filtersOpen}
+            totalCount={totalFiltered}
+            placeholder={language === "en" ? "Search listings..." : "ዝርዝሮች ይፈልጉ..."}
+            compact
+          />
+        </div>
+
+        {loading || smartSearch.loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => <ListingSkeleton key={i} />)}
+          </div>
+        ) : searchableListings.length === 0 ? (
+          <div className="p-12 text-center">
+            <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {language === "en" ? "No matching listings" : "ምንም የሚዛመድ ዝርዝር የለም"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Try adjusting your search or filters"
+                : "እባክዎ ፍለጋዎን ወይም ማጣሪያዎን ያስተካክሉ"}
+            </p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((listing, i) => (
-                <ListingCard key={listing.id} listing={listing} index={i} canContact={canContact} />
+              {searchableListings.map((listing, i) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  index={i}
+                  canContact={canContact}
+                  onRequestQuote={(ctx) => setRfqContext(ctx)}
+                />
               ))}
             </div>
 
@@ -354,6 +452,13 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
           </>
         )}
       </div>
+      <RfqModal
+        open={Boolean(rfqContext)}
+        onOpenChange={(open) => {
+          if (!open) setRfqContext(null)
+        }}
+        rfqContext={rfqContext}
+      />
     </section>
   )
 }

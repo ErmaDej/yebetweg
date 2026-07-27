@@ -1,10 +1,12 @@
-import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock } from "lucide-react"
+import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/lib/i18n"
-import { useTips } from "@/hooks/useTips"
+import { useTips, type Tip } from "@/hooks/useTips"
+import { useSmartSearch } from "@/hooks/useSmartSearch"
+import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { navigateTo } from "@/lib/navigation"
 import type { PremiumTier } from "@/types/payment"
@@ -91,6 +93,19 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
   const { ref, isInView } = useInView()
   const canReadPremium = activePlan === "premium" || activePlan === "pro"
 
+  // Client-side smart search for tips
+  const smartSearch = useSmartSearch<Tip>({
+    data: tips,
+    initialPageSize: 50,
+    defaultSortField: "created_at",
+    searchableFields: ["title_en", "title_am", "content", "category"],
+  })
+
+  const searchableTips = smartSearch.items
+
+  // Get unique categories for filter chips
+  const tipCategories = smartSearch.getFacets("category")
+
   const tickerItems = [
     { text: language === "en" ? "Derba Cement: 8,200 ETB/Qtl" : "ዲርባ ሲሚንቶ: 8,200 ብር/ቆል", change: "+3.5%" },
     { text: language === "en" ? "Grade 60 Rebar: 14,500 ETB/Qtl" : "ግራድ 60 ራብር: 14,500 ብር/ቆል", change: "+7.3%" },
@@ -120,13 +135,97 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">{t("tips.subtitle")}</p>
         </div>
 
+        {/* Smart Search Bar with category filter chips */}
+        <div className="mb-6 max-w-xl mx-auto">
+          <SmartSearchBar
+            query={smartSearch.state.query}
+            onQueryChange={smartSearch.setQuery}
+            chips={[
+              ...(smartSearch.state.filters.category
+                ? [{
+                    key: "category",
+                    label: language === "en" ? "Category" : "ምድብ",
+                    value: smartSearch.state.filters.category,
+                    onRemove: () => smartSearch.setFilter("category", undefined),
+                  }]
+                : []),
+              ...(smartSearch.state.filters.is_premium !== undefined
+                ? [{
+                    key: "premium",
+                    label: "",
+                    value: smartSearch.state.filters.is_premium
+                      ? (language === "en" ? "Premium" : "ፕሪሚየም")
+                      : (language === "en" ? "Free" : "ነፃ"),
+                    onRemove: () => smartSearch.setFilter("is_premium", undefined),
+                  }]
+                : []),
+            ]}
+            totalCount={smartSearch.totalCount}
+            placeholder={language === "en" ? "Search tips..." : "ምክሮች ይፈልጉ..."}
+            compact
+          />
+        </div>
+
+        {/* Category & Premium filter badges */}
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          {tipCategories.slice(0, 10).map((cat) => {
+            const isActive = smartSearch.state.filters.category === cat
+            return (
+              <Badge
+                key={cat}
+                variant={isActive ? "default" : "outline"}
+                className="cursor-pointer text-xs"
+                onClick={() => smartSearch.setFilter("category", isActive ? undefined : cat)}
+              >
+                {cat}
+              </Badge>
+            )
+          })}
+          <Badge
+            variant={smartSearch.state.filters.is_premium === true ? "default" : "outline"}
+            className="cursor-pointer text-xs"
+            onClick={() =>
+              smartSearch.setFilter(
+                "is_premium",
+                smartSearch.state.filters.is_premium === true ? undefined : true,
+              )
+            }
+          >
+            {language === "en" ? "Premium" : "ፕሪሚየም"} ✨
+          </Badge>
+          <Badge
+            variant={smartSearch.state.filters.is_premium === false ? "default" : "outline"}
+            className="cursor-pointer text-xs"
+            onClick={() =>
+              smartSearch.setFilter(
+                "is_premium",
+                smartSearch.state.filters.is_premium === false ? undefined : false,
+              )
+            }
+          >
+            {language === "en" ? "Free" : "ነፃ"}
+          </Badge>
+        </div>
+
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => <TipSkeleton key={i} />)}
           </div>
+        ) : searchableTips.length === 0 ? (
+          <div className="p-12 text-center">
+            <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {language === "en" ? "No matching tips" : "ምንም የሚዛመድ ምክር የለም"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Try adjusting your search or filters"
+                : "እባክዎ ፍለጋዎን ወይም ማጣሪያዎን ያስተካክሉ"}
+            </p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tips.map((tip, i) => (
+            {searchableTips.map((tip, i) => (
               <TipCard key={tip.id} tip={tip} index={i} canReadPremium={canReadPremium} />
             ))}
           </div>

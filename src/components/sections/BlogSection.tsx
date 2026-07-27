@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Clock, ArrowRight, BookOpen } from "lucide-react"
+import { Clock, ArrowRight, BookOpen, SearchX } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,9 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
-import { useBlogs } from "@/hooks/useBlogs"
+import { useBlogs, type Blog } from "@/hooks/useBlogs"
+import { useSmartSearch } from "@/hooks/useSmartSearch"
+import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 
 const categories = [
@@ -113,12 +115,23 @@ function BlogSkeleton() {
 }
 
 export function BlogSection() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const [page, setPage] = useState(1)
   const { blogs, loading, total } = useBlogs(category, page, BLOGS_PER_PAGE)
   const { ref, isInView } = useInView()
-  const pageCount = Math.max(1, Math.ceil(total / BLOGS_PER_PAGE))
+
+  // Client-side smart search for blogs
+  const smartSearch = useSmartSearch<Blog>({
+    data: blogs,
+    initialPageSize: BLOGS_PER_PAGE,
+    defaultSortField: "created_at",
+    searchableFields: ["title_en", "title_am", "content", "category", "author"],
+  })
+
+  const searchableBlogs = smartSearch.items
+  const totalFiltered = smartSearch.totalCount
+  const pageCount = Math.max(1, Math.ceil(totalFiltered / BLOGS_PER_PAGE))
   const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
 
   useEffect(() => {
@@ -138,7 +151,7 @@ export function BlogSection() {
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">{t("blog.subtitle")}</p>
         </div>
 
-        <Tabs value={category} onValueChange={setCategory} className="mb-8">
+        <Tabs value={category} onValueChange={setCategory} className="mb-6">
           <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
             {categories.map((cat) => (
               <TabsTrigger key={cat.value} value={cat.value} className="text-xs sm:text-sm">
@@ -148,14 +161,37 @@ export function BlogSection() {
           </TabsList>
         </Tabs>
 
+        {/* Smart Search Bar */}
+        <div className="mb-6 max-w-md mx-auto">
+          <SmartSearchBar
+            query={smartSearch.state.query}
+            onQueryChange={smartSearch.setQuery}
+            totalCount={totalFiltered}
+            placeholder={language === "en" ? "Search articles..." : "ጽሁፎች ይፈልጉ..."}
+            compact
+          />
+        </div>
+
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: BLOGS_PER_PAGE }).map((_, i) => <BlogSkeleton key={i} />)}
           </div>
+        ) : searchableBlogs.length === 0 ? (
+          <div className="p-12 text-center">
+            <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {language === "en" ? "No matching articles" : "ምንም የሚዛመድ ጽሁፍ የለም"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Try adjusting your search or category"
+                : "እባክዎ ፍለጋዎን ወይም ምድብዎን ያስተካክሉ"}
+            </p>
+          </div>
         ) : (
           <>
             <div key={`${category}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
-              {blogs.map((blog, i) => (
+              {searchableBlogs.map((blog, i) => (
                 <BlogCard key={blog.id} blog={blog} featured={blog.is_featured && page === 1} index={i} />
               ))}
             </div>
