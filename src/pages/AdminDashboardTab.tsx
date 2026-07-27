@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/lib/i18n"
-import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, type LucideIcon } from "lucide-react"
+import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
 
@@ -15,6 +15,7 @@ type AdminMetricKey =
   | "pendingListings"
   | "professionals"
   | "inquiries"
+  | "rfqs"
   | "blogs"
   | "ads"
 
@@ -27,8 +28,15 @@ const emptyMetrics: AdminMetrics = {
   pendingListings: 0,
   professionals: 0,
   inquiries: 0,
+  rfqs: 0,
   blogs: 0,
   ads: 0,
+}
+
+type AdminActionResult = {
+  action: string
+  data?: unknown[]
+  message?: string
 }
 
 export function AdminDashboardTab() {
@@ -39,6 +47,7 @@ export function AdminDashboardTab() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<AdminMetrics>(emptyMetrics)
   const [actionInFlight, setActionInFlight] = useState<string | null>(null)
+  const [actionResult, setActionResult] = useState<AdminActionResult | null>(null)
 
   const loadMetrics = async () => {
     setMetricsLoading(true)
@@ -51,6 +60,7 @@ export function AdminDashboardTab() {
         pendingListings,
         professionals,
         inquiries,
+        rfqs,
         blogs,
         ads,
       ] = await Promise.all([
@@ -60,6 +70,7 @@ export function AdminDashboardTab() {
         supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("professionals").select("id", { count: "exact", head: true }),
         supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("is_read", false),
+        supabase.from("rfq_requests").select("id", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("blogs").select("id", { count: "exact", head: true }),
         supabase.from("ads").select("id", { count: "exact", head: true }),
       ])
@@ -71,6 +82,7 @@ export function AdminDashboardTab() {
         pendingListings: pendingListings.count || 0,
         professionals: professionals.count || 0,
         inquiries: inquiries.count || 0,
+        rfqs: rfqs.count || 0,
         blogs: blogs.count || 0,
         ads: ads.count || 0,
       })
@@ -86,7 +98,7 @@ export function AdminDashboardTab() {
   }, [])
 
   const operationalHealth = useMemo(() => {
-    if (metrics.pendingListings > 5 || metrics.inquiries > 10) return "attention"
+    if (metrics.pendingListings > 5 || metrics.inquiries > 10 || metrics.rfqs > 10) return "attention"
     if (metrics.subscriptions > 0 && metrics.users > 0) return "healthy"
     return "warming"
   }, [metrics])
@@ -96,13 +108,19 @@ export function AdminDashboardTab() {
     setActionInFlight(action)
     setError(null)
     setSuccessMessage(null)
+    setActionResult(null)
     try {
-      await callAdminAction(action)
+      const result = await callAdminAction(action)
       const message =
         language === "en"
           ? `Successfully performed ${action.replaceAll("_", " ")}`
           : `ተገቢው እርምጃ ${action} ተፈጸመ`
       setSuccessMessage(message)
+      setActionResult({
+        action,
+        data: Array.isArray(result?.data) ? result.data : undefined,
+        message: result?.message,
+      })
       await loadMetrics()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.")
@@ -142,12 +160,13 @@ export function AdminDashboardTab() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           { key: "users", icon: Users, label: language === "en" ? "Users" : "ተጠቃሚዎች", tone: "text-blue-500" },
           { key: "subscriptions", icon: ShieldCheck, label: language === "en" ? "Active plans" : "ንቁ እቅዶች", tone: "text-emerald-500" },
           { key: "pendingListings", icon: PackageCheck, label: language === "en" ? "Pending listings" : "በግምገማ ያሉ", tone: "text-amber-500" },
           { key: "inquiries", icon: AlertTriangle, label: language === "en" ? "Unread inquiries" : "ያልተነበቡ", tone: "text-rose-500" },
+          { key: "rfqs", icon: ClipboardList, label: language === "en" ? "New RFQs" : "አዲስ የዋጋ ጥያቄዎች", tone: "text-cyan-500" },
         ].map((item) => (
           <Card key={item.key}>
             <CardContent className="pt-6">
@@ -205,6 +224,46 @@ export function AdminDashboardTab() {
         </CardContent>
       </Card>
 
+      {actionResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              {language === "en" ? "Action Result" : "የእርምጃ ውጤት"}
+            </CardTitle>
+            <CardDescription>
+              {actionResult.message ||
+                (language === "en"
+                  ? `${actionResult.action.replaceAll("_", " ")} returned ${actionResult.data?.length ?? 0} records.`
+                  : `${actionResult.action} ${actionResult.data?.length ?? 0} መዝገቦችን አመጣ።`)}
+            </CardDescription>
+          </CardHeader>
+          {actionResult.data && actionResult.data.length > 0 && (
+            <CardContent>
+              <div className="max-h-72 overflow-auto rounded-lg border border-border/60">
+                <div className="min-w-[520px] divide-y divide-border/60">
+                  {actionResult.data.slice(0, 10).map((record, index) => {
+                    const item = record as Record<string, any>
+                    return (
+                      <div key={item.id || index} className="grid grid-cols-[1fr_auto] gap-3 p-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">
+                            {item.title_en || item.name || item.requester_name || item.email || item.username || item.advertiser || item.reference || item.id}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-muted-foreground">
+                            {item.requester_phone || item.category || item.specialty || item.status || item.position || item.method || item.created_at}
+                          </p>
+                        </div>
+                        {item.status && <Badge variant="outline">{item.status}</Badge>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>{language === "en" ? "Content Management" : "ይዘት አስተዳደር"}</CardTitle>
@@ -228,6 +287,7 @@ export function AdminDashboardTab() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <ActionButton action="moderate_listings" icon={Eye} label={language === "en" ? "Moderate Listings" : "ዝርዝሮችን አጣራ"} variant={metrics.pendingListings > 0 ? "default" : "outline"} />
+          <ActionButton action="manage_rfqs" icon={ClipboardList} label={language === "en" ? "Manage RFQs" : "የዋጋ ጥያቄዎች"} variant={metrics.rfqs > 0 ? "default" : "outline"} />
           <ActionButton action="verify_professionals" icon={ShieldCheck} label={language === "en" ? "Verify Professionals" : "ባለሙያዎችን አረጋግጥ"} />
           <ActionButton action="ban_users" icon={Ban} label={language === "en" ? "Ban/Suspend Users" : "ተጠቃሚዎችን አግድ/አስቁም"} variant="destructive" />
         </CardContent>

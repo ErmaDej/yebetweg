@@ -2,101 +2,132 @@
 
 ## Purpose
 
-This file is the source of truth for the YeBetWeg project. It collects the current architecture, technology stack, features, documentation index, and core implementation details in a single curated reference.
+This file is the source of truth for the YeBetWeg project. It defines the product position, target users, strategic differentiators, core workflows, MVP scope, technology stack, and current delivery priorities.
 
-## Project Overview
+## Product Overview
 
-**YeBetWeg (የቤት-ወግ)** is a construction knowledge platform and marketplace connector for Ethiopia. It supports bilingual content in English and Amharic and integrates a Supabase backend for real-time data, user interaction, and marketplace functionality.
+**YeBetWeg (YBW / የቤት-ወግ)** is a bilingual Ethiopian construction decision platform that helps homeowners, small contractors, engineers, suppliers, and property builders move from idea to estimated budget, supplier quotes, trusted professionals, and site progress tracking.
 
-## Key Features
+YBW is not only a construction blog, marketplace, or price board. It is the practical workflow layer for Ethiopian building decisions:
 
-- Knowledge Hub with 8 bilingual construction articles
-- Construction tips section with 10 expert tips (6 free, 4 premium)
-- Market prices dashboard for 15 construction materials
-- Marketplace with 12 listings across property, materials, and professional services
-- Professionals directory with 6 verified construction experts
-- Premium membership system with tiered access
-- Advertisement slots and social media integration
-- Contact form and newsletter subscription
-- Dark/light mode and language toggle
-- Responsive mobile-first design
+1. Learn what to build and what it requires.
+2. Estimate construction cost using Ethiopian BOQ assumptions.
+3. Compare current material prices by city and source confidence.
+4. Convert BOQ materials into supplier quote requests.
+5. Find verified professionals and service providers.
+6. Track site activity and payments during execution.
+
+## Strategic Positioning
+
+YBW should stand out by being more trustworthy than Telegram-only channels, more complete than BOQ-only calculators, more actionable than content portals, and more locally relevant than generic construction software.
+
+The core product promise:
+
+> Estimate, compare, quote, and build with Ethiopian construction intelligence.
+
+## Target Users
+
+- Homeowners planning villas, G+1 to G+4 houses, renovations, finishing works, or small commercial projects.
+- Small contractors and foremen who need estimates, material prices, quote requests, leads, and site logs.
+- Engineers, architects, quantity surveyors, contractors, foremen, and trades seeking visibility and client inquiries.
+- Suppliers and shops that want verified buyer demand and structured quote opportunities.
+- Diaspora clients who need trusted local construction information before committing money.
+
+## Competitive Context
+
+Direct and adjacent competitors include AddisBOQ, Addis Cost Estimator, Conlink, Construction Proxy, Construction Resources Telegram, Construction Et Market Telegram, Ethio Construction Engineering Telegram, Kabu, EthioMaterial, Shaleqa, and Ethiopian ecommerce or supplier directory sites.
+
+Observed competitor strengths:
+
+- BOQ calculators and paid exports.
+- Telegram-first material price distribution.
+- Supplier and material catalogs.
+- Job, tender, and professional communities.
+- Ecommerce-style product discovery.
+- Site log and contractor workflow features.
+
+Observed gaps YBW can exploit:
+
+- Telegram data is large but unstructured and hard to trust.
+- BOQ-only products do not strongly connect estimates to supplier quotes, professionals, education, and project tracking.
+- Generic directories are not workflow-centered.
+- Supplier marketplaces often lack homeowner guidance and trust metadata.
+- International construction software is too heavy for the Ethiopian homeowner and small-contractor market.
+
+## Core Differentiator
+
+YBW combines BOQ, market prices, supplier and professional matching, educational guidance, and Telegram/community distribution in one mobile-first bilingual experience.
+
+The minimum defensible wedge is:
+
+**BOQ Lite + trusted market price intelligence + RFQ workflow + verified suppliers/professionals.**
+
+## MVP Product Pillars
+
+### 1. BOQ Lite
+
+- Quick construction cost estimate for common Ethiopian building types.
+- Inputs: project type, city, built-up area, floors, finish level, structural assumptions, and optional contingency.
+- Outputs: estimated total, cost per square meter, major material summary, labor/overhead allowance, assumptions, and disclaimer.
+- Premium path: BOQ Pro export or detailed report unlock.
+
+### 2. Market Intelligence
+
+- Material prices by city, unit, grade/specification, VAT status, source type, source name, date, and confidence score.
+- Freshness labels such as verified, community reported, supplier quoted, expired, or needs confirmation.
+- Trend indicators and premium historical analytics over time.
+
+### 3. Marketplace and RFQ
+
+- Listings for materials, property, equipment, services, and construction opportunities.
+- RFQ flow from a material, listing, supplier, or BOQ summary.
+- Quote request status tracking for users and admins.
+- Future supplier dashboard for responding to RFQs.
+
+### 4. Verified Professionals and Suppliers
+
+- Searchable profiles for engineers, architects, contractors, quantity surveyors, foremen, trades, and suppliers.
+- Verification badge, specialties, service areas, portfolio, response contact, and trust notes.
+- Inquiry flow from each profile.
+
+### 5. Knowledge Hub
+
+- Bilingual articles and construction tips tied to practical actions such as estimate, permit, hire, buy, compare, and track.
+- Premium content should support decisions, not merely hide generic articles.
+
+### 6. Site Log Lite
+
+- Daily work note, labor count, materials used, payments, delays, and optional photo record.
+- Exportable or shareable project summary in a later phase.
+
+### 7. Telegram Bridge
+
+- Telegram should be a growth and distribution loop, not just a social icon.
+- Use cases: material price alerts, featured suppliers, weekly cement/rebar watch, RFQ intake, listing promotion, and deep links back to YBW.
+
+## Current Implemented Foundation
+
+- React 19 + TypeScript + Vite frontend.
+- Tailwind CSS v4, shadcn/ui, Radix UI, Lucide React.
+- Supabase backend with PostgreSQL, RLS, auth, migrations, and edge function structure.
+- Bilingual English/Amharic language system.
+- Existing sections for hero, blogs, tips, market prices, marketplace, professionals, premium, ads, contact, dashboard, search, and authentication.
+- Chapa and TeleBirr integration code paths.
 
 ## Technology Stack
 
-- Frontend: React 19, TypeScript, Vite 7
-- Styling: Tailwind CSS v4, OKLCH color palette
-- UI Components: shadcn/ui, Lucide React, Radix UI
-- Forms: React Hook Form, Zod
-- Backend: Supabase (PostgreSQL, RLS, real-time)
-- Internationalization: custom React context and translation keys
-- Animation: CSS animations + intersection observer
-
-## Project Structure
-
-```
-src/
-├── components/
-│   ├── icons/
-│   ├── layout/
-│   ├── sections/
-│   └── ui/
-├── hooks/
-├── lib/
-├── App.tsx
-├── main.tsx
-└── index.css
-supabase/
-├── migrations/
-public/
-├── assets and static files
-package.json
-vite.config.ts
-tsconfig.json
-README.md
-TECHNICAL_DOCUMENTATION.md
-USER_MANUAL.md
-QUICK_START_GUIDE.md
-SETUP_CHECKLIST.md
-DATABASE_MIGRATION_INSTRUCTIONS.md
-SUPABASE_MIGRATION_GUIDE.md
-IMPLEMENTATION_SUMMARY.md
-PROJECT_COMPLETION_SUMMARY.md
-Ref/
-```
-
-## Documentation Index
-
-| File | Purpose |
-|------|---------|
-| `README.md` | High-level product overview, feature summary, quick start for users and developers |
-| `TECHNICAL_DOCUMENTATION.md` | Architecture, stack, schema, implementation details, and system design |
-| `USER_MANUAL.md` | End-user guide with workflows, features, and FAQs |
-| `QUICK_START_GUIDE.md` | Rapid onboarding and most common actions for users |
-| `SETUP_CHECKLIST.md` | Development & deployment checklist, verification steps |
-| `DATABASE_MIGRATION_INSTRUCTIONS.md` | Database migration workflow and Supabase setup steps |
-| `SUPABASE_MIGRATION_GUIDE.md` | Supabase credentials and migration execution guide |
-| `IMPLEMENTATION_SUMMARY.md` | Implementation highlights, feature completion report |
-| `PROJECT_COMPLETION_SUMMARY.md` | Final project delivery summary, readiness status |
-| `ASSETS_AND_IMAGES.md` | Image asset inventory and usage notes |
-
-## Existing Documentation Sources
-
-The following documents are the primary references for YeBetWeg:
-
-- `README.md`
-- `TECHNICAL_DOCUMENTATION.md`
-- `USER_MANUAL.md`
-- `QUICK_START_GUIDE.md`
-- `SETUP_CHECKLIST.md`
-- `DATABASE_MIGRATION_INSTRUCTIONS.md`
-- `SUPABASE_MIGRATION_GUIDE.md`
-- `IMPLEMENTATION_SUMMARY.md`
-- `PROJECT_COMPLETION_SUMMARY.md`
-- `ASSETS_AND_IMAGES.md`
+- Frontend: React 19, TypeScript, Vite 7.
+- Styling: Tailwind CSS v4, OKLCH color palette.
+- UI Components: shadcn/ui, Lucide React, Radix UI.
+- Forms: React Hook Form, Zod.
+- Backend: Supabase PostgreSQL, Auth, RLS, Edge Functions.
+- Internationalization: custom React context and translation keys.
+- Payments: Chapa and TeleBirr.
+- Deployment: Vercel frontend, Supabase backend.
 
 ## Core Database and Data Model
 
-### Tables
+Existing tables:
 
 - `blogs`
 - `tips`
@@ -110,49 +141,46 @@ The following documents are the primary references for YeBetWeg:
 - `users`
 - `subscription_payments`
 
-### Sample Data Summary
+Required strategic additions:
 
-- 8 blog articles
-- 10 construction tips
-- 15 market price records
-- 12 marketplace listings
-- 6 professional profiles
-- 3 advertisements
-- 3 seeded user accounts (including 2 admin accounts)
-- 1 sample premium subscription
-- 1 sample payment record
+- BOQ assumptions and presets.
+- BOQ estimates or saved project estimates.
+- RFQ requests and RFQ line items.
+- Supplier verification metadata.
+- Price confidence, source, city, freshness, VAT, and trend metadata.
+- Site log entries.
 
-### New Data Model Enhancements
+## Monetization
 
-- `users` stores login-ready account metadata, role, provider, and language preference
-- `subscription_payments` tracks payment history and transaction references
-- `market_prices.access_level` enables free vs premium data gating
-- `listings`, `inquiries`, `professionals`, and `subscribers` can optionally link to a user account
-- `premium_subscriptions` now includes explicit status tracking and stronger foreign key ownership
+- Premium BOQ exports and project reports.
+- Supplier and professional verification.
+- Featured supplier/professional placement.
+- RFQ lead fees or supplier subscriptions.
+- Premium market price analytics and alerts.
+- Relevant construction brand sponsorships and ads.
+- Site Log Pro subscription for contractors.
 
-## Runtime Configuration
+## MVP Success Metrics
 
-- `.env` contains Supabase project credentials and environment variables
-- `package.json` defines scripts: `dev`, `build`, `typecheck`, `preview`
-- `tsconfig.json` and `vite.config.ts` define build settings
+- A user can generate a quick estimate in under 3 minutes.
+- A user can view fresh material prices with confidence metadata.
+- A user can send an RFQ from a material, listing, supplier, or BOQ list.
+- A user can contact a verified professional or supplier.
+- A user can create one daily site log entry.
+- An admin can manage prices, listings, professionals, RFQs, and verification status.
 
-## MVP Status (July 2026)
+## Current Delivery Priority
 
-The project is in **MVP Phase** — frontend features are ~95% complete. The critical path to shipping is deploying backend edge functions, setting secrets, and launching.
+The project is in a strategic MVP upgrade phase. The next delivery sequence is:
 
-See [Ref/MVP_DEFINITION.md](./MVP_DEFINITION.md) for full scope, exit criteria, and gap analysis.
-
-## Notes for Future Work (Post-MVP)
-
-- Deploy remaining edge functions and configure secrets (blocking launch)
-- Implement real DB queries in `admin_actions` edge function (currently a stub)
-- Image upload for listings and profiles via Supabase Storage
-- Email notification system for inquiries
-- Favorites / wishlist functionality
-- Social logins (Google, Facebook)
-- Historical market price charts
-- Professional booking / appointment calendar
+1. Stabilize existing build and backend functions.
+2. Add BOQ Lite.
+3. Extend price intelligence metadata.
+4. Add RFQ workflow.
+5. Upgrade supplier/professional trust profiles.
+6. Add Site Log Lite.
+7. Polish launch UX, Amharic copy, and deployment readiness.
 
 ---
 
-*Created as the curated project context reference for YeBetWeg.*
+*Last updated: July 26, 2026.*

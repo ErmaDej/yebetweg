@@ -1,185 +1,209 @@
 # YeBetWeg Development Plan
 
-**Last Updated:** July 26, 2026
-**Status:** MVP Phase — Frontend ~95% complete, backend services deployed, E2E payment tested.
-**Strategic Context:** Solo founder, $0 budget (free tiers only), relocating to Germany via Ausbildung (hard deadline), Ethiopian construction market, bilingual EN/AM.
+**Last Updated:** July 27, 2026
+**Status:** Strategic MVP upgrade in progress
 
----
+## Product Direction
 
-## Project Overview
+YeBetWeg is evolving from a broad Ethiopian construction knowledge and marketplace site into a practical construction decision platform:
 
-YeBetWeg is a bilingual (English/Amharic) construction knowledge platform and marketplace connector for Ethiopia. It bridges homeowners, professionals, builders, and suppliers through:
-- **Knowledge Hub:** 8 bilingual construction articles + 10 expert tips (4 premium-gated)
-- **Market Intelligence:** Real-time pricing for 15+ Addis Ababa construction materials
-- **Marketplace:** 12 listings across properties, materials, services with inquiry system
-- **Professionals Directory:** 6 verified construction experts with portfolios
-- **Premium Membership:** 3 tiers (Free / Premium 500 ETB/mo / Pro 1,200 ETB/mo)
-- **Ad Platform:** 3 slots (leaderboard, sidebar, native)
-- **Social Integration:** YouTube, TikTok, Telegram, Facebook
+**Estimate, compare, quote, and build with Ethiopian construction intelligence.**
 
-**Tech Stack:** React 19 + TypeScript + Vite 7 + Tailwind CSS v4 + shadcn/ui (70+ components) + Supabase (PostgreSQL, Auth, RLS, Realtime, Edge Functions/Deno, Storage)
+The revised MVP should focus on the smallest defensible product that can stand out against AddisBOQ, Conlink, Construction Proxy, Telegram construction channels, supplier directories, and generic construction software:
 
----
+**BOQ Lite + trusted market price intelligence + RFQ workflow + verified suppliers/professionals.**
 
-## WHAT'S BUILT (Frontend ~95% Complete)
+## Phase 0: Stabilize Existing MVP
 
-### Landing Page (All Sections Render)
-- Hero with video showcase
-- Blog section (8 bilingual articles)
-- Tips section (10 tips, 6 free + 4 premium-gated)
-- Market prices dashboard (15 materials, premium-gated rows)
-- Marketplace (12 listings, inquiry modal, create form)
-- Professionals directory (6 profiles, inquiry modal, category filter)
-- Premium section (3-tier pricing, Chapa + TeleBirr dialogs)
-- Social bridge + contact form + newsletter signup
-- Responsive ads (leaderboard, sidebar, native)
-- Navbar, footer, floating social bar, dark/light mode
+Goal: make the current codebase reliable enough to extend quickly.
 
-### Authentication (Complete)
-- Email/password signup, login, logout, password reset
-- AuthSheet component, ProtectedRoute, session management
-- AuthCallbackPage, ResetPasswordPage
+### Must Do
 
-### User Dashboard (`/dashboard`)
-- Profile view/edit, subscription status, activity overview
-- Quick stats (inquiries, listings, payments)
-- Next-best-action prompt
-- Admin-only tab (role-gated)
+- [x] Run TypeScript and production build checks.
+- [x] Fix all blocking type and build errors.
+- [x] Review Supabase migrations for current schema readiness.
+- [x] Implement real `admin_actions` edge function behavior instead of placeholder responses.
+- [ ] Verify Chapa, TeleBirr, auth, dashboard, search, inquiries, and premium gating code paths against deployed Supabase functions.
+- [ ] Confirm deployment prerequisites for Vercel and Supabase.
 
-### Admin Dashboard Tab
-- Role-gated (admin only)
-- Live metrics from DB (users, subscriptions, pending listings, unread inquiries)
-- Action buttons for content/marketplace/user management
-- **Backend edge function (`admin_actions`) has real DB logic implemented** (was stub)
+### Exit Criteria
 
-### Payment System
-- PremiumSection with pricing comparison table
-- Chapa dialog + TeleBirr dialog with phone input
-- QR code display for TeleBirr
-- PaymentSuccessPage with callback handling
-- `usePayment` hook with dual-gateway initiation
+- [x] `npm run typecheck` passes.
+- [x] `npm run build` passes.
+- [x] Admin edge function has real database-backed actions for MVP admin workflows.
+- [ ] Remaining deployment-only tasks are clearly documented.
 
-### Search
-- SearchBar component in navbar
-- SearchResults page with full-text across blogs and tips
+## Phase 1: Competitive MVP Upgrade
 
-### Internationalization
-- Custom React context (`useLanguage`)
-- 150+ translation keys for all user-facing text (EN + AM)
-- Language toggle in navbar
+Goal: add the product features that make YBW strategically distinct.
 
-### Edge Functions (All Deployed ✅)
-| Function | Version | Purpose |
-|----------|---------|---------|
-| `telebirr-service` | v9 | Secure proxy for TeleBirr API (init + query), keeps credentials server-side |
-| `telebirr-webhook` | v12 | Handles async TeleBirr payment notifications |
-| `chapa-service` | v1 | Server-side proxy for Chapa API (init + verify), hides secret key from browser |
-| `chapa-webhook` | v13 | Verifies Chapa signatures (HMAC), activates subscriptions via RPC |
-| `admin_actions` | v4 | Real DB operations: analytics, blog/tips/ads management, listing moderation, professional verification, user management, payment logs |
-| `notify_user` | Stub | Placeholder for email notifications (deferred — not deployed) |
+### BOQ Lite
 
----
+- [x] Add a quick estimate workflow for Ethiopian residential and small commercial projects.
+- Inputs:
+  - project type
+  - city
+  - area in square meters
+  - number of floors
+  - finish level
+  - structural/basic assumption presets
+  - contingency percentage
+- Outputs:
+  - estimated total cost
+  - cost per square meter
+  - material/labor/overhead summary
+  - assumptions and disclaimer
+  - premium export call-to-action
 
-## WHAT REMAINS TO SHIP MVP
+### BOQ Pro Unlock
 
-### Must Do (Blocking Launch) — **Priority Order**
+- [x] Add premium path for detailed BOQ/export CTA.
+- [ ] Initial implementation can be a generated on-screen report with later Excel/PDF export.
+- [x] Connect unlock to existing Chapa/TeleBirr premium flow where practical.
 
-| # | Task | Status | Verification |
-|---|------|--------|--------------|
-| 1 | **Deploy `telebirr-service` edge function** | ✅ DONE (v9) | Function visible in Supabase Dashboard → Edge Functions |
-| 2 | **Deploy `telebirr-webhook` edge function** | ✅ DONE (v12) | Function visible; webhook URL registered with TeleBirr |
-| 3 | **Deploy `chapa-webhook` edge function** | ✅ DONE (v13) | Function visible; HMAC verification fixed, webhook URL registered with Chapa |
-| 4 | **Deploy `admin_actions` edge function** | ✅ DONE (v4) | Function visible; admin dashboard loads live metrics |
-| 5 | **Set all secrets in Supabase Dashboard** | ✅ DONE | All 16 secrets present (see Secrets Checklist below) |
-| 6 | **Apply all Supabase migrations** | ✅ DONE (16 files) | All tables, RLS policies, RPCs, seed data present. **Manual step:** Apply `20260726000000_011_fix_activate_subscription_rpc.sql` via Supabase Dashboard SQL Editor |
-| 7 | **TypeScript clean build** | ✅ DONE | `tsc --noEmit` exits 0 |
-| 8 | **Production build** | ✅ DONE | `dist/` created without errors |
-| 9 | **Deploy frontend to Vercel** | ⏳ PENDING | `vercel --prod` (link project first) |
-| 10 | **E2E Payment QA** | ✅ DONE (see notes) | Chapa init→verify→webhook→activate tested end-to-end. TeleBirr flow tested via edge function |
-| 11 | **Soft launch** | ⏳ PENDING | Invite 5-10 beta testers |
+### Market Price Intelligence
 
-### Secrets Checklist (Set in Supabase Dashboard → Edge Functions → Secrets)
+- [x] Extend `market_prices` with:
+  - city
+  - specification/grade
+  - source type
+  - source name
+  - VAT flag
+  - confidence score
+  - last verified date
+  - trend direction
+  - freshness status
+- [x] Update UI to show trust and freshness clearly.
 
-| Secret | Used By | Source |
-|--------|---------|--------|
-| `VITE_TELEBIRR_API_KEY` | `telebirr-service` | Ethio Telecom Developer Portal |
-| `VITE_TELEBIRR_MERCHANT_APP_ID` | `telebirr-service` | Ethio Telecom Developer Portal |
-| `VITE_TELEBIRR_FABRIC_APP_ID` | `telebirr-service` | Ethio Telecom Developer Portal |
-| `VITE_TELEBIRR_SHORT_CODE` | `telebirr-service` | Ethio Telecom Developer Portal |
-| `CHAPA_SECRET_KEY` | `chapa-webhook` | Chapa Dashboard → API Keys |
-| `CHAPA_WEBHOOK_SECRET` | `chapa-webhook` | Chapa Dashboard → Webhook Settings |
-| `RESEND_API_KEY` | `notify_user` (deferred) | Resend Dashboard (can skip for MVP) |
-| `SUPABASE_SERVICE_ROLE_KEY` | All edge functions | Supabase Dashboard → Settings → API (auto-available) |
+### RFQ Workflow
 
-> **Note:** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are already in `.env` for frontend. Edge functions use `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (auto-injected by Supabase).
+- [x] Add quote request flow from market price item.
+- [ ] Add quote request flow from marketplace listing.
+- [ ] Add quote request flow from supplier/professional profile.
+- [ ] Add quote request flow from BOQ estimate summary.
+- [x] Store RFQs with status tracking.
+- [ ] Add admin visibility for RFQs.
 
-### Should Do (Before Launch)
+### Verified Profiles
 
-| # | Task | Why |
-|---|------|-----|
-| 12 | End-to-end QA of all flows (auth, payments, search, dashboard) | Catch regressions |
-| 13 | Responsive testing at 320px, 768px, 1024px, 1440px | Mobile-first Ethiopian users |
-| 14 | Error state handling verification (API failure, network down, invalid input, expired session) | Graceful degradation |
-| 15 | README update with live URLs | Documentation |
-| 16 | Run `SETUP_CHECKLIST.md` from scratch on clean machine | Reproducibility |
+- [ ] Upgrade supplier/professional cards with:
+  - verification badge
+  - specialty
+  - city/service area
+  - response contact
+  - portfolio or proof placeholder
+  - trust notes
 
-### Can Defer (Post-MVP)
+### Site Log Lite
 
-- Image upload (Supabase Storage) — manual seed data works for MVP
-- Favorites / wishlist
-- Email notifications (Resend) — `notify_user` stub in place
-- Real-time updates (Supabase Realtime)
-- Social logins (Google, Facebook)
-- Promo codes
-- PWA / offline support
-- CI/CD pipeline (GitHub Actions) — manual deploy is fine for initial release
+- [ ] Add simple project log entry:
+  - date
+  - work completed
+  - labor count
+  - materials used
+  - payments
+  - delay reason
+  - optional image placeholder
 
----
+### Telegram Bridge
 
-## MONETIZATION FLOW (From Agentic Verdicts — Practical Ethiopia Reality)
+- Add UI and content hooks for:
+  - material price alert subscription
+  - Telegram channel CTA
+  - shareable material/BOQ links
+  - weekly market watch concept
 
-### Phase 1: Manual TeleBirr (Launch Week — Revenue NOW)
-> **Trust > Automation in Ethiopia.** Start human, then automate.
+### Exit Criteria
 
-1. **Premium button** → shows TeleBirr phone + reference (user's email)
-2. User pays via TeleBirr app → uploads screenshot in contact form / Telegram
-3. Admin verifies manually → toggles `is_premium` in Supabase Dashboard
-4. Premium content unlocks immediately via RLS / frontend gating
+- [x] User can estimate a project in under 3 minutes.
+- [x] User can send an RFQ from at least one major workflow.
+- [x] Market prices display freshness and trust metadata.
+- [ ] Verified profiles show useful trust signals.
+- [ ] A basic site log entry can be created.
 
-**Why:** Avoids API complexity, matches local behavior (screenshot proof is standard), gets first paying users THIS WEEK.
+## Phase 2: Admin and Data Trust
 
-### Phase 2: Chapa Automation (Week 2-3)
-- Chapa webhook → `activate_subscription` RPC → auto-unlock
-- TeleBirr webhook → same RPC (once sandbox credentials work)
+Goal: make the new workflows maintainable by admins.
 
-### Phase 3: Marketplace Monetization (Month 1)
-- **Boost listing (3 days):** 50-100 ETB
-- **Featured listing (7 days):** 150-300 ETB
-- **Professional verification badge:** 200-500 ETB/mo
-- **Ads:** Banner 500-2,000 ETB/week, Featured supplier 1,000-3,000 ETB/week
+### Must Do
 
-### Revenue Targets
-| Period | Target | Primary Drivers |
-|--------|--------|-----------------|
-| Week 1 | 5 paying users | Manual TeleBirr + premium tips/prices |
-| Month 1 | 50 paying users | Chapa automation + marketplace boosts |
-| Month 3 | 500 paying users | Content SEO + Telegram community + referrals |
+- Admin CRUD for market prices.
+- Admin CRUD for BOQ assumptions/presets.
+- Admin RFQ list and status management.
+- Admin verification workflow for suppliers and professionals.
+- Price freshness warnings and expired-price states.
+- Seed realistic Ethiopian BOQ assumptions and sample price intelligence records.
 
----
+### Exit Criteria
 
-## GROWTH LEVERS (Prioritized for Solo Founder, $0 Budget)
+- Admin can maintain the main datasets without direct database edits.
+- Users can distinguish verified, supplier-quoted, community-reported, expired, and unverified data.
 
-| Lever | Effort | Impact | Timeline | Action |
-|-------|--------|--------|----------|--------|
-| **Telegram Channel + Daily Tips** | Low | High | Immediate | Create `@yebetweg`, post daily bilingual tips (construction + philosophy) |
-| **TikTok/Reels Demos** | Low | High | Week 1 | 3-5 videos: "Check cement price in 10 sec", "Find verified architect" |
-| **SEO: "Addis construction prices" + Amharic keywords** | Medium | High | Month 1 | Sitemap, robots.txt, meta tags, structured data for prices |
-| **Professional Partnerships (B2B)** | Medium | High | Week 2 | Free Pro tier for 5 architects/contractors in exchange for content + referrals |
-| **Chapa/TeleBirr Co-marketing** | Low | Medium | Week 1 | Request "partner showcase" — they want Ethiopian merchant stories |
-| **Referral Program** | Low | Medium | Month 1 | "Refer a pro → 1 month free Premium" |
-| **WhatsApp Business API** | Medium | Medium | Month 2 | Automated inquiry notifications (90% of Ethiopian biz comms) |
+## Phase 3: Launch Polish
 
----
+Goal: prepare the upgraded MVP for public launch.
+
+### Must Do
+
+- Mobile-first UX pass.
+- Amharic copy pass for all new workflows.
+- Landing page repositioned around estimate, compare, quote, build.
+- SEO pages or sections for:
+  - BOQ calculator
+  - material prices
+  - suppliers
+  - professionals
+- Error and loading state pass.
+- Production deployment to Vercel and Supabase.
+- Update README, setup guides, and launch checklist with live URLs.
+
+### Exit Criteria
+
+- Core flows are usable on mobile.
+- No known blocking production errors.
+- Documentation reflects the deployed product.
+
+## Phase 4: Post-Launch Enhancements
+
+- Historical material price charts.
+- Supplier dashboard.
+- Telegram bot intake.
+- Advanced BOQ templates.
+- Permit checklist and document center.
+- Reviews and ratings.
+- Saved projects.
+- PWA/offline support.
+- Image uploads through Supabase Storage.
+- Professional booking calendar.
+- Email and SMS notifications.
+
+## Current Technical Foundation
+
+### Frontend
+
+- React 19 + TypeScript
+- Vite 7
+- Tailwind CSS v4
+- shadcn/ui, Radix UI, Lucide React
+- React Hook Form + Zod
+- Recharts and Chart.js
+
+### Backend
+
+- Supabase PostgreSQL
+- Supabase Auth
+- Row Level Security
+- Supabase Edge Functions
+- Chapa and TeleBirr payment paths
+
+### Existing Main Views
+
+- Landing page sections
+- Search results
+- Dashboard
+- Admin dashboard tab
+- Auth callback and password reset
+- Payment and payment success pages
 
 ## TECHNICAL ARCHITECTURE — Risk Assessment
 
@@ -265,31 +289,160 @@ All must be ✅ before declaring MVP shipped:
 
 **You are closer to revenue than you think.** The product is genuinely useful, the stack is modern and scalable, and the Ethiopian construction market has **zero direct competitor** with your bilingual + real-prices + verified-pros combo.
 
-**Biggest risk isn't technical — it's deployment velocity.** Every day not live is a day not learning from real users. The Ausbildung move adds a hard deadline.
+**Biggest risk isn\`t technical — it\`s deployment velocity.** Every day not live is a day not learning from real users. The Ausbildung move adds a hard deadline.
 
-**Recommendation:** Treat this week as "Launch Week." Block everything else. Deploy → Test → Launch → Iterate. The code is ready. The only thing missing is the `supabase functions deploy` commands and secret configuration.
+**Recommendation:** Treat this week as \
+
+## WHAT'S BUILT (Frontend ~95% complete)
+
+### Landing Page
+- Hero section with video showcase
+- Blog section (8 bilingual articles)
+- Tips section (10 tips, 6 free + 4 premium-gated)
+- Market prices dashboard (15 materials, premium-gated)
+- Marketplace (12 listings, inquiry modal, create form)
+- Professionals directory (6 profiles, inquiry modal)
+- Premium section (3-tier pricing, Chapa + TeleBirr dialogs)
+- Social bridge + contact form + newsletter
+- Responsive ads (leaderboard, sidebar, native)
+- Navbar, footer, floating social bar, dark/light mode
+
+### Authentication
+- Email/password signup, login, logout, password reset
+- AuthSheet component, ProtectedRoute, session management
+- AuthCallbackPage, ResetPasswordPage
+
+### User Dashboard `/dashboard`
+- Profile view/edit, subscription status, activity overview
+- Quick stats (inquiries, listings, payments)
+- Next-best-action prompt
+
+### Admin Dashboard Tab
+- Role-gated (admin-only tab in dashboard)
+- Live metrics from DB (users, subscriptions, pending listings, unread inquiries)
+- Action buttons for content/marketplace/user management
+- Backend edge function is currently a **stub** — needs real DB logic
+
+### Payment System
+- PremiumSection with pricing comparison table
+- Chapa dialog + TeleBirr dialog with phone input
+- QR code display for TeleBirr
+- PaymentSuccessPage with callback handling
+- `usePayment` hook with dual-gateway initiation
+
+### Search
+- SearchBar component in navbar
+- SearchResults page with full-text across blogs and tips
+
+### Internationalization
+- Custom React context (`useLanguage`)
+- Translation keys for all user-facing text (EN + AM)
+- Language toggle in navbar
+
+### Edge Functions (Written, NOT Deployed)
+- `telebirr-service/index.ts` — full implementation with TeleBirr API call
+- `telebirr-webhook/index.ts` — handles async payment notification
+- `chapa-webhook/index.ts` — signature verification + subscription activation
+- `admin_actions.ts` — **stub only** (returns placeholder success)
+- `notify_user.ts` — stub (placeholder email recipient)
 
 ---
 
-## APPROVAL & EXECUTION
+## WHAT REMAINS TO SHIP MVP
 
-**Review this plan. If approved, I will:**
-1. Help fix TypeScript errors (run `npm run typecheck`, share output)
-2. Guide edge function deployment step-by-step
-3. Verify secrets configuration
-4. Support E2E payment testing
-5. Draft Telegram launch content (first 5 posts, bilingual)
+### Must Do (Blocking Launch)
 
-**Say "APPROVED" to proceed with execution, or request modifications.**
+1. **Deploy all edge functions** to Supabase
+   - `supabase functions deploy telebirr-service`
+   - `supabase functions deploy telebirr-webhook`
+   - `supabase functions deploy chapa-webhook`
+   - `supabase functions deploy admin_actions`
+
+2. **Set environment secrets** in Supabase Dashboard
+   - TeleBirr: API key, merchant app ID, fabric app ID, short code
+   - Chapa: secret key, webhook secret
+   - Resend: API key (can skip if deferred)
+
+3. **Implement real `admin_actions` edge function** (replace switch stub with actual Supabase queries)
+
+4. **Apply all Supabase migrations** (ensure schema is current)
+
+5. **TypeScript clean build** — `tsc --noEmit` must pass; fix remaining type issues
+
+6. **Deploy frontend** to Vercel
+
+### Should Do (Before Launch)
+
+7. End-to-end QA of all flows (auth, payments, search, dashboard)
+8. Responsive testing across device sizes
+9. Error state handling verification
+10. README update with live URLs
+
+### Can Defer (Post-MVP)
+
+- Image upload (Supabase Storage)
+- Favorites / wishlist
+- Email notifications
+- Real-time updates
+- Social logins
+- Promo codes
+- PWA / offline
 
 ---
 
-**Developer Note (Local Testing):**
+## Technology Stack
 
-For quicker iteration during development we mock TeleBirr locally. The mock server is included at `supabase/mocks/telebirr_mock.py` and listens on `http://127.0.0.1:8081`. To use the mock, set `TELEBIRR_API_URL=http://127.0.0.1:8081/v1` in your `.env` (already added) and run:
+### Frontend
+- **Framework:** React 19 + TypeScript
+- **Build:** Vite 7
+- **UI:** shadcn/ui (70+ components), Radix UI, Tailwind CSS v4
+- **Charts:** Recharts, Chart.js
+- **Forms:** React Hook Form + Zod
+- **Icons:** Lucide React
+
+### Backend
+- **Database:** Supabase (PostgreSQL)
+- **Auth:** Supabase Auth + Custom RPC
+- **Edge Functions:** Supabase (Deno)
+- **Real-time:** Supabase Realtime (not yet used)
+- **Storage:** Supabase Storage (not yet used)
+
+### Payment Gateways
+- **Chapa** — cards & mobile money
+- **TeleBirr** — mobile money & USSD
+
+### Deployment
+- **Frontend:** Vercel
+- **Backend:** Supabase Cloud
+
+---
+
+## Project Metrics
+
+| Metric | Current | Target |
+|---|---|---|
+| Components | 70+ | — |
+| Pages/Views | 7 | — |
+| Database Tables | 12 | — |
+| Seed Records | 70+ | — |
+| Translations | 150+ | — |
+| Payment Gateways | 2 | — |
+| Mobile Optimization | ~95% | 100% |
+
+---
+
+## Quick Start
 
 ```bash
-python3 supabase/mocks/telebirr_mock.py
+npm install
+npm run dev        # local dev at localhost:5173
+npm run typecheck  # check TypeScript errors
+npm run build      # production build
 ```
 
-This mock returns a successful `code: "0000"` payment initialization response and helps validate UI and edge-function integrations without hitting the real TeleBirr endpoint. Remove or override `TELEBIRR_API_URL` when testing against staging/production endpoints.
+## References
+
+- [Ref/MVP_DEFINITION.md](./Ref/MVP_DEFINITION.md) — MVP scope, exit criteria, gap analysis
+- [Ref/PROJECT_CONTEXT.md](./Ref/PROJECT_CONTEXT.md) — architecture and data model
+- [SETUP_CHECKLIST.md](./SETUP_CHECKLIST.md) — deployment checklist
+- [DEVELOPMENT_ROADMAP.md](./DEVELOPMENT_ROADMAP.md) — phased roadmap to launch

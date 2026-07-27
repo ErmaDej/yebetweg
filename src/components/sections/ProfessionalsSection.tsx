@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Star, MapPin, Phone, Plus, Award } from "lucide-react"
+import { Star, MapPin, Phone, Plus, Award, ShieldCheck, BriefcaseBusiness, Clock3, Images } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,6 +51,17 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
     .split(" ")
     .map((n: string) => n[0])
     .join("")
+  const portfolioCount = professional.portfolio_images?.filter(Boolean).length || 0
+  const trustScore = Math.min(
+    100,
+    Math.round(
+      (professional.is_verified ? 45 : 15) +
+        Math.min(Number(professional.rating || 0), 5) * 7 +
+        Math.min(Number(professional.experience_years || 0), 15) * 1.5 +
+        (portfolioCount > 0 ? 8 : 0),
+    ),
+  )
+  const responseLabel = language === "en" ? "Usually responds in 24h" : "ብዙውን ጊዜ በ24 ሰዓት ይመልሳል"
 
   const handleInquiry = async () => {
     if (!hireData.name || !hireData.phone) {
@@ -110,21 +121,51 @@ function ProfessionalCard({ professional, index }: { professional: any; index: n
                 <Award className="h-4 w-4 text-accent shrink-0" />
               )}
             </div>
-            <Badge variant="secondary" className="mt-1 text-[10px]">
-              {t(specialties.find(s => s.value === professional.specialty)?.key || "professionals.contractor")}
-            </Badge>
-            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <Badge variant="secondary" className="text-[10px]">
+                {t(specialties.find(s => s.value === professional.specialty)?.key || "professionals.contractor")}
+              </Badge>
+              <Badge variant={professional.is_verified ? "default" : "outline"} className="gap-1 text-[10px]">
+                <ShieldCheck className="h-3 w-3" />
+                {professional.is_verified
+                  ? t("common.verified")
+                  : language === "en" ? "Review pending" : "ግምገማ ላይ"}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Star className="h-3 w-3 text-accent fill-accent" />
                 {Number(professional.rating).toFixed(1)}
               </span>
-              <span>{professional.experience_years} {language === "en" ? "yrs exp" : "ዓም ልምድ"}</span>
+              <span className="flex items-center gap-1">
+                <BriefcaseBusiness className="h-3 w-3" />
+                {professional.experience_years} {language === "en" ? "yrs exp" : "ዓም ልምድ"}
+              </span>
             </div>
             <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3" />
               <span className="line-clamp-1">{professional.location}</span>
             </div>
           </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-lg border border-border/60 p-2">
+            <p className="text-muted-foreground">{language === "en" ? "Trust score" : "የእምነት መጠን"}</p>
+            <p className="mt-1 font-semibold">{trustScore}%</p>
+          </div>
+          <div className="rounded-lg border border-border/60 p-2">
+            <p className="text-muted-foreground">{language === "en" ? "Proof" : "ማረጋገጫ"}</p>
+            <p className="mt-1 inline-flex items-center gap-1 font-semibold">
+              <Images className="h-3 w-3" />
+              {portfolioCount || (professional.is_verified ? 1 : 0)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          <Clock3 className="h-3.5 w-3.5 shrink-0" />
+          <span className="line-clamp-1">{responseLabel}</span>
         </div>
 
         <Dialog open={hireOpen} onOpenChange={setHireOpen}>
