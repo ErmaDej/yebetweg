@@ -106,8 +106,6 @@ export function useSmartSearch<T extends Record<string, any>>({
   const [sort, setSortState] = useState<SortOption>(defaultSort(defaultSortField))
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(initialPageSize)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const debouncedQuery = useDebounce(query, debounceMs)
 
@@ -117,9 +115,6 @@ export function useSmartSearch<T extends Record<string, any>>({
 
   const filtered = useMemo(() => {
     if (!clientSide) return { items: [], totalCount: 0 }
-
-    setLoading(true)
-    setError(null)
 
     try {
       let result = [...data]
@@ -140,12 +135,10 @@ export function useSmartSearch<T extends Record<string, any>>({
         if (value === undefined || value === null || value === "" || value === "all") return
 
         if (Array.isArray(value)) {
-          // Multi-select: item must match any value
           if (value.length > 0) {
             result = result.filter((item) => value.includes(String(item[key])))
           }
         } else if (typeof value === "object" && "min" in value && "max" in value) {
-          // Range filter
           const { min, max } = value as { min?: number; max?: number }
           result = result.filter((item) => {
             const v = Number(item[key])
@@ -155,7 +148,6 @@ export function useSmartSearch<T extends Record<string, any>>({
             return true
           })
         } else {
-          // Single value filter
           result = result.filter((item) => String(item[key]) === String(value))
         }
       })
@@ -179,11 +171,8 @@ export function useSmartSearch<T extends Record<string, any>>({
         return sort.direction === "desc" ? -cmp : cmp
       })
 
-      setLoading(false)
       return { items: result, totalCount: result.length }
-    } catch (err: any) {
-      setError(err.message || "Filter error")
-      setLoading(false)
+    } catch {
       return { items: [], totalCount: 0 }
     }
   }, [data, debouncedQuery, filters, sort, searchableFields, clientSide])
@@ -268,8 +257,8 @@ export function useSmartSearch<T extends Record<string, any>>({
     items: paginatedItems,
     totalCount: filtered.totalCount,
     pageCount,
-    loading,
-    error,
+    loading: false,
+    error: null,
     state: { query, filters, sort, page, pageSize },
     setQuery,
     setFilter,

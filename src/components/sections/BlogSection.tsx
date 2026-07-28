@@ -122,11 +122,12 @@ export function BlogSection() {
   const { ref, isInView } = useInView()
 
   // Client-side smart search for blogs
+  const blogSearchFields = useMemo(() => ["title_en", "title_am", "content", "category", "author"] as (keyof Blog)[], [])
   const smartSearch = useSmartSearch<Blog>({
     data: blogs,
     initialPageSize: BLOGS_PER_PAGE,
     defaultSortField: "created_at",
-    searchableFields: ["title_en", "title_am", "content", "category", "author"],
+    searchableFields: blogSearchFields,
   })
 
   const searchableBlogs = smartSearch.items
