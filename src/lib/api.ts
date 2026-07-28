@@ -31,7 +31,7 @@ async function callFunction<T>(functionName: string, body: Record<string, any>, 
     } else {
       const customUserId = getCustomAuthUserId()
       if (customUserId) {
-        headers["X-Custom-Auth-UserId"] = customUserId
+        body._customUserId = customUserId
       }
     }
   }
