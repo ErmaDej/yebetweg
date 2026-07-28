@@ -256,7 +256,7 @@ export function ProfessionalsSection() {
   const { t, language } = useLanguage()
   const [specialty, setSpecialty] = useState("all")
   const [page, setPage] = useState(1)
-  const { professionals, loading, total } = useProfessionals(specialty, page, PROFESSIONALS_PER_PAGE)
+  const { professionals, loading } = useProfessionals(specialty, page, PROFESSIONALS_PER_PAGE)
   const { ref, isInView } = useInView()
   const [joinOpen, setJoinOpen] = useState(false)
   const [joinError, setJoinError] = useState("")

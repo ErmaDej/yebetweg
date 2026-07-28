@@ -18,7 +18,7 @@ export interface FilterGroup<T> {
   rangeStep?: number
 }
 
-export interface SmartSearchState<T> {
+export interface SmartSearchState {
   query: string
   filters: Record<string, any>
   sort: SortOption
@@ -38,7 +38,7 @@ export interface SmartSearchResult<T> {
   /** Error message if any */
   error: string | null
   /** Current state (useful for reset) */
-  state: SmartSearchState<T>
+  state: SmartSearchState
   /** Set the search query (debounced) */
   setQuery: (q: string) => void
   /** Set/clear a single filter value */
@@ -111,7 +111,6 @@ export function useSmartSearch<T extends Record<string, any>>({
 
   const debouncedQuery = useDebounce(query, debounceMs)
 
-  const initialFilters = useRef<Record<string, any>>({})
   const initialSort = useRef<SortOption>(defaultSort(defaultSortField))
 
   // ── Derived filtered dataset ──────────────────────────────────────

@@ -2,7 +2,6 @@ import { useState, useMemo } from "react"
 import { X, ChevronDown, ChevronUp, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
 import {
@@ -41,8 +40,6 @@ export interface FilterPanelProps {
   values: FilterValues
   /** Called when a single filter changes */
   onFilterChange: (key: string, value: any) => void
-  /** Called to set multiple filters at once */
-  onFiltersChange?: (values: FilterValues) => void
   /** Called to clear all filters */
   onClear: () => void
   /** Whether the panel is visible */
@@ -96,7 +93,6 @@ export function FilterPanel({
   filters: filterDefs,
   values,
   onFilterChange,
-  onFiltersChange,
   onClear,
   open,
   onToggle,

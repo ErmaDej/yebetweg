@@ -118,7 +118,7 @@ export function BlogSection() {
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const [page, setPage] = useState(1)
-  const { blogs, loading, total } = useBlogs(category, page, BLOGS_PER_PAGE)
+  const { blogs, loading } = useBlogs(category, page, BLOGS_PER_PAGE)
   const { ref, isInView } = useInView()
 
   // Client-side smart search for blogs
