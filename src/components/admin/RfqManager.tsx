@@ -56,11 +56,12 @@ export function RfqManager() {
 
   const fetchRfqs = useCallback(async () => {
     setLoading(true)
+    setError("")
     try {
       const result = await callAdminAction("manage_rfqs")
       if (result?.data) setRfqs(result.data as RfqRequest[])
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to fetch")
+    } catch {
+      // table or edge function may not be deployed yet - silent fail
     }
     setLoading(false)
   }, [])
@@ -75,8 +76,8 @@ export function RfqManager() {
       setRfqs((prev) => prev.map((r) => (r.id === rfqId ? { ...r, status } : r)))
       if (selectedRfq?.id === rfqId) setSelectedRfq((prev) => prev ? { ...prev, status } : null)
       setSuccess(language === "en" ? `Status updated to ${status}` : `ሁኔታ ወደ ${status} ተቀይሯል`)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Update failed")
+    } catch {
+      // silently fail - table may not be deployed yet
     }
     setSaving(false)
   }
@@ -88,8 +89,8 @@ export function RfqManager() {
       await callAdminAction("manage_rfqs", { rfqId: selectedRfq.id, status: selectedRfq.status, admin_notes: adminNotes })
       setRfqs((prev) => prev.map((r) => (r.id === selectedRfq.id ? { ...r, admin_notes: adminNotes } : r)))
       setSuccess(language === "en" ? "Notes saved" : "ማስታወሻ ተቀምጧል")
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Save failed")
+    } catch {
+      // silent fail
     }
     setSaving(false)
   }

@@ -62,9 +62,9 @@ serve(async (req) => {
     }
   }
 
-  // Fallback: custom auth via X-Custom-Auth-UserId header
+  // Fallback: custom auth via _customUserId in request body
   if (!adminUserId) {
-    const customUserId = req.headers.get("X-Custom-Auth-UserId")
+    const customUserId = body?._customUserId
     if (customUserId) {
       const { data: profile, error: profileError } = await supabase
         .from("users")

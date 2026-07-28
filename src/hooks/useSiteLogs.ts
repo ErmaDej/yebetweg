@@ -22,18 +22,22 @@ export function useSiteLogs(userId?: string) {
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
-    let query = supabase
-      .from("site_logs")
-      .select("*")
-      .order("date", { ascending: false })
+    try {
+      let query = supabase
+        .from("site_logs")
+        .select("*")
+        .order("date", { ascending: false })
 
-    if (userId) {
-      query = query.eq("user_id", userId)
-    }
+      if (userId) {
+        query = query.eq("user_id", userId)
+      }
 
-    const { data, error } = await query
-    if (!error && data) {
-      setLogs(data as SiteLog[])
+      const { data, error } = await query
+      if (!error && data) {
+        setLogs(data as SiteLog[])
+      }
+    } catch {
+      // table may not exist yet
     }
     setLoading(false)
   }, [userId])
@@ -43,44 +47,56 @@ export function useSiteLogs(userId?: string) {
   }, [fetchLogs])
 
   const createLog = async (log: Omit<SiteLog, "id" | "created_at" | "updated_at">) => {
-    const { data, error } = await supabase
-      .from("site_logs")
-      .insert(log)
-      .select()
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from("site_logs")
+        .insert(log)
+        .select()
+        .single()
 
-    if (!error && data) {
-      setLogs((prev) => [data as SiteLog, ...prev])
-      return { data: data as SiteLog, error: null }
+      if (!error && data) {
+        setLogs((prev) => [data as SiteLog, ...prev])
+        return { data: data as SiteLog, error: null }
+      }
+      return { data: null, error }
+    } catch {
+      return { data: null, error: new Error("table not available") }
     }
-    return { data: null, error }
   }
 
   const updateLog = async (id: string, updates: Partial<SiteLog>) => {
-    const { data, error } = await supabase
-      .from("site_logs")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await supabase
+        .from("site_logs")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single()
 
-    if (!error && data) {
-      setLogs((prev) => prev.map((l) => (l.id === id ? (data as SiteLog) : l)))
-      return { data: data as SiteLog, error: null }
+      if (!error && data) {
+        setLogs((prev) => prev.map((l) => (l.id === id ? (data as SiteLog) : l)))
+        return { data: data as SiteLog, error: null }
+      }
+      return { data: null, error }
+    } catch {
+      return { data: null, error: new Error("table not available") }
     }
-    return { data: null, error }
   }
 
   const deleteLog = async (id: string) => {
-    const { error } = await supabase
-      .from("site_logs")
-      .delete()
-      .eq("id", id)
+    try {
+      const { error } = await supabase
+        .from("site_logs")
+        .delete()
+        .eq("id", id)
 
-    if (!error) {
-      setLogs((prev) => prev.filter((l) => l.id !== id))
+      if (!error) {
+        setLogs((prev) => prev.filter((l) => l.id !== id))
+      }
+      return { error }
+    } catch {
+      return { error: new Error("table not available") }
     }
-    return { error }
   }
 
   return { logs, loading, createLog, updateLog, deleteLog, refresh: fetchLogs }
