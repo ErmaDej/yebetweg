@@ -51,42 +51,39 @@ export function AdminDashboardTab() {
   const [actionInFlight, setActionInFlight] = useState<string | null>(null)
   const [actionResult, setActionResult] = useState<AdminActionResult | null>(null)
 
+  const safeCount = async (table: string, query?: (q: any) => any) => {
+    try {
+      let q = supabase.from(table).select("id", { count: "exact", head: true })
+      if (query) q = query(q)
+      const { count } = await q
+      return count || 0
+    } catch {
+      return 0
+    }
+  }
+
   const loadMetrics = async () => {
     setMetricsLoading(true)
     setError(null)
     try {
       const [
-        users,
-        subscriptions,
-        payments,
-        pendingListings,
-        professionals,
-        inquiries,
-        rfqs,
-        blogs,
-        ads,
+        users, subscriptions, payments, pendingListings,
+        professionals, inquiries, rfqs, blogs, ads,
       ] = await Promise.all([
-        supabase.from("users").select("id", { count: "exact", head: true }),
-        supabase.from("premium_subscriptions").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("subscription_payments").select("id", { count: "exact", head: true }),
-        supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("professionals").select("id", { count: "exact", head: true }),
-        supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("is_read", false),
-        supabase.from("rfq_requests").select("id", { count: "exact", head: true }).eq("status", "new"),
-        supabase.from("blogs").select("id", { count: "exact", head: true }),
-        supabase.from("ads").select("id", { count: "exact", head: true }),
+        safeCount("users"),
+        safeCount("premium_subscriptions", (q) => q.eq("is_active", true)),
+        safeCount("subscription_payments"),
+        safeCount("listings", (q) => q.eq("status", "pending")),
+        safeCount("professionals"),
+        safeCount("inquiries", (q) => q.eq("is_read", false)),
+        safeCount("rfq_requests", (q) => q.eq("status", "new")),
+        safeCount("blogs"),
+        safeCount("ads"),
       ])
 
       setMetrics({
-        users: users.count || 0,
-        subscriptions: subscriptions.count || 0,
-        payments: payments.count || 0,
-        pendingListings: pendingListings.count || 0,
-        professionals: professionals.count || 0,
-        inquiries: inquiries.count || 0,
-        rfqs: rfqs.count || 0,
-        blogs: blogs.count || 0,
-        ads: ads.count || 0,
+        users, subscriptions, payments, pendingListings,
+        professionals, inquiries, rfqs, blogs, ads,
       })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Unable to load admin metrics.")

@@ -42,21 +42,44 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  const token = authHeader.replace("Bearer ", "")
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  let adminUserId: string | null = null
 
-  if (authError || !user) {
-    return jsonResponse({ error: "Unauthorized" }, 401)
+  // Try standard Supabase Auth JWT first
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader.replace("Bearer ", "")
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+
+    if (!authError && user) {
+      const { data: profile, error: profileError } = await supabase
+        .from("users")
+        .select("id, role, status")
+        .or(`id.eq.${user.id},auth_uid.eq.${user.id}`)
+        .single()
+
+      if (!profileError && profile && profile.role === "admin" && profile.status === "active") {
+        adminUserId = profile.id
+      }
+    }
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("id, role, status")
-    .or(`id.eq.${user.id},auth_uid.eq.${user.id}`)
-    .single()
+  // Fallback: custom auth via X-Custom-Auth-UserId header
+  if (!adminUserId) {
+    const customUserId = req.headers.get("X-Custom-Auth-UserId")
+    if (customUserId) {
+      const { data: profile, error: profileError } = await supabase
+        .from("users")
+        .select("id, role, status")
+        .eq("id", customUserId)
+        .single()
 
-  if (profileError || !profile || profile.role !== "admin" || profile.status !== "active") {
-    return jsonResponse({ error: "Forbidden: active admin role required" }, 403)
+      if (!profileError && profile && profile.role === "admin" && profile.status === "active") {
+        adminUserId = profile.id
+      }
+    }
+  }
+
+  if (!adminUserId) {
+    return jsonResponse({ error: "Unauthorized or insufficient permissions" }, 401)
   }
 
   let body
