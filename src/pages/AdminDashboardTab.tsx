@@ -4,9 +4,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/lib/i18n"
-import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, type LucideIcon } from "lucide-react"
+import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
+import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
+import { RfqManager } from "@/components/admin/RfqManager"
 
 type AdminMetricKey =
   | "users"
@@ -306,6 +308,33 @@ export function AdminDashboardTab() {
           <ActionButton action="manage_payments" icon={DollarSign} label={language === "en" ? "Manage Payments" : "ክፍያዎችን አስተዳድር"} />
         </CardContent>
       </Card>
+
+      <ExpandableSection title={language === "en" ? "Market Price Management" : "የገበያ ዋጋ አስተዳደር"} defaultOpen={false}>
+        <MarketPriceManager />
+      </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "RFQ Management" : "የዋጋ ጥያቄ አስተዳደር"} defaultOpen={false}>
+        <RfqManager />
+      </ExpandableSection>
     </div>
+  )
+}
+
+function ExpandableSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <Card>
+      <CardHeader className="cursor-pointer select-none" onClick={() => setOpen(!open)}>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          {open ? <ChevronDown className="h-5 w-5 text-muted-foreground" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent>
+          {children}
+        </CardContent>
+      )}
+    </Card>
   )
 }

@@ -9,6 +9,7 @@ import { BoqLiteSection } from "@/components/sections/BoqLiteSection"
 import { MarketPricesSection } from "@/components/sections/MarketPricesSection"
 import { MarketplaceSection } from "@/components/sections/MarketplaceSection"
 import { ProfessionalsSection } from "@/components/sections/ProfessionalsSection"
+import { SiteLogSection } from "@/components/sections/SiteLogSection"
 import { PremiumSection } from "@/components/sections/PremiumSection"
 import { SocialBridgeSection } from "@/components/sections/SocialBridgeSection"
 import { VideoShowcaseSection } from "@/components/sections/VideoShowcaseSection"
@@ -60,6 +61,8 @@ function HomePage() {
         <MarketplaceSection activePlan={activePlan} />
 
         <ProfessionalsSection />
+
+        <SiteLogSection />
 
         <PremiumSection activePlan={activePlan} subscription={subscription} />
 
