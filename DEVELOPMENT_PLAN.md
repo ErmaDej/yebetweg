@@ -1,14 +1,14 @@
 # YeBetWeg Development Plan
 
-**Last Updated:** July 26, 2026  
-**Status:** Strategic MVP upgrade in progress
+**Last Updated:** July 28, 2026  
+**Status:** Phase 1 feature complete — Admin CRUD, RFQ management, trust cards, Site Log Lite
 
 ## Progress Snapshot
 
 - [x] Project context replaced with competitor-informed YBW positioning.
 - [x] Development plan replaced with phased execution plan.
 - [x] Phase 0 typecheck and production build verified.
-- [x] `admin_actions` edge function upgraded from fragile placeholder behavior to schema-aware database-backed actions.
+- [x] `admin_actions` edge function upgraded with full CRUD for market prices (create/read/update/delete, bulk CSV import, single edit).
 - [x] BOQ Lite estimator added to the landing flow.
 - [x] Market price intelligence migration added.
 - [x] Market price UI upgraded with trust, freshness, source, VAT, city, and RFQ action metadata.
@@ -18,10 +18,11 @@
 - [x] **RFQ button added to marketplace listing cards** with full context passing.
 - [x] **RFQ button added to professional profile cards** alongside existing Hire flow.
 - [x] **RFQ button wired to BOQ estimate summary** replacing placeholder #marketplace nav link.
+- [x] **Admin Market Price CRUD** — Full table view, inline add/edit dialog, delete, CSV bulk import in Admin Dashboard.
+- [x] **Admin RFQ Management** — Dedicated panel with list, status dropdown, detail view, admin notes per RFQ.
+- [x] **Verified Professional Trust Card Upgrade** — Prominent verification badge, trust score bar, portfolio count badge, response time indicator.
+- [x] **Site Log Lite** — New `site_logs` table migration, entry form (date, work, labor, materials, payments, delays), listing with delete.
 - [ ] New migrations applied to the target Supabase project.
-- [ ] Admin RFQ visibility and status management.
-- [ ] Verified supplier/professional trust card upgrade.
-- [ ] Site Log Lite.
 - [ ] Telegram bridge upgrade.
 - [ ] Launch polish and final deployment.
 
@@ -100,32 +101,34 @@ Goal: add the product features that make YBW strategically distinct.
 ### RFQ Workflow
 
 - [x] Add quote request flow from market price item.
-- [ ] Add quote request flow from marketplace listing.
-- [ ] Add quote request flow from supplier/professional profile.
-- [ ] Add quote request flow from BOQ estimate summary.
+- [x] Add quote request flow from marketplace listing.
+- [x] Add quote request flow from supplier/professional profile.
+- [x] Add quote request flow from BOQ estimate summary.
 - [x] Store RFQs with status tracking.
-- [ ] Add admin visibility for RFQs.
+- [x] Add admin visibility for RFQs with full status management UI.
 
 ### Verified Profiles
 
-- [ ] Upgrade supplier/professional cards with:
-  - verification badge
+- [x] Upgrade supplier/professional cards with:
+  - verification badge (prominent corner badge + avatar ring)
   - specialty
   - city/service area
   - response contact
-  - portfolio or proof placeholder
-  - trust notes
+  - portfolio or proof count badge
+  - trust score visualization (gradient bar)
+  - trust level (high/medium/low)
 
 ### Site Log Lite
 
-- [ ] Add simple project log entry:
+- [x] Add simple project log entry:
   - date
   - work completed
   - labor count
   - materials used
   - payments
   - delay reason
-  - optional image placeholder
+  - notes
+  - delete entry
 
 ### Telegram Bridge
 
@@ -140,8 +143,8 @@ Goal: add the product features that make YBW strategically distinct.
 - [x] User can estimate a project in under 3 minutes.
 - [x] User can send an RFQ from at least one major workflow.
 - [x] Market prices display freshness and trust metadata.
-- [ ] Verified profiles show useful trust signals.
-- [ ] A basic site log entry can be created.
+- [x] Verified profiles show useful trust signals (score bar, verification badge, portfolio count).
+- [x] A basic site log entry can be created.
 
 ## Phase 2: Admin and Data Trust
 
@@ -149,9 +152,9 @@ Goal: make the new workflows maintainable by admins.
 
 ### Must Do
 
-- Admin CRUD for market prices.
+- [x] Admin CRUD for market prices (with CSV bulk import).
 - Admin CRUD for BOQ assumptions/presets.
-- Admin RFQ list and status management.
+- [x] Admin RFQ list and status management.
 - Admin verification workflow for suppliers and professionals.
 - Price freshness warnings and expired-price states.
 - Seed realistic Ethiopian BOQ assumptions and sample price intelligence records.

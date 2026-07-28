@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Star, MapPin, Phone, Plus, Award, ShieldCheck, BriefcaseBusiness, Clock3, Images, Send, SearchX } from "lucide-react"
+import { Star, MapPin, Phone, Plus, ShieldCheck, BriefcaseBusiness, Clock3, Images, Send, SearchX } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -65,9 +65,11 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
       (professional.is_verified ? 45 : 15) +
         Math.min(Number(professional.rating || 0), 5) * 7 +
         Math.min(Number(professional.experience_years || 0), 15) * 1.5 +
-        (portfolioCount > 0 ? 8 : 0),
+        Math.min(portfolioCount, 10) * 1.5,
     ),
   )
+  const trustLevel = trustScore >= 80 ? "high" : trustScore >= 50 ? "medium" : "low"
+  const trustColor = trustLevel === "high" ? "bg-emerald-500" : trustLevel === "medium" ? "bg-amber-500" : "bg-muted-foreground"
   const responseLabel = language === "en" ? "Usually responds in 24h" : "ብዙውን ጊዜ በ24 ሰዓት ይመልሳል"
 
   const handleInquiry = async () => {
@@ -99,45 +101,66 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
 
   return (
     <Card
-      className="group h-full overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+      className={`group h-full overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${professional.is_verified ? "ring-1 ring-accent/30" : ""}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
+      {professional.is_verified && (
+        <div className="absolute top-0 right-0">
+          <div className="bg-accent text-accent-foreground text-[8px] font-bold px-2 py-0.5 rounded-bl-lg flex items-center gap-1">
+            <ShieldCheck className="h-3 w-3" />
+            {language === "en" ? "VERIFIED" : "የተረጋገጠ"}
+          </div>
+        </div>
+      )}
       <CardContent className="flex h-full flex-col p-5">
         <div className="flex items-start gap-3">
-          {professional.portfolio_images && professional.portfolio_images.length > 0 ? (
-            <img
-              src={professional.portfolio_images[0]}
-              alt={professional.name}
-              className="h-12 w-12 rounded-full object-cover border-2 border-primary/20 shrink-0 animate-scale-in"
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <Avatar className="h-12 w-12 border-2 border-primary/20">
-              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          )}
+          <div className="relative shrink-0">
+            {professional.portfolio_images && professional.portfolio_images.length > 0 ? (
+              <img
+                src={professional.portfolio_images[0]}
+                alt={professional.name}
+                className="h-14 w-14 rounded-full object-cover border-2 border-primary/20 shrink-0 animate-scale-in"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <Avatar className="h-14 w-14 border-2 border-primary/20">
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            )}
+            {professional.is_verified && (
+              <div className="absolute -bottom-1 -right-1 bg-accent rounded-full p-0.5 ring-2 ring-background">
+                <ShieldCheck className="h-3.5 w-3.5 text-accent-foreground" />
+              </div>
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-foreground group-hover:text-accent transition-colors truncate">
                 {professional.name}
               </h3>
-              {professional.is_verified && (
-                <Award className="h-4 w-4 text-accent shrink-0" />
-              )}
             </div>
             <div className="mt-1 flex flex-wrap gap-1.5">
               <Badge variant="secondary" className="text-[10px]">
                 {t(specialties.find(s => s.value === professional.specialty)?.key || "professionals.contractor")}
               </Badge>
-              <Badge variant={professional.is_verified ? "default" : "outline"} className="gap-1 text-[10px]">
+              <Badge
+                variant={professional.is_verified ? "default" : "outline"}
+                className={`gap-1 text-[10px] ${professional.is_verified ? "bg-accent text-accent-foreground" : ""}`}
+              >
                 <ShieldCheck className="h-3 w-3" />
                 {professional.is_verified
                   ? t("common.verified")
-                  : language === "en" ? "Review pending" : "ግምገማ ላይ"}
+                  : language === "en" ? "Pending" : "ግምገማ ላይ"}
               </Badge>
+              {portfolioCount > 0 && (
+                <Badge variant="outline" className="text-[10px] gap-1">
+                  <Images className="h-3 w-3" />
+                  {portfolioCount} {language === "en" ? "proofs" : "ማረጋገጫዎች"}
+                </Badge>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
@@ -146,27 +169,26 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
               </span>
               <span className="flex items-center gap-1">
                 <BriefcaseBusiness className="h-3 w-3" />
-                {professional.experience_years} {language === "en" ? "yrs exp" : "ዓም ልምድ"}
+                {professional.experience_years} {language === "en" ? "yrs" : "ዓመታት"}
               </span>
-            </div>
-            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" />
-              <span className="line-clamp-1">{professional.location}</span>
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span className="line-clamp-1">{professional.location}</span>
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-lg border border-border/60 p-2">
-            <p className="text-muted-foreground">{language === "en" ? "Trust score" : "የእምነት መጠን"}</p>
-            <p className="mt-1 font-semibold">{trustScore}%</p>
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-muted-foreground">{language === "en" ? "Trust Score" : "የእምነት ደረጃ"}</span>
+            <span className="text-xs font-semibold">{trustScore}%</span>
           </div>
-          <div className="rounded-lg border border-border/60 p-2">
-            <p className="text-muted-foreground">{language === "en" ? "Proof" : "ማረጋገጫ"}</p>
-            <p className="mt-1 inline-flex items-center gap-1 font-semibold">
-              <Images className="h-3 w-3" />
-              {portfolioCount || (professional.is_verified ? 1 : 0)}
-            </p>
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${trustColor}`}
+              style={{ width: `${trustScore}%` }}
+            />
           </div>
         </div>
 
@@ -195,7 +217,7 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
           </Button>
           <Dialog open={hireOpen} onOpenChange={setHireOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="w-full mt-4 gap-2">
+            <Button size="sm" className="w-full gap-2">
               <Phone className="h-3.5 w-3.5" />
               {t("professionals.hire")}
             </Button>

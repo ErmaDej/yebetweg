@@ -277,6 +277,7 @@ serve(async (req) => {
             source_type,
             status,
             created_at,
+            admin_notes,
             rfq_items (
               material_name,
               specification,
@@ -289,6 +290,117 @@ serve(async (req) => {
           .limit(50))
 
         return jsonResponse({ success: true, action, data: rfqs || [] })
+      }
+
+      case "manage_market_prices": {
+        const priceId = payload?.priceId
+        const { material_am, material_en, unit, price, change_percent, category, city, specification, source_type, source_name, vat_included, confidence_score, trend_direction, freshness_status, access_level } = payload || {}
+
+        if (priceId && payload?.delete) {
+          const { error: deleteError } = await supabase
+            .from("market_prices")
+            .delete()
+            .eq("id", priceId)
+
+          if (deleteError) throw deleteError
+
+          return jsonResponse({ success: true, action, message: `Market price ${priceId} deleted` })
+        }
+
+        if (priceId) {
+          const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+          if (material_am !== undefined) updates.material_am = material_am
+          if (material_en !== undefined) updates.material_en = material_en
+          if (unit !== undefined) updates.unit = unit
+          if (price !== undefined) updates.price = price
+          if (change_percent !== undefined) updates.change_percent = change_percent
+          if (category !== undefined) updates.category = category
+          if (city !== undefined) updates.city = city
+          if (specification !== undefined) updates.specification = specification
+          if (source_type !== undefined) updates.source_type = source_type
+          if (source_name !== undefined) updates.source_name = source_name
+          if (vat_included !== undefined) updates.vat_included = vat_included
+          if (confidence_score !== undefined) updates.confidence_score = confidence_score
+          if (trend_direction !== undefined) updates.trend_direction = trend_direction
+          if (freshness_status !== undefined) updates.freshness_status = freshness_status
+          if (access_level !== undefined) updates.access_level = access_level
+
+          const { error: updateError } = await supabase
+            .from("market_prices")
+            .update(updates)
+            .eq("id", priceId)
+
+          if (updateError) throw updateError
+
+          return jsonResponse({ success: true, action, message: `Market price ${priceId} updated` })
+        }
+
+        if (payload?.bulk) {
+          const rows = payload?.rows
+          if (!Array.isArray(rows) || rows.length === 0) {
+            return jsonResponse({ error: "No rows provided for bulk import" }, 400)
+          }
+
+          const { data: inserted, error: insertError } = await supabase
+            .from("market_prices")
+            .insert(rows.map((r: Record<string, unknown>) => ({
+              material_am: r.material_am || "",
+              material_en: r.material_en || "",
+              unit: r.unit || "",
+              price: Number(r.price) || 0,
+              change_percent: Number(r.change_percent) || 0,
+              category: r.category || "cement",
+              city: r.city || "Addis Ababa",
+              specification: r.specification || "",
+              source_type: r.source_type || "admin_verified",
+              source_name: r.source_name || "YeBetWeg Market Desk",
+              vat_included: Boolean(r.vat_included),
+              confidence_score: Number(r.confidence_score) || 70,
+              trend_direction: r.trend_direction || "stable",
+              freshness_status: r.freshness_status || "verified",
+              access_level: r.access_level || "free",
+            })))
+            .select()
+
+          if (insertError) throw insertError
+
+          return jsonResponse({ success: true, action, message: `${inserted?.length || 0} market prices imported` })
+        }
+
+        if (payload?.create) {
+          const { data: inserted, error: insertError } = await supabase
+            .from("market_prices")
+            .insert({
+              material_am: material_am || "",
+              material_en: material_en || "",
+              unit: unit || "",
+              price: Number(price) || 0,
+              change_percent: Number(change_percent) || 0,
+              category: category || "cement",
+              city: city || "Addis Ababa",
+              specification: specification || "",
+              source_type: source_type || "admin_verified",
+              source_name: source_name || "YeBetWeg Market Desk",
+              vat_included: Boolean(vat_included),
+              confidence_score: Number(confidence_score) || 70,
+              trend_direction: trend_direction || "stable",
+              freshness_status: freshness_status || "verified",
+              access_level: access_level || "free",
+            })
+            .select()
+
+          if (insertError) throw insertError
+
+          return jsonResponse({ success: true, action, data: inserted })
+        }
+
+        const prices = assertNoError(await supabase
+          .from("market_prices")
+          .select("*")
+          .order("category", { ascending: true })
+          .order("material_en", { ascending: true }))
+
+        return jsonResponse({ success: true, action, data: prices || [] })
       }
 
       default:
