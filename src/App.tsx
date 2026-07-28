@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { Analytics } from "@vercel/analytics/react"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { FloatingSocialBar } from "@/components/layout/FloatingSocialBar"
@@ -79,6 +80,7 @@ function HomePage() {
       </main>
 
       <Footer />
+      <Analytics />
     </div>
   )
 }
@@ -122,11 +124,21 @@ export function App() {
   }, [currentPage])
 
   if (currentPage === "auth-callback") {
-    return <AuthCallbackPage />
+    return (
+      <>
+        <AuthCallbackPage />
+        <Analytics />
+      </>
+    )
   }
 
   if (currentPage === "reset-password") {
-    return <ResetPasswordPage />
+    return (
+      <>
+        <ResetPasswordPage />
+        <Analytics />
+      </>
+    )
   }
 
   if (currentPage === "dashboard") {
@@ -137,6 +149,7 @@ export function App() {
           <Dashboard />
         </ProtectedRoute>
         <Footer />
+        <Analytics />
       </div>
     )
   }
@@ -147,12 +160,18 @@ export function App() {
         <Navbar />
         <SearchResults />
         <Footer />
+        <Analytics />
       </div>
     )
   }
 
   if (currentPage === "payment") {
-    return <PaymentSuccessPage />
+    return (
+      <>
+        <PaymentSuccessPage />
+        <Analytics />
+      </>
+    )
   }
 
   return <HomePage />
