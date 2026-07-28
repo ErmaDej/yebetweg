@@ -144,6 +144,9 @@ export function SiteLogSection() {
                 <DialogTitle>
                   {language === "en" ? "New Site Log Entry" : "አዲስ የግንባታ ምዝግብ"}
                 </DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  {language === "en" ? "Record daily construction progress" : "የዕለት ተዕለት የግንባታ እድገት ይመዝግቡ"}
+                </p>
               </DialogHeader>
               {error && <p className="text-xs text-destructive">{error}</p>}
               <div className="space-y-3">
