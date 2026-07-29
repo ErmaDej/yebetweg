@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/lib/i18n"
-import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, type LucideIcon } from "lucide-react"
+import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, Trash2, CheckCircle, XCircle, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
 import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
@@ -129,6 +129,33 @@ export function AdminDashboardTab() {
     }
   }
 
+  const handleActionWithPayload = async (action: string, payload: Record<string, any>) => {
+    setLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+    try {
+      await callAdminAction(action, payload)
+      setSuccessMessage(
+        language === "en"
+          ? `${action.replaceAll("_", " ")} — updated`
+          : `${action} — ተዘምኗል`
+      )
+      await loadMetrics()
+      if (actionResult?.action === action && actionResult.data) {
+        const result = await callAdminAction(action)
+        setActionResult({
+          action,
+          data: Array.isArray(result?.data) ? result.data : undefined,
+          message: result?.message,
+        })
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const ActionButton = ({
     action,
     icon: Icon,
@@ -239,12 +266,13 @@ export function AdminDashboardTab() {
           {actionResult.data && actionResult.data.length > 0 && (
             <CardContent>
               <div className="max-h-72 overflow-auto rounded-lg border border-border/60">
-                <div className="min-w-[520px] divide-y divide-border/60">
+                <div className="min-w-[600px] divide-y divide-border/60">
                   {actionResult.data.slice(0, 10).map((record, index) => {
                     const item = record as Record<string, any>
+                    const action = actionResult.action
                     return (
-                      <div key={item.id || index} className="grid grid-cols-[1fr_auto] gap-3 p-3 text-sm">
-                        <div className="min-w-0">
+                      <div key={item.id || index} className="flex items-center justify-between gap-3 p-3 text-sm">
+                        <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">
                             {item.title_en || item.name || item.requester_name || item.email || item.username || item.advertiser || item.reference || item.id}
                           </p>
@@ -252,7 +280,34 @@ export function AdminDashboardTab() {
                             {item.requester_phone || item.category || item.specialty || item.status || item.position || item.method || item.created_at}
                           </p>
                         </div>
-                        {item.status && <Badge variant="outline">{item.status}</Badge>}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.status && <Badge variant="outline">{item.status}</Badge>}
+                          {action === "moderate_listings" && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500" title={language === "en" ? "Approve" : "አጽድቅ"} onClick={() => handleActionWithPayload("moderate_listings", { listingId: item.id, status: "approved" })}>
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Reject" : "አልተቀበለም"} onClick={() => handleActionWithPayload("moderate_listings", { listingId: item.id, status: "rejected" })}>
+                                <XCircle className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                          {action === "verify_professionals" && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-500" title={language === "en" ? "Verify" : "አረጋግጥ"} onClick={() => handleActionWithPayload("verify_professionals", { professionalId: item.id, verified: !item.is_verified })}>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {action === "ban_users" && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Ban/Suspend" : "አግድ/አስቁም"} onClick={() => handleActionWithPayload("ban_users", { userId: item.id, status: item.status === "active" ? "suspended" : "active" })}>
+                              <Ban className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {(action === "manage_blogs" || action === "manage_tips" || action === "manage_ads") && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Delete" : "ሰርዝ"} onClick={() => handleActionWithPayload(action, { id: item.id, delete: true })}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )
                   })}

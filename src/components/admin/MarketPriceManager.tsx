@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { Plus, Pencil, Trash2, Upload, RefreshCw, Loader2, SearchX } from "lucide-react"
+import { Plus, Pencil, Trash2, Upload, Download, RefreshCw, Loader2, SearchX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -187,6 +187,21 @@ export function MarketPriceManager() {
     )
   })
 
+  const handleCsvExport = () => {
+    const headers = ["material_en", "material_am", "unit", "price", "change_percent", "category", "city", "specification", "source_type", "source_name", "freshness_status", "trend_direction"]
+    const rows = filtered.map((p) =>
+      headers.map((h) => `"${(p[h as keyof MarketPrice] ?? "").toString().replace(/"/g, '""')}"`).join(",")
+    )
+    const csv = [headers.join(","), ...rows].join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `market_prices_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const freshnessColor = (s: string) => {
     if (s === "expired" || s === "needs_confirmation") return "destructive"
     if (s === "verified") return "default"
@@ -216,6 +231,10 @@ export function MarketPriceManager() {
           />
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={prices.length === 0} className="gap-2">
+            <Download className="h-4 w-4" />
+            {language === "en" ? "CSV Export" : "CSV አውርድ"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setCsvDialogOpen(true); setCsvText("") }} className="gap-2">
             <Upload className="h-4 w-4" />
             {language === "en" ? "CSV Import" : "CSV አስመጣ"}
