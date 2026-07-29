@@ -3,6 +3,9 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "env": {
     "VITE_SUPABASE_URL": {
       "description": "Supabase project URL (e.g., https://your-project.supabase.co)"

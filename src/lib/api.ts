@@ -29,6 +29,7 @@ async function callFunction<T>(functionName: string, body: Record<string, any>, 
     if (session?.access_token) {
       headers["Authorization"] = `Bearer ${session.access_token}`
     } else {
+      headers["Authorization"] = `Bearer ${supabaseAnonKey}`
       const customUserId = getCustomAuthUserId()
       if (customUserId) {
         body._customUserId = customUserId

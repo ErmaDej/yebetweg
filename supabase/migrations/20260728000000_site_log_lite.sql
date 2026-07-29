@@ -34,4 +34,11 @@ CREATE POLICY "Users can delete own site logs"
 -- Admin read-all policy
 CREATE POLICY "Admins can read all site logs"
   ON site_logs FOR SELECT
-  USING (current_user_is_admin());
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid()
+        AND role = 'admin'
+        AND status = 'active'
+    )
+  );

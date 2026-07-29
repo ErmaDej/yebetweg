@@ -42,6 +42,13 @@ serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+  let body
+  try {
+    body = await req.json()
+  } catch {
+    return jsonResponse({ error: "Invalid JSON body" }, 400)
+  }
+
   let adminUserId: string | null = null
 
   // Try standard Supabase Auth JWT first
@@ -80,13 +87,6 @@ serve(async (req) => {
 
   if (!adminUserId) {
     return jsonResponse({ error: "Unauthorized or insufficient permissions" }, 401)
-  }
-
-  let body
-  try {
-    body = await req.json()
-  } catch {
-    return jsonResponse({ error: "Invalid JSON body" }, 400)
   }
 
   const { action, payload } = body
@@ -139,6 +139,16 @@ serve(async (req) => {
       }
 
       case "manage_blogs": {
+        const deleteId = payload?.id
+        if (deleteId && payload?.delete) {
+          const { error: deleteError } = await supabase
+            .from("blogs")
+            .delete()
+            .eq("id", deleteId)
+          if (deleteError) throw deleteError
+          return jsonResponse({ success: true, action, message: `Blog ${deleteId} deleted` })
+        }
+
         const blogs = assertNoError(await supabase
           .from("blogs")
           .select("id, title_en, category, created_at")
@@ -148,6 +158,16 @@ serve(async (req) => {
       }
 
       case "manage_tips": {
+        const tipDeleteId = payload?.id
+        if (tipDeleteId && payload?.delete) {
+          const { error: deleteError } = await supabase
+            .from("tips")
+            .delete()
+            .eq("id", tipDeleteId)
+          if (deleteError) throw deleteError
+          return jsonResponse({ success: true, action, message: `Tip ${tipDeleteId} deleted` })
+        }
+
         const tips = assertNoError(await supabase
           .from("tips")
           .select("id, title_en, category, is_premium, created_at")
@@ -157,6 +177,16 @@ serve(async (req) => {
       }
 
       case "manage_ads": {
+        const adDeleteId = payload?.id
+        if (adDeleteId && payload?.delete) {
+          const { error: deleteError } = await supabase
+            .from("ads")
+            .delete()
+            .eq("id", adDeleteId)
+          if (deleteError) throw deleteError
+          return jsonResponse({ success: true, action, message: `Ad ${adDeleteId} deleted` })
+        }
+
         const ads = assertNoError(await supabase
           .from("ads")
           .select("id, advertiser, position, is_active, created_at")
