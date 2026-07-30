@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 }
 
-const CHAPA_API_URL = "https://api.chapa.co/v1"
+const CHAPA_API_URL = "https://api.chapa.co/v1/transaction"
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -33,7 +33,7 @@ serve(async (req) => {
       )
     }
 
-    const verifyRes = await fetch(`${CHAPA_API_URL}/transaction/verify/${txRef}`, {
+    const verifyRes = await fetch(`${CHAPA_API_URL}/verify/${txRef}`, {
       headers: { Authorization: `Bearer ${secretKey}` },
     })
     const verifyData = await verifyRes.json()
