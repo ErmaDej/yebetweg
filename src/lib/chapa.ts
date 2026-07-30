@@ -80,6 +80,36 @@ export async function initializeChapaPayment(
   }
 }
 
+export async function verifyChapaPayment(txRef: string): Promise<VerifyPaymentResult> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return { success: false, error: "Payment service is not configured" }
+    }
+
+    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/chapa-service?tx_ref=${encodeURIComponent(txRef)}`
+    const response = await fetch(serviceUrl, {
+      method: "GET",
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
+      },
+    })
+
+    const data = await response.json()
+    if (!response.ok || !data.success) {
+      return { success: false, error: data.error || `Verify error: ${response.status}` }
+    }
+
+    return { success: true, status: data.status }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Network error" }
+  }
+}
+
 export function formatAmount(amount: number): string {
   return new Intl.NumberFormat("en-ET", {
     style: "currency",
