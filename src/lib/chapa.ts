@@ -67,7 +67,7 @@ export async function initializeChapaPayment(
     const data = await response.json()
 
     if (!response.ok || !data.success) {
-      return { success: false, error: data.error || `Service error: ${response.status}` }
+      return { success: false, error: typeof data.error === "string" ? data.error : `Service error: ${response.status}` }
     }
 
     return {
@@ -101,7 +101,7 @@ export async function verifyChapaPayment(txRef: string): Promise<VerifyPaymentRe
 
     const data = await response.json()
     if (!response.ok || !data.success) {
-      return { success: false, error: data.error || `Verify error: ${response.status}` }
+      return { success: false, error: typeof data.error === "string" ? data.error : `Verify error: ${response.status}` }
     }
 
     return { success: true, status: data.status }

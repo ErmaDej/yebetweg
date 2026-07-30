@@ -120,8 +120,8 @@ export function usePayment() {
             callback_url: callbackUrl,
             return_url: returnUrl,
             customization: {
-              title: `YeBetWeg ${tier.charAt(0).toUpperCase() + tier.slice(1)} Subscription`,
-              description: `Payment for ${tier} membership (ETB ${amount})`,
+              title: `YeBetWeg`,
+              description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} - ETB ${amount}`,
             },
           })
 
