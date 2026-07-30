@@ -85,8 +85,8 @@ serve(async (req) => {
         callback_url,
         return_url,
         customization: customization || {
-          title: "YeBetWeg Premium Subscription",
-          description: "Payment for YeBetWeg premium membership",
+          title: "YeBetWeg",
+          description: "Premium membership",
         },
       }),
     })
@@ -94,11 +94,13 @@ serve(async (req) => {
     const data = await chapaResponse.json()
 
     if (!chapaResponse.ok || data.status !== "success") {
+      const errMsg = typeof data.message === "string"
+        ? data.message
+        : typeof data.message === "object" && data.message !== null
+          ? Object.entries(data.message).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`).join("; ")
+          : `Chapa API error: ${chapaResponse.status}`
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: data.message || `Chapa API error: ${chapaResponse.status}`,
-        }),
+        JSON.stringify({ success: false, error: errMsg }),
         { status: chapaResponse.ok ? 400 : chapaResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )
     }
