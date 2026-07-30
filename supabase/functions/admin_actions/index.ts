@@ -139,59 +139,148 @@ serve(async (req) => {
       }
 
       case "manage_blogs": {
-        const deleteId = payload?.id
-        if (deleteId && payload?.delete) {
-          const { error: deleteError } = await supabase
-            .from("blogs")
-            .delete()
-            .eq("id", deleteId)
+        const blogId = payload?.id
+        if (blogId && payload?.delete) {
+          const { error: deleteError } = await supabase.from("blogs").delete().eq("id", blogId)
           if (deleteError) throw deleteError
-          return jsonResponse({ success: true, action, message: `Blog ${deleteId} deleted` })
+          return jsonResponse({ success: true, action, message: "Blog deleted" })
+        }
+        if (blogId && (payload?.save || !payload?.delete)) {
+          const updates: Record<string, unknown> = {}
+          if (payload.title_en !== undefined) updates.title_en = payload.title_en
+          if (payload.title_am !== undefined) updates.title_am = payload.title_am
+          if (payload.content_en !== undefined) updates.content_en = payload.content_en
+          if (payload.content_am !== undefined) updates.content_am = payload.content_am
+          if (payload.excerpt_en !== undefined) updates.excerpt_en = payload.excerpt_en
+          if (payload.excerpt_am !== undefined) updates.excerpt_am = payload.excerpt_am
+          if (payload.author !== undefined) updates.author = payload.author
+          if (payload.image_url !== undefined) updates.image_url = payload.image_url
+          if (payload.category !== undefined) updates.category = payload.category
+          if (payload.tags !== undefined) updates.tags = payload.tags
+          if (payload.status !== undefined) updates.status = payload.status
+          await supabase.from("blogs").update(updates).eq("id", blogId)
+          return jsonResponse({ success: true, action, message: "Blog updated" })
+        }
+        if (!blogId && !payload?.delete) {
+          const { data: created, error: createError } = await supabase
+            .from("blogs")
+            .insert({
+              title_en: payload.title_en || "",
+              title_am: payload.title_am || "",
+              content_en: payload.content_en || "",
+              content_am: payload.content_am || "",
+              excerpt_en: payload.excerpt_en || "",
+              excerpt_am: payload.excerpt_am || "",
+              author: payload.author || "",
+              image_url: payload.image_url || "",
+              category: payload.category || "general",
+              tags: payload.tags || "",
+              status: payload.status || "published",
+            })
+            .select("id, title_en, title_am, category, status, created_at")
+            .single()
+          if (createError) throw createError
+          return jsonResponse({ success: true, action, data: created, message: "Blog created" })
         }
 
         const blogs = assertNoError(await supabase
           .from("blogs")
-          .select("id, title_en, category, created_at")
+          .select("id, title_en, title_am, category, status, created_at")
           .order("created_at", { ascending: false }))
-
         return jsonResponse({ success: true, action, data: blogs || [] })
       }
 
       case "manage_tips": {
-        const tipDeleteId = payload?.id
-        if (tipDeleteId && payload?.delete) {
-          const { error: deleteError } = await supabase
-            .from("tips")
-            .delete()
-            .eq("id", tipDeleteId)
+        const tipId = payload?.id
+        if (tipId && payload?.delete) {
+          const { error: deleteError } = await supabase.from("tips").delete().eq("id", tipId)
           if (deleteError) throw deleteError
-          return jsonResponse({ success: true, action, message: `Tip ${tipDeleteId} deleted` })
+          return jsonResponse({ success: true, action, message: "Tip deleted" })
+        }
+        if (tipId && (payload?.save || !payload?.delete)) {
+          const updates: Record<string, unknown> = {}
+          if (payload.title_en !== undefined) updates.title_en = payload.title_en
+          if (payload.title_am !== undefined) updates.title_am = payload.title_am
+          if (payload.content_en !== undefined) updates.content_en = payload.content_en
+          if (payload.content_am !== undefined) updates.content_am = payload.content_am
+          if (payload.category !== undefined) updates.category = payload.category
+          if (payload.tags !== undefined) updates.tags = payload.tags
+          if (payload.status !== undefined) updates.status = payload.status
+          if (payload.is_premium !== undefined) updates.is_premium = payload.is_premium
+          await supabase.from("tips").update(updates).eq("id", tipId)
+          return jsonResponse({ success: true, action, message: "Tip updated" })
+        }
+        if (!tipId && !payload?.delete) {
+          const { data: created, error: createError } = await supabase
+            .from("tips")
+            .insert({
+              title_en: payload.title_en || "",
+              title_am: payload.title_am || "",
+              content_en: payload.content_en || "",
+              content_am: payload.content_am || "",
+              category: payload.category || "general",
+              tags: payload.tags || "",
+              status: payload.status || "published",
+              is_premium: payload.is_premium ?? false,
+            })
+            .select("id, title_en, title_am, category, status, is_premium, created_at")
+            .single()
+          if (createError) throw createError
+          return jsonResponse({ success: true, action, data: created, message: "Tip created" })
         }
 
         const tips = assertNoError(await supabase
           .from("tips")
-          .select("id, title_en, category, is_premium, created_at")
+          .select("id, title_en, title_am, category, status, is_premium, created_at")
           .order("created_at", { ascending: false }))
-
         return jsonResponse({ success: true, action, data: tips || [] })
       }
 
       case "manage_ads": {
-        const adDeleteId = payload?.id
-        if (adDeleteId && payload?.delete) {
-          const { error: deleteError } = await supabase
-            .from("ads")
-            .delete()
-            .eq("id", adDeleteId)
+        const adId = payload?.id
+        if (adId && payload?.delete) {
+          const { error: deleteError } = await supabase.from("ads").delete().eq("id", adId)
           if (deleteError) throw deleteError
-          return jsonResponse({ success: true, action, message: `Ad ${adDeleteId} deleted` })
+          return jsonResponse({ success: true, action, message: "Ad deleted" })
+        }
+        if (adId && (payload?.save || !payload?.delete)) {
+          const updates: Record<string, unknown> = {}
+          if (payload.advertiser !== undefined) updates.advertiser = payload.advertiser
+          if (payload.image_url !== undefined) updates.image_url = payload.image_url
+          if (payload.target_url !== undefined) updates.target_url = payload.target_url
+          if (payload.position !== undefined) updates.position = payload.position
+          if (payload.starts_at !== undefined) updates.starts_at = payload.starts_at
+          if (payload.ends_at !== undefined) updates.ends_at = payload.ends_at
+          if (payload.status !== undefined) {
+            updates.is_active = payload.status === "active"
+            updates.status = payload.status
+          }
+          await supabase.from("ads").update(updates).eq("id", adId)
+          return jsonResponse({ success: true, action, message: "Ad updated" })
+        }
+        if (!adId && !payload?.delete) {
+          const { data: created, error: createError } = await supabase
+            .from("ads")
+            .insert({
+              advertiser: payload.advertiser || "",
+              image_url: payload.image_url || "",
+              target_url: payload.target_url || "",
+              position: payload.position || "sidebar",
+              starts_at: payload.starts_at || null,
+              ends_at: payload.ends_at || null,
+              status: payload.status || "active",
+              is_active: (payload.status || "active") === "active",
+            })
+            .select("id, advertiser, position, status, is_active, created_at")
+            .single()
+          if (createError) throw createError
+          return jsonResponse({ success: true, action, data: created, message: "Ad created" })
         }
 
         const ads = assertNoError(await supabase
           .from("ads")
-          .select("id, advertiser, position, is_active, created_at")
+          .select("id, advertiser, position, status, is_active, created_at")
           .order("created_at", { ascending: false }))
-
         return jsonResponse({ success: true, action, data: ads || [] })
       }
 
@@ -257,36 +346,51 @@ serve(async (req) => {
 
       case "ban_users": {
         const userId = payload?.userId
-        const banStatus = payload?.status || "suspended"
-        const allowedStatuses = ["active", "suspended", "banned"]
 
         if (!userId) {
           const users = assertNoError(await supabase
             .from("users")
             .select("id, email, username, role, status, created_at")
-            .neq("role", "admin")
             .order("created_at", { ascending: false }))
 
           return jsonResponse({
             success: true,
             action,
             data: users || [],
-            message: "No user was changed. Send userId and status to update a user.",
+            message: "No user was changed. Send userId and a field to update.",
           })
         }
 
-        if (!allowedStatuses.includes(banStatus)) {
-          return jsonResponse({ error: `Invalid user status: ${banStatus}` }, 400)
+        const updates: Record<string, unknown> = {}
+
+        if (payload?.status !== undefined) {
+          const allowedStatuses = ["active", "suspended", "banned"]
+          if (!allowedStatuses.includes(payload.status)) {
+            return jsonResponse({ error: `Invalid user status: ${payload.status}` }, 400)
+          }
+          updates.status = payload.status
+        }
+
+        if (payload?.role !== undefined) {
+          const allowedRoles = ["user", "premium", "pro", "admin"]
+          if (!allowedRoles.includes(payload.role)) {
+            return jsonResponse({ error: `Invalid user role: ${payload.role}` }, 400)
+          }
+          updates.role = payload.role
+        }
+
+        if (Object.keys(updates).length === 0) {
+          return jsonResponse({ error: "Provide status or role to update." }, 400)
         }
 
         const { error: updateError } = await supabase
           .from("users")
-          .update({ status: banStatus })
+          .update(updates)
           .eq("id", userId)
 
         if (updateError) throw updateError
 
-        return jsonResponse({ success: true, action, message: `User ${userId} status set to ${banStatus}` })
+        return jsonResponse({ success: true, action, message: `User ${userId} updated: ${JSON.stringify(updates)}` })
       }
 
       case "manage_payments": {

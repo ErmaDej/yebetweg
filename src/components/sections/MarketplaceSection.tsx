@@ -35,6 +35,7 @@ const listingTabs = [
   { value: "land_sale", key: "marketplace.land" as const },
   { value: "material_sale", key: "marketplace.materials" as const },
   { value: "professional_service", key: "marketplace.services" as const },
+  { value: "job_posting", key: "marketplace.jobs" as const },
 ]
 
 const LISTINGS_PER_PAGE = 6
@@ -195,6 +196,9 @@ function ListingCard({ listing, index, canContact, onRequestQuote }: {
            listing.listing_type === "property_rent" ? t("marketplace.rent") :
            listing.listing_type === "land_sale" ? t("marketplace.land") :
            listing.listing_type === "material_sale" ? t("marketplace.materials") :
+           listing.listing_type === "job_posting" ? t("marketplace.jobs") :
+           listing.listing_type === "material_supply" ? t("marketplace.materials") :
+           listing.listing_type === "service_offer" ? t("marketplace.services") :
            t("marketplace.services")}
         </Badge>
       </div>

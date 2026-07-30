@@ -18,7 +18,7 @@ interface CreateListingFormProps {
 
 export function CreateListingForm({ open, onOpenChange }: CreateListingFormProps) {
   const { language } = useLanguage()
-  const { user } = useAuthContext()
+  const { user, session } = useAuthContext()
 
   const [listingType, setListingType] = useState("property_sale")
   const [titleEn, setTitleEn] = useState("")
@@ -61,6 +61,7 @@ export function CreateListingForm({ open, onOpenChange }: CreateListingFormProps
         ? images.split("\n").map((url) => url.trim()).filter((url) => url)
         : []
 
+      const isCustomAuth = !session
       const { data, error: submitError } = await supabase.rpc("create_listing", {
         p_listing_type: listingType,
         p_title_am: titleAm,
@@ -72,6 +73,7 @@ export function CreateListingForm({ open, onOpenChange }: CreateListingFormProps
         p_contact_email: contactEmail,
         p_category: category,
         p_images: imageArray,
+        p_custom_user_id: isCustomAuth && user ? user.id : null,
       })
 
       if (submitError) throw submitError
