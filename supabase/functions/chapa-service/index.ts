@@ -14,6 +14,43 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders })
   }
 
+  const secretKey = Deno.env.get("CHAPA_SECRET_KEY")
+  if (!secretKey) {
+    return new Response(
+      JSON.stringify({ success: false, error: "Server configuration error: Missing Chapa secret key" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
+  }
+
+  // GET — verify transaction status
+  if (req.method === "GET") {
+    const url = new URL(req.url)
+    const txRef = url.searchParams.get("tx_ref")
+    if (!txRef) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing tx_ref query parameter" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
+    const verifyRes = await fetch(`${CHAPA_API_URL}/transaction/verify/${txRef}`, {
+      headers: { Authorization: `Bearer ${secretKey}` },
+    })
+    const verifyData = await verifyRes.json()
+
+    if (!verifyRes.ok) {
+      return new Response(
+        JSON.stringify({ success: false, error: verifyData.message || `Chapa verify error: ${verifyRes.status}` }),
+        { status: verifyRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, status: verifyData.data?.status }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -22,14 +59,6 @@ serve(async (req) => {
   }
 
   try {
-    const secretKey = Deno.env.get("CHAPA_SECRET_KEY")
-    if (!secretKey) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Server configuration error: Missing Chapa secret key" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      )
-    }
-
     const body = await req.json()
     const { amount, currency, email, first_name, last_name, tx_ref, callback_url, return_url, customization } = body
 
