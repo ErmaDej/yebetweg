@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 }
 
-// TeleBirr API Configuration (allow override for local mocking)
+// TeleBirr API Configuration
 const TELEBIRR_API_URL = Deno.env.get("TELEBIRR_API_URL") || "https://api.telebirr.com/v1"
 
 interface TeleBirrPaymentRequest {
@@ -34,89 +34,13 @@ interface TeleBirrPaymentResponse {
   }
 }
 
-interface TeleBirrQueryResponse {
-  code: string
-  msg: string
-  data?: {
-    status: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED"
-    amount: string
-    outTradeNo: string
-    transactionId: string
-  }
-}
-
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
   }
 
-  // GET requests are used to query payment status
-  if (req.method === "GET") {
-    const url = new URL(req.url)
-    const reference = url.searchParams.get("reference")
-
-    if (!reference) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Missing reference query parameter" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      )
-    }
-
-    const apiKey = Deno.env.get("TELEBIRR_API_KEY") || Deno.env.get("VITE_TELEBIRR_API_KEY")
-    const authHeader = apiKey?.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`
-
-    try {
-      const queryUrl = `${TELEBIRR_API_URL}/payment/query?outTradeNo=${encodeURIComponent(reference)}`
-      const response = await fetch(queryUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
-      })
-
-      const data: TeleBirrQueryResponse = await response.json()
-
-      if (!response.ok) {
-        return new Response(
-          JSON.stringify({ success: false, error: data.msg || `HTTP ${response.status}` }),
-          {
-            status: response.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        )
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: data.code === "0000",
-          status: data.data?.status,
-          data: data.data,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      )
-    } catch (error) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: error instanceof Error ? error.message : "Query failed",
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      )
-    }
-  }
-
-  // Only allow POST requests for payment initialization
+  // Only allow POST requests
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -127,22 +51,11 @@ serve(async (req) => {
   try {
     console.log("[TeleBirr Service] Processing payment request")
 
-    // Dev bypass: when ALLOW_DEV_BYPASS=true and `x-dev-auth` matches DEV_BYPASS_TOKEN,
-    // allow proceeding without external auth (for local testing only).
-    const allowDevBypass = Deno.env.get("ALLOW_DEV_BYPASS") === "true"
-    const devBypassToken = Deno.env.get("DEV_BYPASS_TOKEN")
-    if (allowDevBypass && devBypassToken) {
-      const devHeader = req.headers.get("x-dev-auth")
-      if (devHeader && devHeader === devBypassToken) {
-        console.log("[TeleBirr Service] Dev bypass token accepted; proceeding in dev mode")
-      }
-    }
-
-    // Get environment variables (support both server-side and VITE-prefixed names)
-    const apiKey = Deno.env.get("TELEBIRR_API_KEY") || Deno.env.get("VITE_TELEBIRR_API_KEY")
-    const merchantAppId = Deno.env.get("TELEBIRR_MERCHANT_APP_ID") || Deno.env.get("VITE_TELEBIRR_MERCHANT_APP_ID")
-    const fabricAppId = Deno.env.get("TELEBIRR_FABRIC_APP_ID") || Deno.env.get("VITE_TELEBIRR_FABRIC_APP_ID")
-    const shortCode = Deno.env.get("TELEBIRR_SHORT_CODE") || Deno.env.get("VITE_TELEBIRR_SHORT_CODE")
+    // Get environment variables
+    const apiKey = Deno.env.get("VITE_TELEBIRR_API_KEY")
+    const merchantAppId = Deno.env.get("VITE_TELEBIRR_MERCHANT_APP_ID")
+    const fabricAppId = Deno.env.get("VITE_TELEBIRR_FABRIC_APP_ID")
+    const shortCode = Deno.env.get("VITE_TELEBIRR_SHORT_CODE")
 
     // Validate environment variables
     if (!apiKey || !merchantAppId || !fabricAppId || !shortCode) {
@@ -226,16 +139,14 @@ serve(async (req) => {
       returnUrl: returnUrl,
     }
 
-    const telebirrUrl = `${TELEBIRR_API_URL}/payment/create`
-    const authHeader = apiKey.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`
-    console.log("[TeleBirr Service] Sending payment request to TeleBirr API...", { telebirrUrl, authHeaderMasked: authHeader && authHeader.slice(0, 12) + '...' })
+    console.log("[TeleBirr Service] Sending payment request to TeleBirr API...")
 
     // Make request to TeleBirr API
-    const telebirrResponse = await fetch(telebirrUrl, {
+    const telebirrResponse = await fetch(`${TELEBIRR_API_URL}/payment/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: authHeader,
+        Authorization: apiKey.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`,
       },
       body: JSON.stringify(paymentRequest),
     })

@@ -1,134 +1,94 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, Content-Type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 }
 
-const CHAPA_BASE_URL = "https://api.chapa.co/v1"
-const CHAPA_SECRET_KEY = Deno.env.get("CHAPA_SECRET_KEY") || Deno.env.get("VITE_CHAPA_SECRET_KEY") || ""
+const CHAPA_API_URL = "https://api.chapa.co/v1"
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
   }
 
-  if (!CHAPA_SECRET_KEY) {
-    return new Response(
-      JSON.stringify({ success: false, error: "Server configuration error: missing Chapa secret" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    )
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
   }
 
-  if (req.method === "POST") {
-    try {
-      const body = await req.json()
-      const {
+  try {
+    const secretKey = Deno.env.get("CHAPA_SECRET_KEY")
+    if (!secretKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Server configuration error: Missing Chapa secret key" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
+    const body = await req.json()
+    const { amount, currency, email, first_name, last_name, tx_ref, callback_url, return_url, customization } = body
+
+    if (!amount || !email || !tx_ref) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing required payment parameters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
+    const chapaResponse = await fetch(`${CHAPA_API_URL}/initialize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${secretKey}`,
+      },
+      body: JSON.stringify({
         amount,
+        currency: currency || "ETB",
         email,
-        first_name,
-        last_name,
+        first_name: first_name || "",
+        last_name: last_name || "",
         tx_ref,
         callback_url,
         return_url,
-        customization,
-      } = body
-
-      if (!amount || !email || !first_name || !last_name || !tx_ref || !callback_url || !return_url) {
-        return new Response(
-          JSON.stringify({ success: false, error: "Missing required payment parameters" }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        )
-      }
-
-      const response = await fetch(`${CHAPA_BASE_URL}/transaction/initialize`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
+        customization: customization || {
+          title: "YeBetWeg Premium Subscription",
+          description: "Payment for YeBetWeg premium membership",
         },
-        body: JSON.stringify({
-          amount,
-          currency: "ETB",
-          email,
-          first_name,
-          last_name,
-          tx_ref,
-          callback_url,
-          return_url,
-          customization,
+      }),
+    })
+
+    const data = await chapaResponse.json()
+
+    if (!chapaResponse.ok || data.status !== "success") {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: data.message || `Chapa API error: ${chapaResponse.status}`,
         }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        return new Response(JSON.stringify({ success: false, error: data.message || "Chapa initialize failed", data }), {
-          status: response.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-
-      return new Response(JSON.stringify({ success: true, data }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    } catch (error) {
-      return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unexpected error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+        { status: chapaResponse.ok ? 400 : chapaResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
     }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        checkoutUrl: data.data.checkout_url,
+        reference: data.data.reference || tx_ref,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "An unexpected error occurred",
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    )
   }
-
-  if (req.method === "GET") {
-    const url = new URL(req.url)
-    const tx_ref = url.searchParams.get("tx_ref")
-
-    if (!tx_ref) {
-      return new Response(JSON.stringify({ success: false, error: "Missing tx_ref query parameter" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-
-    try {
-      const response = await fetch(`${CHAPA_BASE_URL}/transaction/verify/${encodeURIComponent(tx_ref)}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
-        },
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        return new Response(JSON.stringify({ success: false, error: data.message || "Chapa verify failed", data }), {
-          status: response.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
-      }
-
-      return new Response(JSON.stringify({ success: true, data }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    } catch (error) {
-      return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Unexpected error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
-    }
-  }
-
-  return new Response(JSON.stringify({ success: false, error: "Method not allowed" }), {
-    status: 405,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  })
 })
