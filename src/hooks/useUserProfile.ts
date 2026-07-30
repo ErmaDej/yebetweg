@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useAuthContext } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
+import { planFromRole } from "@/lib/entitlements"
 import type { Subscription } from "@/types/payment"
 
 export interface UserProfile {
@@ -213,6 +214,31 @@ function mapSubscription(row: SubscriptionRow): Subscription {
   }
 }
 
+function subscriptionFromRole(profile: UserProfile): Subscription | null {
+  const tier = planFromRole(profile.role)
+
+  if (tier === "free") {
+    return null
+  }
+
+  const timestamp = new Date().toISOString()
+  const expiresAt = new Date()
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+
+  return {
+    id: `role-entitlement-${profile.id}`,
+    userId: profile.id,
+    tier,
+    paymentMethod: "chapa",
+    startsAt: timestamp,
+    expiresAt: expiresAt.toISOString(),
+    isActive: true,
+    status: "active",
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at,
+  }
+}
+
 export function useSubscription(profile: UserProfile | null) {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
@@ -230,7 +256,10 @@ export function useSubscription(profile: UserProfile | null) {
         setLoading(true)
         setError(null)
 
-        const { data, error: fetchError } = await supabase
+        let data: any = null
+        let fetchError: any = null
+
+        const result = await supabase
           .from("premium_subscriptions")
           .select("*")
           .eq("user_id", profile.id)
@@ -240,13 +269,30 @@ export function useSubscription(profile: UserProfile | null) {
           .limit(1)
           .maybeSingle()
 
-        if (fetchError) {
-          throw fetchError
+        data = result.data
+        fetchError = result.error
+
+        if (fetchError || !data) {
+          const rpcResult = await supabase.rpc("get_active_subscription", {
+            p_user_id: profile.id,
+          })
+          if (rpcResult.error) throw rpcResult.error
+          data = rpcResult.data
         }
 
-        setSubscription(data ? mapSubscription(data as SubscriptionRow) : null)
+        if (data) {
+          const row = Array.isArray(data) ? data[0] : data
+          if (row?.id) {
+            setSubscription(mapSubscription(row as SubscriptionRow))
+          } else {
+            setSubscription(subscriptionFromRole(profile))
+          }
+        } else {
+          setSubscription(subscriptionFromRole(profile))
+        }
       } catch (err: unknown) {
         setError(getErrorMessage(err))
+        setSubscription(subscriptionFromRole(profile))
       } finally {
         setLoading(false)
       }

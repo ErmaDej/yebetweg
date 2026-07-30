@@ -22,17 +22,12 @@ import { AuthCallbackPage } from "@/pages/AuthCallbackPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
-import type { PremiumTier } from "@/types/payment"
+import { getActivePlan } from "@/lib/entitlements"
 
 function HomePage() {
   const { profile } = useUserProfile()
   const { subscription } = useSubscription(profile)
-  const activePlan: PremiumTier =
-    profile?.role === "admin"
-      ? "pro"
-      : subscription?.status === "active" && subscription.isActive
-        ? subscription.tier
-        : "free"
+  const activePlan = getActivePlan(profile, subscription)
 
   return (
     <div className="min-h-screen bg-background text-foreground">

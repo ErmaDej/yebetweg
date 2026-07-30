@@ -49,6 +49,7 @@ type TranslationKey =
   | "marketplace.land"
   | "marketplace.materials"
   | "marketplace.services"
+  | "marketplace.jobs"
   | "marketplace.listYours"
   | "marketplace.commission"
   | "marketplace.contact"
@@ -194,6 +195,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "marketplace.land": "Land",
     "marketplace.materials": "Materials",
     "marketplace.services": "Professional Services",
+    "marketplace.jobs": "Jobs",
     "marketplace.listYours": "List Your Property or Service",
     "marketplace.commission": "2% commission on successful property transactions. Material and service connections are free.",
     "marketplace.contact": "Contact",
@@ -218,7 +220,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "premium.feature.blogs": "Blog & article access",
     "premium.feature.prices": "Market price data",
     "premium.feature.tips": "Construction tips",
-    "premium.feature.listings": "Browse listings",
+    "premium.feature.listings": "Add/Browse listings",
     "premium.feature.contact": "Direct contact reveal",
     "premium.feature.priority": "Priority listing placement",
     "premium.feature.analytics": "Market analytics dashboard",
@@ -337,6 +339,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "marketplace.land": "መሬት",
     "marketplace.materials": "ቁሶች",
     "marketplace.services": "የባለሙያ አገልግሎቶች",
+    "marketplace.jobs": "ስራዎች",
     "marketplace.listYours": "ንብረት ወይም አገልግሎት ይዘርዝሩ",
     "marketplace.commission": "በስኬታማ የንብረት ግብይቶች 2% ኮሚሽን። የቁስ እና አገልግሎት ግንኙነቶች ነፃ ናቸው።",
     "marketplace.contact": "ያግኙ",
@@ -361,7 +364,7 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "premium.feature.blogs": "ብሎግ እና መጣጥፍ መዳረሻ",
     "premium.feature.prices": "የገበያ ዋጋ ውሂብ",
     "premium.feature.tips": "የግንባታ ምክሮች",
-    "premium.feature.listings": "ዝርዝሮችን ይመልከቱ",
+    "premium.feature.listings": "ዝርዝሮችን ያክሉ/ይመልከቱ",
     "premium.feature.contact": "ቀጥታ ግንኙነት መግለጫ",
     "premium.feature.priority": "ቅድላይ ዝርዝር አቀማመጥ",
     "premium.feature.analytics": "የገበያ ትንተና ዳሽቦርድ",

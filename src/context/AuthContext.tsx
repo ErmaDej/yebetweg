@@ -111,8 +111,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!isMounted) return
-      setSession(currentSession)
-      setUser(currentSession?.user ?? null)
+      if (currentSession) {
+        setSession(currentSession)
+        setUser(currentSession.user)
+        clearCustomAuthUser()
+      } else if (!loadCustomAuthUser()) {
+        setSession(null)
+        setUser(null)
+      }
       setLoading(false)
     })
 
@@ -136,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!error) {
         setSession(data.session)
         setUser(data.session?.user ?? null)
+        clearCustomAuthUser()
         return {}
       }
 
@@ -195,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setSession(data.session)
       setUser(data.session?.user ?? null)
+      clearCustomAuthUser()
       return {}
     } catch (e: any) {
       setError(e.message)
@@ -277,4 +285,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-

@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useLanguage } from "@/lib/i18n"
-import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, Trash2, CheckCircle, XCircle, type LucideIcon } from "lucide-react"
+import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, Trash2, CheckCircle, XCircle, Plus, Save, Search, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
 import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
@@ -50,6 +55,10 @@ export function AdminDashboardTab() {
   const [metrics, setMetrics] = useState<AdminMetrics>(emptyMetrics)
   const [actionInFlight, setActionInFlight] = useState<string | null>(null)
   const [actionResult, setActionResult] = useState<AdminActionResult | null>(null)
+  const [editingRecord, setEditingRecord] = useState<Record<string, any> | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createAction, setCreateAction] = useState<string>("")
 
   const safeCount = async (table: string, query?: (q: any) => any) => {
     try {
@@ -110,11 +119,6 @@ export function AdminDashboardTab() {
     setActionResult(null)
     try {
       const result = await callAdminAction(action)
-      const message =
-        language === "en"
-          ? `Successfully performed ${action.replaceAll("_", " ")}`
-          : `ተገቢው እርምጃ ${action} ተፈጸመ`
-      setSuccessMessage(message)
       setActionResult({
         action,
         data: Array.isArray(result?.data) ? result.data : undefined,
@@ -133,13 +137,30 @@ export function AdminDashboardTab() {
     setLoading(true)
     setError(null)
     setSuccessMessage(null)
+    const isDelete = payload.delete
+    const isSave = payload.id && !payload.delete
+    const isCreate = !payload.id && !payload.delete
     try {
       await callAdminAction(action, payload)
-      setSuccessMessage(
-        language === "en"
-          ? `${action.replaceAll("_", " ")} — updated`
-          : `${action} — ተዘምኗል`
-      )
+      if (isCreate) {
+        setSuccessMessage(
+          language === "en"
+            ? `${action.replaceAll("_", " ")} — created`
+            : `${action} — ተፈጠረ`
+        )
+      } else if (isSave) {
+        setSuccessMessage(
+          language === "en"
+            ? `${action.replaceAll("_", " ")} — saved`
+            : `${action} — ተቀምጧል`
+        )
+      } else if (isDelete) {
+        setSuccessMessage(
+          language === "en"
+            ? `${action.replaceAll("_", " ")} — deleted`
+            : `${action} — ተሰርዟል`
+        )
+      }
       await loadMetrics()
       if (actionResult?.action === action && actionResult.data) {
         const result = await callAdminAction(action)
@@ -253,15 +274,25 @@ export function AdminDashboardTab() {
       {actionResult && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">
-              {language === "en" ? "Action Result" : "የእርምጃ ውጤት"}
-            </CardTitle>
-            <CardDescription>
-              {actionResult.message ||
-                (language === "en"
-                  ? `${actionResult.action.replaceAll("_", " ")} returned ${actionResult.data?.length ?? 0} records.`
-                  : `${actionResult.action} ${actionResult.data?.length ?? 0} መዝገቦችን አመጣ።`)}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">
+                  {language === "en" ? "Action Result" : "የእርምጃ ውጤት"}
+                </CardTitle>
+                <CardDescription>
+                  {actionResult.message ||
+                    (language === "en"
+                      ? `${actionResult.action.replaceAll("_", " ")} returned ${actionResult.data?.length ?? 0} records.`
+                      : `${actionResult.action} ${actionResult.data?.length ?? 0} መዝገቦችን አመጣ።`)}
+                </CardDescription>
+              </div>
+              {(actionResult.action === "manage_blogs" || actionResult.action === "manage_tips" || actionResult.action === "manage_ads") && (
+                <Button size="sm" className="gap-2" onClick={() => { setCreateAction(actionResult.action); setCreateDialogOpen(true) }}>
+                  <Plus className="h-4 w-4" />
+                  {language === "en" ? "Create New" : "አዲስ ፍጠር"}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           {actionResult.data && actionResult.data.length > 0 && (
             <CardContent>
@@ -303,9 +334,14 @@ export function AdminDashboardTab() {
                             </Button>
                           )}
                           {(action === "manage_blogs" || action === "manage_tips" || action === "manage_ads") && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Delete" : "ሰርዝ"} onClick={() => handleActionWithPayload(action, { id: item.id, delete: true })}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500" title={language === "en" ? "Edit" : "አርትዕ"} onClick={() => { setEditingRecord(item); setEditDialogOpen(true) }}>
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Delete" : "ሰርዝ"} onClick={() => handleActionWithPayload(action, { id: item.id, delete: true })}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -361,6 +397,58 @@ export function AdminDashboardTab() {
         </CardContent>
       </Card>
 
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "en" ? `Edit ${actionResult?.action?.replace("manage_", "") ?? ""}` : `${actionResult?.action?.replace("manage_", "") ?? ""} አርትዕ`}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "en" ? "Edit the fields below and save." : "ከታች ያሉትን መስኮች ያርትዑ እና ያስቀምጡ።"}
+            </DialogDescription>
+          </DialogHeader>
+          {editingRecord && actionResult && (
+            <ContentForm
+              action={actionResult.action}
+              record={editingRecord}
+              language={language}
+              onCancel={() => setEditDialogOpen(false)}
+              onSave={async (payload) => {
+                await handleActionWithPayload(actionResult.action, { ...payload, id: editingRecord.id })
+                setEditDialogOpen(false)
+                setEditingRecord(null)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {language === "en" ? `New ${createAction.replace("manage_", "") ?? ""}` : `አዲስ ${createAction.replace("manage_", "") ?? ""}`}
+            </DialogTitle>
+            <DialogDescription>
+              {language === "en" ? "Fill in the fields below to create a new record." : "አዲስ መዝገብ ለመፍጠር ከታች ያሉትን መስኮች ይሙሉ።"}
+            </DialogDescription>
+          </DialogHeader>
+          {createAction && (
+            <ContentForm
+              action={createAction}
+              record={{}}
+              language={language}
+              onCancel={() => setCreateDialogOpen(false)}
+              onSave={async (payload) => {
+                await handleActionWithPayload(createAction, payload)
+                setCreateDialogOpen(false)
+                setCreateAction("")
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <ExpandableSection title={language === "en" ? "Market Price Management" : "የገበያ ዋጋ አስተዳደር"} defaultOpen={false}>
         <MarketPriceManager />
       </ExpandableSection>
@@ -368,6 +456,366 @@ export function AdminDashboardTab() {
       <ExpandableSection title={language === "en" ? "RFQ Management" : "የዋጋ ጥያቄ አስተዳደር"} defaultOpen={false}>
         <RfqManager />
       </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "User Management" : "ተጠቃሚ አስተዳደር"} defaultOpen={false}>
+        <UserManagementSection language={language} />
+      </ExpandableSection>
+    </div>
+  )
+}
+
+function ContentForm({
+  action,
+  record,
+  language,
+  onCancel,
+  onSave,
+}: {
+  action: string
+  record: Record<string, any>
+  language: string
+  onCancel: () => void
+  onSave: (payload: Record<string, any>) => Promise<void>
+}) {
+  const [form, setForm] = useState<Record<string, any>>({ ...record })
+  const [saving, setSaving] = useState(false)
+
+  const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }))
+
+  const isBlog = action === "manage_blogs"
+  const isTip = action === "manage_tips"
+  const isAd = action === "manage_ads"
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const payload: Record<string, any> = {}
+      if (isBlog || isTip) {
+        payload.title_en = form.title_en || ""
+        payload.title_am = form.title_am || ""
+        payload.content_en = form.content_en || ""
+        payload.content_am = form.content_am || ""
+        if (isBlog) {
+          payload.excerpt_en = form.excerpt_en || ""
+          payload.excerpt_am = form.excerpt_am || ""
+          payload.author = form.author || ""
+          payload.image_url = form.image_url || ""
+        }
+        payload.category = form.category || ""
+        payload.tags = form.tags || ""
+        payload.status = form.status || "published"
+      }
+      if (isAd) {
+        payload.advertiser = form.advertiser || ""
+        payload.image_url = form.image_url || ""
+        payload.target_url = form.target_url || ""
+        payload.position = form.position || "sidebar"
+        payload.starts_at = form.starts_at || ""
+        payload.ends_at = form.ends_at || ""
+        payload.status = form.status || "active"
+      }
+      await onSave(payload)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {(isBlog || isTip) && (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Title (EN)" : "ርዕስ (EN)"}</Label>
+              <Input value={form.title_en || ""} onChange={(e) => set("title_en", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Title (AM)" : "ርዕስ (AM)"}</Label>
+              <Input value={form.title_am || ""} onChange={(e) => set("title_am", e.target.value)} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Content (EN)" : "ይዘት (EN)"}</Label>
+              <textarea
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.content_en || ""}
+                onChange={(e) => set("content_en", e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Content (AM)" : "ይዘት (AM)"}</Label>
+              <textarea
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.content_am || ""}
+                onChange={(e) => set("content_am", e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          {isBlog && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{language === "en" ? "Excerpt (EN)" : "አጭር ገለጻ (EN)"}</Label>
+                  <Input value={form.excerpt_en || ""} onChange={(e) => set("excerpt_en", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === "en" ? "Excerpt (AM)" : "አጭር ገለጻ (AM)"}</Label>
+                  <Input value={form.excerpt_am || ""} onChange={(e) => set("excerpt_am", e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{language === "en" ? "Author" : "ደራሲ"}</Label>
+                  <Input value={form.author || ""} onChange={(e) => set("author", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === "en" ? "Image URL" : "የምስል መጠቆሚያ"}</Label>
+                  <Input value={form.image_url || ""} onChange={(e) => set("image_url", e.target.value)} />
+                </div>
+              </div>
+            </>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Category" : "ምድብ"}</Label>
+              <Input value={form.category || ""} onChange={(e) => set("category", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Tags" : "መለያዎች"}</Label>
+              <Input value={form.tags || ""} onChange={(e) => set("tags", e.target.value)} placeholder="comma,separated" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{language === "en" ? "Status" : "ሁኔታ"}</Label>
+            <Select value={form.status || "published"} onValueChange={(v) => set("status", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="published">{language === "en" ? "Published" : "የታተመ"}</SelectItem>
+                <SelectItem value="draft">{language === "en" ? "Draft" : "ረቂቅ"}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
+      {isAd && (
+        <>
+          <div className="space-y-2">
+            <Label>{language === "en" ? "Advertiser" : "አስተዋዋቂ"}</Label>
+            <Input value={form.advertiser || ""} onChange={(e) => set("advertiser", e.target.value)} required />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Image URL" : "የምስል መጠቆሚያ"}</Label>
+              <Input value={form.image_url || ""} onChange={(e) => set("image_url", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Target URL" : "ዒላማ መጠቆሚያ"}</Label>
+              <Input value={form.target_url || ""} onChange={(e) => set("target_url", e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{language === "en" ? "Position" : "ቦታ"}</Label>
+            <Select value={form.position || "sidebar"} onValueChange={(v) => set("position", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sidebar">{language === "en" ? "Sidebar" : "የጎን አሞሌ"}</SelectItem>
+                <SelectItem value="banner">{language === "en" ? "Banner" : "ሰንደቅ"}</SelectItem>
+                <SelectItem value="inline">{language === "en" ? "Inline" : "መካከል"}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{language === "en" ? "Start Date" : "የመጀመሪያ ቀን"}</Label>
+              <Input type="date" value={form.starts_at?.split("T")[0] || ""} onChange={(e) => set("starts_at", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === "en" ? "End Date" : "የመጨረሻ ቀን"}</Label>
+              <Input type="date" value={form.ends_at?.split("T")[0] || ""} onChange={(e) => set("ends_at", e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{language === "en" ? "Status" : "ሁኔታ"}</Label>
+            <Select value={form.status || "active"} onValueChange={(v) => set("status", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">{language === "en" ? "Active" : "ንቁ"}</SelectItem>
+                <SelectItem value="inactive">{language === "en" ? "Inactive" : "ያልተንቀሳቃሽ"}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
+      <div className="flex justify-end gap-3 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          {language === "en" ? "Cancel" : "ሰርዝ"}
+        </Button>
+        <Button type="submit" disabled={saving} className="gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {language === "en" ? "Save" : "አስቀምጥ"}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function UserManagementSection({ language }: { language: string }) {
+  const [users, setUsers] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState("")
+  const [updating, setUpdating] = useState<string | null>(null)
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null)
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true)
+    try {
+      const result = await callAdminAction("manage_users")
+      if (Array.isArray(result?.data)) {
+        setUsers(result.data.map((u: any) => ({
+          id: u.id,
+          username: u.username || "",
+          email: u.email || "",
+          role: u.role || "user",
+          status: u.status || "active",
+          created_at: u.created_at || "",
+        })))
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadUsers() }, [loadUsers])
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    setUpdating(userId)
+    try {
+      await callAdminAction("ban_users", { userId, role: newRole })
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u))
+    } catch {
+      // silently fail
+    } finally {
+      setUpdating(null)
+    }
+  }
+
+  const handleToggleStatus = async (userId: string, currentStatus: string) => {
+    setStatusUpdating(userId)
+    const newStatus = currentStatus === "active" ? "suspended" : "active"
+    try {
+      await callAdminAction("ban_users", { userId, status: newStatus })
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, status: newStatus } : u))
+    } catch {
+      // silently fail
+    } finally {
+      setStatusUpdating(null)
+    }
+  }
+
+  const filtered = search
+    ? users.filter((u) =>
+        u.username.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+      )
+    : users
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={language === "en" ? "Search users..." : "ተጠቃሚዎችን ፈልግ..."}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Button variant="outline" size="sm" onClick={loadUsers} disabled={loading} className="gap-2">
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          {language === "en" ? "Refresh" : "አድስ"}
+        </Button>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          {language === "en" ? "No users found." : "ምንም ተጠቃሚ አልተገኘም።"}
+        </p>
+      ) : (
+        <div className="max-h-80 overflow-auto rounded-lg border border-border/60">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{language === "en" ? "Username" : "የተጠቃሚ ስም"}</TableHead>
+                <TableHead>{language === "en" ? "Email" : "ኢሜይል"}</TableHead>
+                <TableHead>{language === "en" ? "Role" : "ሚና"}</TableHead>
+                <TableHead>{language === "en" ? "Status" : "ሁኔታ"}</TableHead>
+                <TableHead>{language === "en" ? "Joined" : "የተቀላቀለበት"}</TableHead>
+                <TableHead className="text-right">{language === "en" ? "Actions" : "እርምጃ"}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium">{u.username}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={u.role}
+                      onValueChange={(v) => handleRoleChange(u.id, v)}
+                      disabled={updating === u.id}
+                    >
+                      <SelectTrigger className="h-8 w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">user</SelectItem>
+                        <SelectItem value="premium">premium</SelectItem>
+                        <SelectItem value="pro">pro</SelectItem>
+                        <SelectItem value="admin">admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={u.status === "active" ? "outline" : "destructive"}>
+                      {u.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : "-"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-7 w-7 ${u.status === "active" ? "text-destructive" : "text-green-500"}`}
+                      title={u.status === "active"
+                        ? (language === "en" ? "Suspend" : "አስቁም")
+                        : (language === "en" ? "Activate" : "አንቃ")}
+                      onClick={() => handleToggleStatus(u.id, u.status)}
+                      disabled={statusUpdating === u.id}
+                    >
+                      {statusUpdating === u.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Ban className="h-3.5 w-3.5" />
+                      }
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   )
 }
