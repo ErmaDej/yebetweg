@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 // TeleBirr API Configuration
-const TELEBIRR_API_URL = "https://api.telebirr.com/v1"
+const TELEBIRR_API_URL = Deno.env.get("TELEBIRR_API_URL") || "https://api.telebirr.com/v1"
 
 interface TeleBirrPaymentRequest {
   appId: string

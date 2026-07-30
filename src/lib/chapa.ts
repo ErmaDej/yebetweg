@@ -1,35 +1,4 @@
-const CHAPA_SECRET_KEY = import.meta.env.VITE_CHAPA_SECRET_KEY
-const CHAPA_BASE_URL = "https://api.chapa.co/v1"
-
-export interface ChapaInitializeResponse {
-  status: "success" | "failed"
-  message: string
-  data: {
-    checkout_url: string
-    reference: string
-  }
-}
-
-export interface ChapaVerifyResponse {
-  status: "success" | "failed"
-  message: string
-  data: {
-    first_name: string
-    last_name: string
-    email: string
-    currency: string
-    amount: string
-    charge: string
-    mode: string
-    method: string
-    type: string
-    status: string
-    reference: string
-    tracking_code: string
-    created_at: string
-    updated_at: string
-  }
-}
+import { supabase } from "@/lib/supabase"
 
 export interface InitializePaymentParams {
   amount: number
@@ -56,7 +25,6 @@ export interface InitializePaymentResult {
 export interface VerifyPaymentResult {
   success: boolean
   status?: string
-  data?: ChapaVerifyResponse["data"]
   error?: string
 }
 
@@ -64,11 +32,21 @@ export async function initializeChapaPayment(
   params: InitializePaymentParams,
 ): Promise<InitializePaymentResult> {
   try {
-    const response = await fetch(`${CHAPA_BASE_URL}/initialize`, {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return { success: false, error: "Payment service is not configured" }
+    }
+
+    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/chapa-service`
+    const response = await fetch(serviceUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
       },
       body: JSON.stringify({
         amount: params.amount,
@@ -88,74 +66,17 @@ export async function initializeChapaPayment(
 
     const data = await response.json()
 
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.message || "Failed to initialize payment",
-      }
-    }
-
-    if (data.status === "success") {
-      return {
-        success: true,
-        checkoutUrl: data.data.checkout_url,
-        reference: data.data.reference,
-      }
+    if (!response.ok || !data.success) {
+      return { success: false, error: data.error || `Service error: ${response.status}` }
     }
 
     return {
-      success: false,
-      error: data.message || "Payment initialization failed",
+      success: true,
+      checkoutUrl: data.checkoutUrl,
+      reference: data.reference,
     }
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Network error",
-    }
-  }
-}
-
-export async function verifyChapaPayment(
-  tx_ref: string,
-): Promise<VerifyPaymentResult> {
-  try {
-    const response = await fetch(
-      `${CHAPA_BASE_URL}/transaction/verify/${tx_ref}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${CHAPA_SECRET_KEY}`,
-        },
-      },
-    )
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.message || "Failed to verify payment",
-      }
-    }
-
-    if (data.status === "success") {
-      return {
-        success: true,
-        status: data.data.status,
-        data: data.data,
-      }
-    }
-
-    return {
-      success: false,
-      error: data.message || "Payment verification failed",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Network error",
-    }
+    return { success: false, error: error instanceof Error ? error.message : "Network error" }
   }
 }
 
