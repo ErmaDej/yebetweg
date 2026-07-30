@@ -120,8 +120,12 @@ export function usePayment() {
             callback_url: callbackUrl,
             return_url: returnUrl,
             customization: {
-              title: `YeBetWeg`,
+              title: "YeBetWeg",
               description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} - ETB ${amount}`,
+            },
+            subscription: {
+              user_id: profile.id,
+              tier,
             },
           })
 
@@ -129,14 +133,6 @@ export function usePayment() {
             setError(result.error || "Failed to initialize payment")
             return { success: false, error: result.error }
           }
-
-          await createSubscriptionRecord({
-            userId: profile.id,
-            tier,
-            paymentMethod: method,
-            reference: txRef,
-            amount,
-          })
 
           return {
             success: true,

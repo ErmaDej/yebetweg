@@ -30,14 +30,14 @@ export function PaymentSuccessPage() {
           .from("premium_subscriptions")
           .select("*")
           .eq("chapa_reference", reference)
-          .single()
+          .maybeSingle()
 
         if (error || !subscription) {
           const { data: telebirrSub } = await supabase
             .from("premium_subscriptions")
             .select("*")
             .eq("telebirr_reference", reference)
-            .single()
+            .maybeSingle()
 
           if (telebirrSub) {
             await supabase

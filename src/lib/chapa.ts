@@ -13,6 +13,10 @@ export interface InitializePaymentParams {
     description?: string
     logo?: string
   }
+  subscription?: {
+    user_id: string
+    tier: string
+  }
 }
 
 export interface InitializePaymentResult {
@@ -58,9 +62,10 @@ export async function initializeChapaPayment(
         callback_url: params.callback_url,
         return_url: params.return_url,
         customization: params.customization || {
-          title: "YeBetWeg Premium Subscription",
-          description: "Payment for YeBetWeg premium membership",
+          title: "YeBetWeg",
+          description: "Premium membership",
         },
+        ...(params.subscription ? { subscription: params.subscription } : {}),
       }),
     })
 
