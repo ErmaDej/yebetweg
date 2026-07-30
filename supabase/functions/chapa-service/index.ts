@@ -60,7 +60,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { amount, currency, email, first_name, last_name, tx_ref, callback_url, return_url, customization } = body
+    const { amount, currency, email, first_name, last_name, tx_ref, callback_url, return_url, customization, subscription } = body
 
     if (!amount || !email || !tx_ref) {
       return new Response(
@@ -105,11 +105,36 @@ serve(async (req) => {
       )
     }
 
+    const reference = data.data.reference || tx_ref
+
+    if (subscription?.user_id) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+        if (supabaseUrl && serviceRoleKey) {
+          const admin = createClient(supabaseUrl, serviceRoleKey)
+          await admin.from("premium_subscriptions").insert({
+            user_id: subscription.user_id,
+            tier: subscription.tier || "premium",
+            payment_method: "chapa",
+            chapa_reference: reference,
+            starts_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            is_active: false,
+            status: "pending",
+          })
+        }
+      } catch (_subErr) {
+        // subscription creation is best-effort; webhook will create it if missing
+        console.error("Failed to create subscription record:", _subErr)
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         checkoutUrl: data.data.checkout_url,
-        reference: data.data.reference || tx_ref,
+        reference,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     )

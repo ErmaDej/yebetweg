@@ -31,7 +31,7 @@ export function PaymentSuccessPage() {
           .from("premium_subscriptions")
           .select("id")
           .eq("chapa_reference", reference)
-          .single()
+          .maybeSingle()
 
         if (chapaSubscription && !error) {
           const result = await verifyChapaPayment(reference)
@@ -66,7 +66,7 @@ export function PaymentSuccessPage() {
           .from("premium_subscriptions")
           .select("*")
           .eq("telebirr_reference", reference)
-          .single()
+          .maybeSingle()
 
         if (telebirrSub) {
           await supabase
