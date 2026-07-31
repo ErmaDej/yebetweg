@@ -168,7 +168,7 @@ export function PremiumSection({
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">{t("premium.subtitle")}</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+          <div id="plans" className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 scroll-mt-24">
             {tiers.map((tier) => {
               const isCurrentPlan = activePlan === tier.key
               const isLowerPlan = tierRank[tier.key] < tierRank[activePlan]

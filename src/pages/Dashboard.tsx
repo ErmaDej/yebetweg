@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { useRequireAuth } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { useLanguage } from "@/lib/i18n"
@@ -9,37 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles } from "lucide-react"
+import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Bot, type LucideIcon } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 import { navigateTo } from "@/lib/navigation"
 import { AdminDashboardTab } from "./AdminDashboardTab"
-import { supabase } from "@/lib/supabase"
 import { Progress } from "@/components/ui/progress"
-
-type DashboardInquiry = {
-  id: string
-  subject: string | null
-  is_read: boolean | null
-  created_at: string
-}
-
-type DashboardListing = {
-  id: string
-  title_en: string | null
-  status: string | null
-  created_at: string
-}
-
-type DashboardPayment = {
-  id: string
-  amount: number | null
-  currency: string | null
-  method: string | null
-  reference: string | null
-  status: string | null
-  created_at: string
-}
+import { useDashboardData, buildActivityFeed, type ActivityKind } from "@/hooks/useDashboardData"
+import { profileStrength } from "@/lib/entitlements"
+import { RfqModal } from "@/components/sections/RfqModal"
 
 export function Dashboard() {
   const { language } = useLanguage()
@@ -55,11 +33,15 @@ export function Dashboard() {
     language_preference: "en",
   })
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
-  const [userStats, setUserStats] = useState({ inquiries: 0, listings: 0, purchases: 0, unread: 0 })
-  const [recentInquiries, setRecentInquiries] = useState<DashboardInquiry[]>([])
-  const [recentListings, setRecentListings] = useState<DashboardListing[]>([])
-  const [recentPayments, setRecentPayments] = useState<DashboardPayment[]>([])
-  const [statsLoading, setStatsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState("profile")
+  const [activityFilter, setActivityFilter] = useState<"all" | ActivityKind>("all")
+  const [activitySort, setActivitySort] = useState<"newest" | "oldest">("newest")
+  const [rfqModalOpen, setRfqModalOpen] = useState(false)
+  const {
+    data: dashboardData,
+    loading: statsLoading,
+    error: statsError,
+  } = useDashboardData(profile?.id ?? null)
 
   const handleEditClick = () => {
     if (!profile) return
@@ -99,76 +81,14 @@ export function Dashboard() {
     navigateTo("/")
   }
 
-  useEffect(() => {
-    if (!profile?.id) {
-      setUserStats({ inquiries: 0, listings: 0, purchases: 0, unread: 0 })
-      setRecentInquiries([])
-      setRecentListings([])
-      setRecentPayments([])
-      return
-    }
-
-    let cancelled = false
-
-    const loadUserStats = async () => {
-      setStatsLoading(true)
-      try {
-        const [inquiries, unreadInquiries, listings, payments] = await Promise.all([
-          supabase
-            .from("inquiries")
-            .select("id, subject, is_read, created_at", { count: "exact" })
-            .eq("user_id", profile.id)
-            .order("created_at", { ascending: false })
-            .limit(3),
-          supabase
-            .from("inquiries")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", profile.id)
-            .eq("is_read", false),
-          supabase
-            .from("listings")
-            .select("id, title_en, status, created_at", { count: "exact" })
-            .eq("user_id", profile.id)
-            .order("created_at", { ascending: false })
-            .limit(3),
-          supabase
-            .from("subscription_payments")
-            .select("id, amount, currency, method, reference, status, created_at", { count: "exact" })
-            .eq("user_id", profile.id)
-            .order("created_at", { ascending: false })
-            .limit(5),
-        ])
-
-        if (cancelled) return
-
-        setUserStats({
-          inquiries: inquiries.count || 0,
-          listings: listings.count || 0,
-          purchases: payments.count || (subscription ? 1 : 0),
-          unread: unreadInquiries.count || 0,
-        })
-        setRecentInquiries((inquiries.data || []) as DashboardInquiry[])
-        setRecentListings((listings.data || []) as DashboardListing[])
-        setRecentPayments((payments.data || []) as DashboardPayment[])
-      } catch (err) {
-        console.error("Failed to load user stats:", err)
-      } finally {
-        if (!cancelled) setStatsLoading(false)
-      }
-    }
-
-    loadUserStats()
-
-    return () => {
-      cancelled = true
-    }
-  }, [profile?.id, subscription?.id])
-
-  const roleLabel = useMemo(() => {
-    if (!profile) return "Free"
-    if (profile.role === "admin") return "Admin"
-    return subscription?.tier || profile.role || "free"
+  const roleKey = useMemo(() => {
+    if (!profile) return "user"
+    if (profile.role === "admin") return "admin"
+    const tier = subscription?.tier || profile.role || "free"
+    return tier === "free" ? "user" : tier
   }, [profile, subscription?.tier])
+
+  const roleStyle = ROLE_STYLES[roleKey] || ROLE_STYLES.user
 
   const planProgress = useMemo(() => {
     if (!subscription) return profile?.role === "admin" ? 100 : 20
@@ -176,6 +96,42 @@ export function Dashboard() {
     if (subscription.tier === "premium") return 68
     return 20
   }, [profile?.role, subscription])
+
+  const purchasesCount = useMemo(() => {
+    if (!dashboardData) return 0
+    return dashboardData.stats.payments > 0 ? dashboardData.stats.payments : subscription ? 1 : 0
+  }, [dashboardData, subscription])
+
+  const profileGaps = useMemo(() => {
+    if (!profile) return []
+    return profileStrength(profile).missing
+  }, [profile])
+
+  const accessStrength = useMemo(() => {
+    if (!profile) return 0
+    return Math.round(planProgress * 0.6 + profileStrength(profile).score * 0.4)
+  }, [planProgress, profile])
+
+  const activityFeed = useMemo(() => {
+    if (!dashboardData) return []
+    const feed = buildActivityFeed(dashboardData)
+    const filtered = activityFilter === "all" ? feed : feed.filter((item) => item.kind === activityFilter)
+    return [...filtered].sort((a, b) =>
+      activitySort === "newest"
+        ? b.createdAt.localeCompare(a.createdAt)
+        : a.createdAt.localeCompare(b.createdAt)
+    )
+  }, [dashboardData, activityFilter, activitySort])
+
+  const actionHandlers: Record<QuickActionKey, () => void> = {
+    submitRfq: () => setRfqModalOpen(true),
+    market: () => navigateTo("/#market"),
+    marketplace: () => navigateTo("/#marketplace"),
+    professionals: () => navigateTo("/#professionals"),
+    upgrade: () => navigateTo("/#plans"),
+    adminConsole: () => setActiveTab("admin"),
+    reviewContent: () => setActiveTab("admin"),
+  }
 
   if (authLoading || profileLoading) {
     return (
@@ -201,11 +157,14 @@ export function Dashboard() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="capitalize">{roleLabel}</Badge>
-                {userStats.unread > 0 && (
+                <Badge className={`gap-1 capitalize ${roleStyle.badge}`}>
+                  <roleStyle.icon className="h-3 w-3" />
+                  {roleStyle.label}
+                </Badge>
+                {(dashboardData?.stats.unread ?? 0) > 0 && (
                   <Badge className="gap-1 bg-amber-600 text-white">
                     <Bell className="h-3 w-3" />
-                    {userStats.unread} {language === "en" ? "new" : "አዲስ"}
+                    {dashboardData?.stats.unread} {language === "en" ? "new" : "አዲስ"}
                   </Badge>
                 )}
               </div>
@@ -231,10 +190,20 @@ export function Dashboard() {
             <div className="min-w-64 rounded-lg bg-muted/70 p-4">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="font-medium">{language === "en" ? "Access strength" : "የመዳረሻ ጥንካሬ"}</span>
-                <span className="text-muted-foreground">{planProgress}%</span>
+                <span className="text-muted-foreground">{accessStrength}%</span>
               </div>
-              <Progress value={planProgress} />
-              <Button className="mt-4 w-full gap-2" onClick={() => navigateTo(profile.role === "admin" ? "/dashboard" : "/#premium")}>
+              <Progress value={accessStrength} />
+              {profileGaps.length > 0 && (
+                <button
+                  onClick={() => setActiveTab("profile")}
+                  className="mt-3 block w-full rounded-md border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
+                >
+                  {language === "en"
+                    ? `Complete your profile: ${profileGaps.map((k) => PROFILE_FIELD_LABELS[k]?.en || k).join(", ")}`
+                    : `መገለጫዎን ያጠናቅቁ: ${profileGaps.map((k) => PROFILE_FIELD_LABELS[k]?.am || k).join(", ")}`}
+                </button>
+              )}
+              <Button className="mt-4 w-full gap-2" onClick={() => navigateTo(profile.role === "admin" ? "/dashboard" : "/#plans")}>
                 <Sparkles className="h-4 w-4" />
                 {profile.role === "admin"
                   ? language === "en" ? "Review operations" : "ኦፕሬሽን ይመልከቱ"
@@ -252,6 +221,12 @@ export function Dashboard() {
           </Alert>
         )}
 
+        {statsError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{statsError}</AlertDescription>
+          </Alert>
+        )}
+
         {saveMessage && (
           <Alert variant={saveMessage.type === "success" ? "default" : "destructive"} className="mb-6">
             <AlertDescription>{saveMessage.text}</AlertDescription>
@@ -259,16 +234,16 @@ export function Dashboard() {
         )}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-blue-500/10">
-                  <Crown className="h-6 w-6 text-blue-500" />
+                <div className={`p-3 rounded-lg ${roleStyle.iconBg}`}>
+                  <roleStyle.icon className={`h-6 w-6 ${roleStyle.iconColor}`} />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Plan" : "እቅድ"}</p>
-                  <p className="text-2xl font-bold capitalize">{roleLabel}</p>
+                  <p className="text-2xl font-bold capitalize">{roleStyle.label}</p>
                 </div>
               </div>
             </CardContent>
@@ -282,7 +257,7 @@ export function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Listings" : "ዝርዝሮች"}</p>
-                  <p className="text-2xl font-bold">{userStats.listings}</p>
+                  <p className="text-2xl font-bold">{dashboardData?.stats.listings ?? 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -296,7 +271,21 @@ export function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Inquiries" : "ጥያቄዎች"}</p>
-                  <p className="text-2xl font-bold">{userStats.inquiries}</p>
+                  <p className="text-2xl font-bold">{dashboardData?.stats.inquiries ?? 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-lg bg-cyan-500/10">
+                  <ClipboardList className="h-6 w-6 text-cyan-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{language === "en" ? "RFQs" : "የዋጋ ጥያቄዎች"}</p>
+                  <p className="text-2xl font-bold">{dashboardData?.stats.rfqs ?? 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -310,14 +299,14 @@ export function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Payments" : "ክፍያዎች"}</p>
-                  <p className="text-2xl font-bold">{statsLoading ? "..." : userStats.purchases}</p>
+                  <p className="text-2xl font-bold">{statsLoading ? "..." : purchasesCount}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -345,40 +334,60 @@ export function Dashboard() {
                 <CardTitle>{language === "en" ? "Workspace Snapshot" : "የስራ ቦታ ማጠቃለያ"}</CardTitle>
                 <CardDescription>{language === "en" ? "Recent activity across your account" : "በአካውንትዎ የቅርብ ጊዜ እንቅስቃሴ"}</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-lg border border-border/60 p-4">
                   <FileText className="mb-3 h-5 w-5 text-blue-500" />
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Recent inquiries" : "የቅርብ ጥያቄዎች"}</p>
-                  <p className="mt-1 text-2xl font-bold">{recentInquiries.length}</p>
+                  <p className="mt-1 text-2xl font-bold">{dashboardData?.recentInquiries.length ?? 0}</p>
                 </div>
                 <div className="rounded-lg border border-border/60 p-4">
                   <PackageCheck className="mb-3 h-5 w-5 text-emerald-500" />
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Listings in motion" : "በሂደት ላይ ያሉ ዝርዝሮች"}</p>
-                  <p className="mt-1 text-2xl font-bold">{recentListings.length}</p>
+                  <p className="mt-1 text-2xl font-bold">{dashboardData?.recentListings.length ?? 0}</p>
+                </div>
+                <div className="rounded-lg border border-border/60 p-4">
+                  <ClipboardList className="mb-3 h-5 w-5 text-cyan-500" />
+                  <p className="text-sm text-muted-foreground">{language === "en" ? "RFQ requests" : "የዋጋ ጥያቄዎች"}</p>
+                  <p className="mt-1 text-2xl font-bold">{dashboardData?.recentRfqs.length ?? 0}</p>
                 </div>
                 <div className="rounded-lg border border-border/60 p-4">
                   <ReceiptText className="mb-3 h-5 w-5 text-violet-500" />
                   <p className="text-sm text-muted-foreground">{language === "en" ? "Billing records" : "የክፍያ መዝገቦች"}</p>
-                  <p className="mt-1 text-2xl font-bold">{recentPayments.length}</p>
+                  <p className="mt-1 text-2xl font-bold">{dashboardData?.recentPayments.length ?? 0}</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>{language === "en" ? "Next Best Action" : "ቀጣይ ተግባር"}</CardTitle>
+                <CardTitle>{language === "en" ? "Quick Actions" : "ፈጣን እርምጃዎች"}</CardTitle>
+                <CardDescription>
+                  {profile.role === "admin"
+                    ? language === "en" ? "Operational shortcuts for the marketplace" : "ለገበያው የአሰራር አቋራጮች"
+                    : language === "en" ? "Jump straight into what matters most" : "በቀጥታ ወደ በጣም አስፈላጊው ይሂዱ"}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {profile.role === "admin"
-                    ? language === "en" ? "Review pending operations and keep the marketplace healthy." : "በመጠባበቅ ላይ ያሉ ኦፕሬሽኖችን ይመልከቱ።"
-                    : subscription
-                      ? language === "en" ? "Keep your profile and listings fresh to convert more leads." : "ተጨማሪ ጥያቄዎችን ለማግኘት መገለጫዎን እና ዝርዝሮችን ያዘምኑ።"
-                      : language === "en" ? "Upgrade to unlock full prices, tips, reports, and priority visibility." : "ሙሉ ዋጋዎችን፣ ምክሮችን እና ቅድሚያ ለመክፈት ያሻሽሉ።"}
-                </p>
-                <Button className="w-full gap-2" onClick={() => navigateTo(profile.role === "admin" ? "/dashboard" : "/#premium")}>
-                  <ArrowRight className="h-4 w-4" />
-                  {profile.role === "admin" ? language === "en" ? "Open admin tab" : "የአስተዳዳሪ ትር" : language === "en" ? "View plans" : "እቅዶችን ይመልከቱ"}
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  {(QUICK_ACTIONS[roleKey] || QUICK_ACTIONS.user).map((action) => (
+                    <QuickActionButton key={action.key} config={action} handlers={actionHandlers} language={language} />
+                  ))}
+                </div>
+                <div className="rounded-lg border border-dashed border-border/70 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-accent/15">
+                      <Bot className="h-4 w-4 animate-pulse text-primary" />
+                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-ping rounded-full bg-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{language === "en" ? "YeBetWeg Assistant" : "የYeBetWeg ረዳት"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {language === "en"
+                          ? "AI guidance coming soon — smarter quotes, BOQ help, and material insights."
+                          : "AI ረዳት በቅርቡ ይመጣል — ብልህ ዋጋ፣ የBOQ እርዳታ እና የቁሳቁስ ግንዛቤዎች።"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -642,7 +651,7 @@ export function Dashboard() {
                       <div className="grid grid-cols-1 gap-3 pt-2">
                         {subscription.tier !== "pro" && (
                           <Button
-                            onClick={() => navigateTo("/#premium")}
+                            onClick={() => navigateTo("/#plans")}
                             className="gap-2"
                             variant={subscription.tier === "premium" ? "default" : "default"}
                           >
@@ -657,7 +666,7 @@ export function Dashboard() {
                           </Button>
                         )}
                         {subscription.tier !== "free" && (
-                          <Button onClick={() => navigateTo("/#premium")} variant="outline" className="gap-2">
+                          <Button onClick={() => navigateTo("/#plans")} variant="outline" className="gap-2">
                             <ArrowRight className="h-4 w-4" />
                             {language === "en" ? "Manage Subscription" : "ምዝገባ አስተዳድር"}
                           </Button>
@@ -677,7 +686,7 @@ export function Dashboard() {
                           ? "Upgrade to unlock premium features and exclusive content."
                           : "ፕሪሚየም ባህሪዎችን እና ብቸኛ ይዘትን ለመክፈት ዝቅ አድርግ።"}
                       </p>
-                      <Button onClick={() => navigateTo("/#premium")} className="gap-2">
+                      <Button onClick={() => navigateTo("/#plans")} className="gap-2">
                         <Crown className="h-4 w-4" />
                         {language === "en" ? "Choose a Plan" : "እቅድ ይምረጡ"}
                       </Button>
@@ -686,37 +695,153 @@ export function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Billing History */}
+              {/* Recent Activity */}
               <Card>
                 <CardHeader>
-                  <CardTitle>{language === "en" ? "Quick Stats" : "ፈጣን ስታቲስቲክስ"}</CardTitle>
+                  <CardTitle>{language === "en" ? "Recent Activity" : "የቅርብ ጊዜ እንቅስቃሴ"}</CardTitle>
                   <CardDescription>
-                    {language === "en" ? "Your engagement overview" : "የእርስዎ ማሳተፍ አጠቃላይ ግምት"}
+                    {language === "en"
+                      ? "Filter and sort your latest account activity"
+                      : "የቅርብ ጊዜ የአካውንት እንቅስቃሴዎን ያጣሩ እና ይደርድሩ"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-blue-500">{userStats.listings}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {language === "en" ? "Listings" : "ዝርዝሮች"}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-purple-500">{userStats.inquiries}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {language === "en" ? "Inquiries" : "ጥያቄዎች"}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-green-500">{userStats.purchases}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {language === "en" ? "Subscriptions" : "ምዝገባ"}
-                      </p>
-                    </div>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <FilterChip
+                      active={activityFilter === "all"}
+                      onClick={() => setActivityFilter("all")}
+                      label={language === "en" ? "All" : "ሁሉም"}
+                    />
+                    <FilterChip
+                      active={activityFilter === "inquiry"}
+                      onClick={() => setActivityFilter("inquiry")}
+                      label={language === "en" ? "Inquiries" : "ጥያቄዎች"}
+                    />
+                    <FilterChip
+                      active={activityFilter === "listing"}
+                      onClick={() => setActivityFilter("listing")}
+                      label={language === "en" ? "Listings" : "ዝርዝሮች"}
+                    />
+                    <FilterChip
+                      active={activityFilter === "rfq"}
+                      onClick={() => setActivityFilter("rfq")}
+                      label={language === "en" ? "RFQs" : "የዋጋ ጥያቄዎች"}
+                    />
+                    <FilterChip
+                      active={activityFilter === "payment"}
+                      onClick={() => setActivityFilter("payment")}
+                      label={language === "en" ? "Payments" : "ክፍያዎች"}
+                    />
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {activityFeed.length} {language === "en" ? "item(s)" : "ዕቃ(ዎች)"}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1.5"
+                      onClick={() => setActivitySort(activitySort === "newest" ? "oldest" : "newest")}
+                    >
+                      <ArrowDownAZ className="h-4 w-4" />
+                      {activitySort === "newest"
+                        ? language === "en" ? "Newest first" : "አዲስ መጀመሪያ"
+                        : language === "en" ? "Oldest first" : "አሮጌ መጀመሪያ"}
+                    </Button>
+                  </div>
+
+                  {activityFeed.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border py-10 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {language === "en" ? "No activity yet" : "እንቅስቃሴ የለም"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {activityFeed.map((item) => (
+                        <div
+                          key={`${item.kind}-${item.id}`}
+                          className="flex items-start gap-3 rounded-lg border border-border/60 p-3"
+                        >
+                          <div className="mt-0.5 rounded-md bg-muted p-2">
+                            <ActivityKindIcon kind={item.kind} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{item.title}</p>
+                            {item.subtitle && (
+                              <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            {item.status && (
+                              <Badge variant="outline" className="text-[10px] capitalize">
+                                {item.status}
+                              </Badge>
+                            )}
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {formatActivityDate(item.createdAt, language)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
+              {/* RFQ Tracking */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{language === "en" ? "RFQ Tracking" : "የዋጋ ጥያቄ ክትትል"}</CardTitle>
+                  <CardDescription>
+                    {language === "en"
+                      ? "Follow the status of your quotation requests"
+                      : "የዋጋ ጥያቄዎችዎን ሁኔታ ይከታተሉ"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {dashboardData && dashboardData.recentRfqs.length > 0 ? (
+                    <div className="space-y-3">
+                      {dashboardData.recentRfqs.map((rfq) => (
+                        <div
+                          key={rfq.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {rfq.project_type || (language === "en" ? "Request for Quotation" : "የዋጋ ጥያቄ")}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {rfq.city} • {formatActivityDate(rfq.created_at, language)}
+                            </p>
+                          </div>
+                          {rfq.status && (
+                            <Badge variant={RFQ_STATUS_COLORS[rfq.status] || "outline"} className="capitalize">
+                              {rfq.status}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border py-10 text-center">
+                      <ClipboardList className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">
+                        {language === "en"
+                          ? "No RFQs submitted yet"
+                          : "ገና ምንም የዋጋ ጥያቄ አልተላከም"}
+                      </p>
+                    </div>
+                  )}
+                  <Button className="w-full gap-2" onClick={() => setRfqModalOpen(true)}>
+                    <ClipboardList className="h-4 w-4" />
+                    {language === "en" ? "Submit RFQ" : "ጥያቄ ላክ"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <RfqModal open={rfqModalOpen} onOpenChange={setRfqModalOpen} rfqContext={null} />
             </div>
           </TabsContent>
 
@@ -728,5 +853,138 @@ export function Dashboard() {
         </Tabs>
       </div>
     </div>
+  )
+}
+
+const PROFILE_FIELD_LABELS: Record<string, { en: string; am: string }> = {
+  username: { en: "username", am: "የተጠቃሚ ስም" },
+  full_name: { en: "full name", am: "ሙሉ ስም" },
+  phone: { en: "phone number", am: "ስልክ ቁጥር" },
+  profile_image: { en: "profile photo", am: "የመገለጫ ፎቶ" },
+  language_preference: { en: "language", am: "ቋንቋ" },
+}
+
+const RFQ_STATUS_COLORS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  new: "default",
+  reviewing: "secondary",
+  sent_to_supplier: "outline",
+  quoted: "default",
+  closed: "outline",
+  spam: "destructive",
+}
+
+function FilterChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <Button size="sm" variant={active ? "default" : "outline"} onClick={onClick}>
+      {label}
+    </Button>
+  )
+}
+
+function ActivityKindIcon({ kind }: { kind: ActivityKind }) {
+  switch (kind) {
+    case "inquiry":
+      return <FileText className="h-4 w-4 text-blue-500" />
+    case "listing":
+      return <PackageCheck className="h-4 w-4 text-emerald-500" />
+    case "rfq":
+      return <ClipboardList className="h-4 w-4 text-cyan-500" />
+    case "payment":
+      return <ReceiptText className="h-4 w-4 text-violet-500" />
+  }
+}
+
+function formatActivityDate(iso: string, language: "am" | "en") {
+  return new Date(iso).toLocaleDateString(
+    language === "am" ? "am-ET" : "en-US",
+    { month: "short", day: "numeric", year: "numeric" }
+  )
+}
+
+const ROLE_STYLES: Record<string, { label: string; icon: LucideIcon; badge: string; iconBg: string; iconColor: string }> = {
+  user: {
+    label: "Free",
+    icon: User,
+    badge: "bg-muted text-muted-foreground",
+    iconBg: "bg-slate-500/10",
+    iconColor: "text-slate-500",
+  },
+  premium: {
+    label: "Premium",
+    icon: Crown,
+    badge: "bg-amber-500/15 text-amber-600",
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-500",
+  },
+  pro: {
+    label: "Pro",
+    icon: Zap,
+    badge: "bg-violet-500/15 text-violet-600",
+    iconBg: "bg-violet-500/10",
+    iconColor: "text-violet-500",
+  },
+  admin: {
+    label: "Admin",
+    icon: ShieldCheck,
+    badge: "bg-rose-500/15 text-rose-600",
+    iconBg: "bg-rose-500/10",
+    iconColor: "text-rose-500",
+  },
+}
+
+type QuickActionKey = "submitRfq" | "market" | "marketplace" | "professionals" | "upgrade" | "adminConsole" | "reviewContent"
+
+type QuickActionConfig = {
+  key: QuickActionKey
+  icon: LucideIcon
+  color: string
+  label: { en: string; am: string }
+}
+
+const QUICK_ACTIONS: Record<string, QuickActionConfig[]> = {
+  user: [
+    { key: "upgrade", icon: Sparkles, color: "text-amber-500", label: { en: "Upgrade plan", am: "እቅድ ያሻሽሉ" } },
+    { key: "market", icon: TrendingUp, color: "text-emerald-500", label: { en: "Market prices", am: "የገበያ ዋጋዎች" } },
+    { key: "submitRfq", icon: ClipboardList, color: "text-cyan-500", label: { en: "Submit RFQ", am: "ጥያቄ ላክ" } },
+    { key: "professionals", icon: Users, color: "text-blue-500", label: { en: "Professionals", am: "ባለሙያዎች" } },
+  ],
+  premium: [
+    { key: "upgrade", icon: Sparkles, color: "text-amber-500", label: { en: "Upgrade to Pro", am: "ወደ ፕሮ ያሻሽሉ" } },
+    { key: "submitRfq", icon: ClipboardList, color: "text-cyan-500", label: { en: "Submit RFQ", am: "ጥያቄ ላክ" } },
+    { key: "market", icon: TrendingUp, color: "text-emerald-500", label: { en: "Market prices", am: "የገበያ ዋጋዎች" } },
+    { key: "professionals", icon: Users, color: "text-blue-500", label: { en: "Professionals", am: "ባለሙያዎች" } },
+  ],
+  pro: [
+    { key: "submitRfq", icon: ClipboardList, color: "text-cyan-500", label: { en: "Submit RFQ", am: "ጥያቄ ላክ" } },
+    { key: "market", icon: TrendingUp, color: "text-emerald-500", label: { en: "Market prices", am: "የገበያ ዋጋዎች" } },
+    { key: "marketplace", icon: Store, color: "text-amber-600", label: { en: "Marketplace", am: "ገበያ" } },
+    { key: "professionals", icon: Users, color: "text-blue-500", label: { en: "Professionals", am: "ባለሙያዎች" } },
+  ],
+  admin: [
+    { key: "adminConsole", icon: ShieldCheck, color: "text-rose-500", label: { en: "Admin console", am: "አስተዳዳሪ ኮንሶል" } },
+    { key: "reviewContent", icon: Newspaper, color: "text-violet-500", label: { en: "Review content", am: "ይዘት ይገምግሙ" } },
+    { key: "market", icon: TrendingUp, color: "text-emerald-500", label: { en: "Market prices", am: "የገበያ ዋጋዎች" } },
+    { key: "marketplace", icon: Store, color: "text-amber-600", label: { en: "Marketplace", am: "ገበያ" } },
+  ],
+}
+
+function QuickActionButton({
+  config,
+  handlers,
+  language,
+}: {
+  config: QuickActionConfig
+  handlers: Record<QuickActionKey, () => void>
+  language: "am" | "en"
+}) {
+  return (
+    <Button
+      variant="outline"
+      className="h-auto flex-col items-center gap-1.5 py-3 text-xs font-medium"
+      onClick={handlers[config.key]}
+    >
+      <config.icon className={`h-5 w-5 ${config.color}`} />
+      {language === "en" ? config.label.en : config.label.am}
+    </Button>
   )
 }
