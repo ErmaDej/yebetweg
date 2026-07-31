@@ -115,6 +115,38 @@ export async function verifyChapaPayment(txRef: string): Promise<VerifyPaymentRe
   }
 }
 
+export async function activateChapaPayment(txRef: string): Promise<VerifyPaymentResult> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return { success: false, error: "Payment service is not configured" }
+    }
+
+    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/chapa-service`
+    const response = await fetch(serviceUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
+      },
+      body: JSON.stringify({ action: "activate", tx_ref: txRef }),
+    })
+
+    const result = await response.json()
+    if (!response.ok || !result.success) {
+      return { success: false, error: typeof result.error === "string" ? result.error : "Activation failed" }
+    }
+
+    return { success: true, status: "success" }
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Network error" }
+  }
+}
+
 export function formatAmount(amount: number): string {
   return new Intl.NumberFormat("en-ET", {
     style: "currency",
