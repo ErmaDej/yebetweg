@@ -22,6 +22,10 @@ serve(async (req) => {
     )
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+  const admin = supabaseUrl && serviceRoleKey ? createClient(supabaseUrl, serviceRoleKey) : null
+
   // GET — verify transaction status
   if (req.method === "GET") {
     const url = new URL(req.url)
@@ -60,6 +64,56 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
+    const { action } = body
+
+    // --- ACTIVATE action: verify payment + activate subscription + upgrade role ---
+    if (action === "activate") {
+      const { tx_ref } = body
+      if (!tx_ref) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Missing tx_ref" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        )
+      }
+
+      const verifyRes = await fetch(`${CHAPA_API_URL}/verify/${tx_ref}`, {
+        headers: { Authorization: `Bearer ${secretKey}` },
+      })
+      const verifyData = await verifyRes.json()
+
+      if (!verifyRes.ok || verifyData.data?.status?.toLowerCase() !== "success") {
+        return new Response(
+          JSON.stringify({ success: false, error: verifyData.message || "Payment not confirmed by Chapa" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        )
+      }
+
+      if (!admin) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Server configuration error" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        )
+      }
+
+      const { data: result, error: rpcError } = await admin.rpc("activate_subscription", {
+        p_reference: tx_ref,
+        p_gateway: "chapa",
+      })
+
+      if (rpcError) {
+        return new Response(
+          JSON.stringify({ success: false, error: rpcError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, data: result }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      )
+    }
+
+    // --- INITIALIZE action (default) ---
     const { amount, currency, email, first_name, last_name, tx_ref, callback_url, return_url, customization, subscription } = body
 
     if (!amount || !email || !tx_ref) {
@@ -107,25 +161,19 @@ serve(async (req) => {
 
     const reference = data.data.reference || tx_ref
 
-    if (subscription?.user_id) {
+    if (admin && subscription?.user_id) {
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")
-        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-        if (supabaseUrl && serviceRoleKey) {
-          const admin = createClient(supabaseUrl, serviceRoleKey)
-          await admin.from("premium_subscriptions").insert({
-            user_id: subscription.user_id,
-            tier: subscription.tier || "premium",
-            payment_method: "chapa",
-            chapa_reference: reference,
-            starts_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            is_active: false,
-            status: "pending",
-          })
-        }
+        await admin.from("premium_subscriptions").insert({
+          user_id: subscription.user_id,
+          tier: subscription.tier || "premium",
+          payment_method: "chapa",
+          chapa_reference: reference,
+          starts_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          is_active: false,
+          status: "pending",
+        })
       } catch (_subErr) {
-        // subscription creation is best-effort; webhook will create it if missing
         console.error("Failed to create subscription record:", _subErr)
       }
     }

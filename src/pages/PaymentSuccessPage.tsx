@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react"
 import { useLanguage } from "@/lib/i18n"
-import { useAuthContext } from "@/context/AuthContext"
-import { supabase } from "@/lib/supabase"
+import { activateChapaPayment } from "@/lib/chapa"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 
 export function PaymentSuccessPage() {
   const { language } = useLanguage()
-  const { user } = useAuthContext()
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading")
   const [message, setMessage] = useState("")
 
@@ -25,71 +23,27 @@ export function PaymentSuccessPage() {
         return
       }
 
-      try {
-        const { data: subscription, error } = await supabase
-          .from("premium_subscriptions")
-          .select("*")
-          .eq("chapa_reference", reference)
-          .maybeSingle()
+      const result = await activateChapaPayment(reference)
 
-        if (error || !subscription) {
-          const { data: telebirrSub } = await supabase
-            .from("premium_subscriptions")
-            .select("*")
-            .eq("telebirr_reference", reference)
-            .maybeSingle()
-
-          if (telebirrSub) {
-            await supabase
-              .from("premium_subscriptions")
-              .update({
-                is_active: true,
-                status: "active",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", telebirrSub.id)
-
-            setStatus("success")
-            setMessage(
-              language === "am"
-                ? "ክፍያዎ በተሳካይ ተጠናቅል"
-                : "Payment completed successfully"
-            )
-            return
-          }
-
-          throw new Error("Subscription not found")
-        }
-
-        const updateData: Record<string, unknown> = {
-          is_active: true,
-          status: "active",
-          updated_at: new Date().toISOString(),
-        }
-
-        await supabase
-          .from("premium_subscriptions")
-          .update(updateData)
-          .eq("id", subscription.id)
-
+      if (result.success) {
         setStatus("success")
         setMessage(
           language === "am"
             ? "ክፍያዎ በተሳካይ ተጠናቅል"
             : "Payment completed successfully"
         )
-      } catch (err) {
+      } else {
         setStatus("failed")
         setMessage(
           language === "am"
-            ? "ክፍያ ለማረጋገጥ ስለተለየው የመረጃ ችግኝ የተወሰነ ሲሆን እባክዎ ደግဝበ ይጠብቁ"
-            : "Payment verification failed. Please contact support."
+            ? "ክፍያ ማረጋገጥ አልተሳካም"
+            : result.error || "Payment verification failed"
         )
       }
     }
 
     verifyPayment()
-  }, [language, user])
+  }, [language])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -115,11 +69,22 @@ export function PaymentSuccessPage() {
               {language === "am" ? "ክፍያ በተሳካይ ተጠናቅል" : "Payment Successful"}
             </h1>
             <p className="text-muted-foreground">{message}</p>
+            <p className="text-sm text-muted-foreground">
+              {language === "am"
+                ? "የእርስዎ ፕሪሚየም አባልነት አሁን ንቁ ነው። ወደ ዳሽቦርድ ይሂዱ እና ልዩ ባህሪያትን ይጠቀሙ።"
+                : "Your premium membership is now active. Go to your dashboard to access exclusive features."}
+            </p>
+            <a
+              href="/dashboard"
+              className="inline-block mt-2 px-6 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/90"
+            >
+              {language === "am" ? "ወደ ዳሽቦርድ" : "Go to Dashboard"}
+            </a>
             <a
               href="/"
-              className="inline-block mt-4 px-6 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/90"
+              className="inline-block mt-2 px-6 py-2 text-muted-foreground hover:text-foreground underline text-sm"
             >
-              {language === "am" ? "ወደ ቤት ገጽ" : "Go to Home"}
+              {language === "am" ? "ወደ ቤት ገጽ" : "Back to Home"}
             </a>
           </>
         )}
@@ -132,10 +97,10 @@ export function PaymentSuccessPage() {
             </h1>
             <p className="text-muted-foreground">{message}</p>
             <a
-              href="/"
+              href="/#premium"
               className="inline-block mt-4 px-6 py-2 bg-accent text-accent-foreground rounded-md hover:bg-accent/90"
             >
-              {language === "am" ? "ወደ ቤት ገጽ" : "Go to Home"}
+              {language === "am" ? "ደግሞ ይሞክሩ" : "Try Again"}
             </a>
           </>
         )}
