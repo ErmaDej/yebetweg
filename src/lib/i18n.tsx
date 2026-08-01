@@ -144,8 +144,31 @@ type TranslationKey =
   | "filter.experience"
   | "filter.freshness"
   | "filter.city"
-  | "filter.clear"
-  | "filter.all"
+   | "filter.clear"
+   | "filter.all"
+   // Dashboard
+   | "dashboard.title"
+   | "dashboard.accessStrength"
+   | "dashboard.tab.profile"
+   | "dashboard.tab.settings"
+   | "dashboard.tab.activity"
+   | "dashboard.tab.admin"
+   | "dashboard.stat.plan"
+   | "dashboard.stat.listings"
+   | "dashboard.stat.inquiries"
+   | "dashboard.stat.rfqs"
+   | "dashboard.stat.payments"
+   | "dashboard.loadMore"
+   | "dashboard.loadMoreRfqs"
+   | "dashboard.noActivity"
+   | "dashboard.noRfqs"
+   | "dashboard.submitRfq"
+   | "dashboard.assistant.title"
+   | "dashboard.assistant.subtitle"
+   | "dashboard.quickActions.title"
+   | "dashboard.quickActions.desc.free"
+   | "dashboard.quickActions.desc.admin"
+   | "dashboard.quickActions.desc.paid"
 
 const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -290,8 +313,30 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "filter.freshness": "Freshness",
     "filter.city": "City",
     "filter.clear": "Clear All",
-    "filter.all": "All",
-  },
+     "filter.all": "All",
+     "dashboard.title": "Dashboard",
+     "dashboard.accessStrength": "Access strength",
+     "dashboard.tab.profile": "Profile",
+     "dashboard.tab.settings": "Settings",
+     "dashboard.tab.activity": "Activity",
+     "dashboard.tab.admin": "Admin",
+     "dashboard.stat.plan": "Plan",
+     "dashboard.stat.listings": "Listings",
+     "dashboard.stat.inquiries": "Inquiries",
+     "dashboard.stat.rfqs": "RFQs",
+     "dashboard.stat.payments": "Payments",
+     "dashboard.loadMore": "Load more",
+     "dashboard.loadMoreRfqs": "Load more RFQs",
+     "dashboard.noActivity": "No activity yet",
+     "dashboard.noRfqs": "No RFQs submitted yet",
+     "dashboard.submitRfq": "Submit RFQ",
+     "dashboard.assistant.title": "YeBetWeg Assistant",
+     "dashboard.assistant.subtitle": "AI guidance coming soon — smarter quotes, BOQ help, and material insights.",
+     "dashboard.quickActions.title": "Quick Actions",
+     "dashboard.quickActions.desc.free": "Jump straight into what matters most",
+     "dashboard.quickActions.desc.admin": "Operational shortcuts for the marketplace",
+     "dashboard.quickActions.desc.paid": "Jump straight into what matters most",
+   },
   am: {
     "nav.knowledge": "ዕውቀት",
     "nav.tips": "ምክሮች",
@@ -434,8 +479,30 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "filter.freshness": "አዲስነት",
     "filter.city": "ከተማ",
     "filter.clear": "ሁሉንም ሰርዝ",
-    "filter.all": "ሁሉም",
-  },
+     "filter.all": "ሁሉም",
+     "dashboard.title": "ዳሽቦርድ",
+     "dashboard.accessStrength": "የመዳረሻ ጥንካሬ",
+     "dashboard.tab.profile": "ገለጻ",
+     "dashboard.tab.settings": "ቅናሾች",
+     "dashboard.tab.activity": "እንቅስቃሴ",
+     "dashboard.tab.admin": "አስተዳዳሪ",
+     "dashboard.stat.plan": "እቅድ",
+     "dashboard.stat.listings": "ዝርዝሮች",
+     "dashboard.stat.inquiries": "ጥያቄዎች",
+     "dashboard.stat.rfqs": "የዋጋ ጥያቄዎች",
+     "dashboard.stat.payments": "ክፍያዎች",
+     "dashboard.loadMore": "በቀላሉ ጨምር",
+     "dashboard.loadMoreRfqs": "የዋጋ ጥያቄዎችን ጨምር",
+     "dashboard.noActivity": "እንቅስቃሴ የለም",
+     "dashboard.noRfqs": "ገና ምንም የዋጋ ጥያቄ አልተላከም",
+     "dashboard.submitRfq": "ጥያቄ ላክ",
+     "dashboard.assistant.title": "የYeBetWeg ረዳት",
+     "dashboard.assistant.subtitle": "AI ረዳት በቅርቡ ይመጣል — ብልህ ዋጋ፣ የBOQ እርዳታ እና የቁሳቁስ ግንዛቤዎች።",
+     "dashboard.quickActions.title": "ፈጣን እርምጃዎች",
+     "dashboard.quickActions.desc.free": "በቀጥታ ወደ በጣም አስፈላጊው ይሂዱ",
+     "dashboard.quickActions.desc.admin": "ለገበያው የአሰራር አቋራጮች",
+     "dashboard.quickActions.desc.paid": "በቀጥታ ወደ በጣም አስፈላጊው ይሂዱ",
+   },
 }
 
 const LanguageContext = React.createContext<{
