@@ -40,7 +40,10 @@ export function Dashboard() {
   const {
     data: dashboardData,
     loading: statsLoading,
+    loadingMore: activityLoadingMore,
     error: statsError,
+    hasMore: activityHasMore,
+    loadMore: loadMoreActivity,
   } = useDashboardData(profile?.id ?? null)
 
   const handleEditClick = () => {
@@ -386,10 +389,28 @@ export function Dashboard() {
                           : "AI ረዳት በቅርቡ ይመጣል — ብልህ ዋጋ፣ የBOQ እርዳታ እና የቁሳቁስ ግንዛቤዎች።"}
                       </p>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                     </div>
+                   )}
+                   {activityHasMore && (
+                     <div className="flex justify-center pt-2">
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         disabled={activityLoadingMore}
+                         onClick={loadMoreActivity}
+                         className="gap-1.5"
+                       >
+                         {activityLoadingMore ? (
+                           <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <ArrowRight className="h-4 w-4" />
+                         )}
+                         {language === "en" ? "Load more" : "በቀላሉ ጨምር"}
+                       </Button>
+                     </div>
+                   )}
+                 </CardContent>
+               </Card>
           </div>
 
           {/* Profile Tab */}
@@ -801,7 +822,7 @@ export function Dashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {dashboardData && dashboardData.recentRfqs.length > 0 ? (
+                  {dashboardData && dashboardData.stats.rfqs > 0 ? (
                     <div className="space-y-3">
                       {dashboardData.recentRfqs.map((rfq) => (
                         <div
@@ -825,16 +846,33 @@ export function Dashboard() {
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border py-10 text-center">
-                      <ClipboardList className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">
-                        {language === "en"
-                          ? "No RFQs submitted yet"
-                          : "ገና ምንም የዋጋ ጥያቄ አልተላከም"}
-                      </p>
-                    </div>
-                  )}
-                  <Button className="w-full gap-2" onClick={() => setRfqModalOpen(true)}>
+                     <div className="rounded-lg border border-dashed border-border py-10 text-center">
+                       <ClipboardList className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                       <p className="text-sm text-muted-foreground">
+                         {language === "en"
+                           ? "No RFQs submitted yet"
+                           : "ገና ምንም የዋጋ ጥያቄ አልተላከም"}
+                       </p>
+                     </div>
+                   )}
+                   {activityHasMore &&
+                     dashboardData &&
+                     dashboardData.stats.rfqs > (dashboardData.recentRfqs.length ?? 0) && (
+                       <Button
+                         className="w-full gap-2"
+                         variant="outline"
+                         onClick={loadMoreActivity}
+                         disabled={activityLoadingMore}
+                       >
+                         {activityLoadingMore ? (
+                           <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <ArrowRight className="h-4 w-4" />
+                         )}
+                         {language === "en" ? "Load more RFQs" : "የዋጋ ጥያቄዎችን ጨምር"}
+                       </Button>
+                     )}
+                   <Button className="w-full gap-2" onClick={() => setRfqModalOpen(true)}>
                     <ClipboardList className="h-4 w-4" />
                     {language === "en" ? "Submit RFQ" : "ጥያቄ ላክ"}
                   </Button>
