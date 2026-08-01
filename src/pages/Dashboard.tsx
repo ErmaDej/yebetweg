@@ -20,7 +20,7 @@ import { profileStrength } from "@/lib/entitlements"
 import { RfqModal } from "@/components/sections/RfqModal"
 
 export function Dashboard() {
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const { isAuthenticated, loading: authLoading } = useRequireAuth()
   const { profile, loading: profileLoading, error, updateProfile } = useUserProfile()
   const { subscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription(profile)
@@ -171,7 +171,7 @@ export function Dashboard() {
                   </Badge>
                 )}
               </div>
-              <h1 className="text-3xl font-bold">{language === "en" ? "Dashboard" : "ዳሽቦርድ"}</h1>
+               <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
               <p className="mt-1 max-w-2xl text-muted-foreground">
                 {profile.role === "admin"
                   ? language === "en"
@@ -192,8 +192,8 @@ export function Dashboard() {
             </div>
             <div className="min-w-64 rounded-lg bg-muted/70 p-4">
               <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-medium">{language === "en" ? "Access strength" : "የመዳረሻ ጥንካሬ"}</span>
-                <span className="text-muted-foreground">{accessStrength}%</span>
+               <span className="font-medium">{t("dashboard.accessStrength")}</span>
+               <span className="text-muted-foreground">{accessStrength}%</span>
               </div>
               <Progress value={accessStrength} />
               {profileGaps.length > 0 && (
@@ -237,7 +237,7 @@ export function Dashboard() {
         )}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -245,7 +245,7 @@ export function Dashboard() {
                   <roleStyle.icon className={`h-6 w-6 ${roleStyle.iconColor}`} />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === "en" ? "Plan" : "እቅድ"}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.stat.plan")}</p>
                   <p className="text-2xl font-bold capitalize">{roleStyle.label}</p>
                 </div>
               </div>
@@ -259,7 +259,7 @@ export function Dashboard() {
                   <CheckCircle2 className="h-6 w-6 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === "en" ? "Listings" : "ዝርዝሮች"}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.stat.listings")}</p>
                   <p className="text-2xl font-bold">{dashboardData?.stats.listings ?? 0}</p>
                 </div>
               </div>
@@ -273,7 +273,7 @@ export function Dashboard() {
                   <Heart className="h-6 w-6 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === "en" ? "Inquiries" : "ጥያቄዎች"}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.stat.inquiries")}</p>
                   <p className="text-2xl font-bold">{dashboardData?.stats.inquiries ?? 0}</p>
                 </div>
               </div>
@@ -287,7 +287,7 @@ export function Dashboard() {
                   <ClipboardList className="h-6 w-6 text-cyan-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === "en" ? "RFQs" : "የዋጋ ጥያቄዎች"}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.stat.rfqs")}</p>
                   <p className="text-2xl font-bold">{dashboardData?.stats.rfqs ?? 0}</p>
                 </div>
               </div>
@@ -301,7 +301,7 @@ export function Dashboard() {
                   <Zap className="h-6 w-6 text-orange-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === "en" ? "Payments" : "ክፍያዎች"}</p>
+                  <p className="text-sm text-muted-foreground">{t("dashboard.stat.payments")}</p>
                   <p className="text-2xl font-bold">{statsLoading ? "..." : purchasesCount}</p>
                 </div>
               </div>
@@ -311,24 +311,24 @@ export function Dashboard() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">{language === "en" ? "Profile" : "ገለጻ"}</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">{language === "en" ? "Settings" : "ቅናሾች"}</span>
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex items-center gap-2">
-              <Heart className="h-4 w-4" />
-              <span className="hidden sm:inline">{language === "en" ? "Activity" : "እንቅስቃሴ"}</span>
-            </TabsTrigger>
-            {profile.role === "admin" && (
-              <TabsTrigger value="admin" className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">{language === "en" ? "Admin" : "አስተዳዳሪ"}</span>
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("dashboard.tab.profile")}</span>
               </TabsTrigger>
-            )}
+              <TabsTrigger value="settings" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("dashboard.tab.settings")}</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("dashboard.tab.activity")}</span>
+              </TabsTrigger>
+              {profile.role === "admin" && (
+                <TabsTrigger value="admin" className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("dashboard.tab.admin")}</span>
+                </TabsTrigger>
+              )}
           </TabsList>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -362,11 +362,13 @@ export function Dashboard() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>{language === "en" ? "Quick Actions" : "ፈጣን እርምጃዎች"}</CardTitle>
+                <CardTitle>{t("dashboard.quickActions.title")}</CardTitle>
                 <CardDescription>
                   {profile.role === "admin"
-                    ? language === "en" ? "Operational shortcuts for the marketplace" : "ለገበያው የአሰራር አቋራጮች"
-                    : language === "en" ? "Jump straight into what matters most" : "በቀጥታ ወደ በጣም አስፈላጊው ይሂዱ"}
+                    ? t("dashboard.quickActions.desc.admin")
+                    : subscription?.tier === "premium" || subscription?.tier === "pro"
+                      ? t("dashboard.quickActions.desc.paid")
+                      : t("dashboard.quickActions.desc.free")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -382,11 +384,9 @@ export function Dashboard() {
                       <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-ping rounded-full bg-primary" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">{language === "en" ? "YeBetWeg Assistant" : "የYeBetWeg ረዳት"}</p>
+                      <p className="text-sm font-medium">{t("dashboard.assistant.title")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {language === "en"
-                          ? "AI guidance coming soon — smarter quotes, BOQ help, and material insights."
-                          : "AI ረዳት በቅርቡ ይመጣል — ብልህ ዋጋ፣ የBOQ እርዳታ እና የቁሳቁስ ግንዛቤዎች።"}
+                        {t("dashboard.assistant.subtitle")}
                       </p>
                     </div>
                   </div>
@@ -757,7 +757,7 @@ export function Dashboard() {
                   {activityFeed.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border py-10 text-center">
                       <p className="text-sm text-muted-foreground">
-                        {language === "en" ? "No activity yet" : "እንቅስቃሴ የለም"}
+                        {t("dashboard.noActivity")}
                       </p>
                     </div>
                   ) : (
@@ -799,15 +799,15 @@ export function Dashboard() {
                          onClick={loadMoreActivity}
                          className="gap-1.5"
                        >
-                         {activityLoadingMore ? (
-                           <Loader2 className="h-4 w-4 animate-spin" />
-                         ) : (
-                           <ArrowRight className="h-4 w-4" />
-                         )}
-                         {language === "en" ? "Load more" : "በቀላሉ ጨምር"}
-                       </Button>
-                     </div>
-                   )}
+                          {activityLoadingMore ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ArrowRight className="h-4 w-4" />
+                          )}
+                          {t("dashboard.loadMore")}
+                        </Button>
+                      </div>
+                    )}
                  </CardContent>
                </Card>
 
@@ -848,10 +848,8 @@ export function Dashboard() {
                   ) : (
                     <div className="rounded-lg border border-dashed border-border py-10 text-center">
                       <ClipboardList className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-                      <p className="text-sm text-muted-foreground">
-                        {language === "en"
-                          ? "No RFQs submitted yet"
-                          : "ገና ምንም የዋጋ ጥያቄ አልተላከም"}
+                       <p className="text-sm text-muted-foreground">
+                        {t("dashboard.noRfqs")}
                       </p>
                      </div>
                    )}
@@ -869,13 +867,13 @@ export function Dashboard() {
                          ) : (
                            <ArrowRight className="h-4 w-4" />
                          )}
-                         {language === "en" ? "Load more RFQs" : "የዋጋ ጥያቄዎችን ጨምር"}
-                       </Button>
-                     )}
-                   <Button className="w-full gap-2" onClick={() => setRfqModalOpen(true)}>
-                     <ClipboardList className="h-4 w-4" />
-                     {language === "en" ? "Submit RFQ" : "ጥያቄ ላክ"}
-                   </Button>
+                          {t("dashboard.loadMoreRfqs")}
+                        </Button>
+                      )}
+                    <Button className="w-full gap-2" onClick={() => setRfqModalOpen(true)}>
+                      <ClipboardList className="h-4 w-4" />
+                      {t("dashboard.submitRfq")}
+                    </Button>
                 </CardContent>
               </Card>
 
