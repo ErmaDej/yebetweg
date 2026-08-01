@@ -389,28 +389,10 @@ export function Dashboard() {
                           : "AI ረዳት በቅርቡ ይመጣል — ብልህ ዋጋ፣ የBOQ እርዳታ እና የቁሳቁስ ግንዛቤዎች።"}
                       </p>
                     </div>
-                     </div>
-                   )}
-                   {activityHasMore && (
-                     <div className="flex justify-center pt-2">
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         disabled={activityLoadingMore}
-                         onClick={loadMoreActivity}
-                         className="gap-1.5"
-                       >
-                         {activityLoadingMore ? (
-                           <Loader2 className="h-4 w-4 animate-spin" />
-                         ) : (
-                           <ArrowRight className="h-4 w-4" />
-                         )}
-                         {language === "en" ? "Load more" : "በቀላሉ ጨምር"}
-                       </Button>
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Profile Tab */}
@@ -807,11 +789,29 @@ export function Dashboard() {
                         </div>
                       ))}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                   )}
+                   {activityHasMore && (
+                     <div className="flex justify-center pt-2">
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         disabled={activityLoadingMore}
+                         onClick={loadMoreActivity}
+                         className="gap-1.5"
+                       >
+                         {activityLoadingMore ? (
+                           <Loader2 className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <ArrowRight className="h-4 w-4" />
+                         )}
+                         {language === "en" ? "Load more" : "በቀላሉ ጨምር"}
+                       </Button>
+                     </div>
+                   )}
+                 </CardContent>
+               </Card>
 
-              {/* RFQ Tracking */}
+               {/* RFQ Tracking */}
               <Card>
                 <CardHeader>
                   <CardTitle>{language === "en" ? "RFQ Tracking" : "የዋጋ ጥያቄ ክትትል"}</CardTitle>
@@ -822,9 +822,9 @@ export function Dashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {dashboardData && dashboardData.stats.rfqs > 0 ? (
-                    <div className="space-y-3">
-                      {dashboardData.recentRfqs.map((rfq) => (
+                   {dashboardData && dashboardData.stats.rfqs > 0 ? (
+                     <div className="space-y-3">
+                       {dashboardData.recentRfqs.map((rfq) => (
                         <div
                           key={rfq.id}
                           className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
@@ -846,13 +846,13 @@ export function Dashboard() {
                       ))}
                     </div>
                   ) : (
-                     <div className="rounded-lg border border-dashed border-border py-10 text-center">
-                       <ClipboardList className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-                       <p className="text-sm text-muted-foreground">
-                         {language === "en"
-                           ? "No RFQs submitted yet"
-                           : "ገና ምንም የዋጋ ጥያቄ አልተላከም"}
-                       </p>
+                    <div className="rounded-lg border border-dashed border-border py-10 text-center">
+                      <ClipboardList className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">
+                        {language === "en"
+                          ? "No RFQs submitted yet"
+                          : "ገና ምንም የዋጋ ጥያቄ አልተላከም"}
+                      </p>
                      </div>
                    )}
                    {activityHasMore &&
@@ -873,9 +873,9 @@ export function Dashboard() {
                        </Button>
                      )}
                    <Button className="w-full gap-2" onClick={() => setRfqModalOpen(true)}>
-                    <ClipboardList className="h-4 w-4" />
-                    {language === "en" ? "Submit RFQ" : "ጥያቄ ላክ"}
-                  </Button>
+                     <ClipboardList className="h-4 w-4" />
+                     {language === "en" ? "Submit RFQ" : "ጥያቄ ላክ"}
+                   </Button>
                 </CardContent>
               </Card>
 

@@ -126,8 +126,6 @@ export interface UseDashboardDataResult {
   loadMore: () => Promise<void>
 }
 
-interface PagedResult { data: DashboardData["recentInquiries" | "recentListings" | "recentRfqs" | "recentPayments"]; count: number | null; error?: string }
-
 export function useDashboardData(
   userId: string | null,
   opts: UseDashboardDataOptions = {}
@@ -141,7 +139,7 @@ export function useDashboardData(
   const pageRef = useRef(1)
   const mountedRef = useRef(true)
 
-  const fetchPage = useCallback(async (page: number, signal?: AbortSignal): Promise<DashboardData | null> => {
+  const fetchPage = useCallback(async (page: number): Promise<DashboardData | null> => {
     if (!userId) return null
 
     const from = (page - 1) * limit
@@ -153,35 +151,30 @@ export function useDashboardData(
         .select("id, subject, is_read, created_at", { count: "exact" })
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .range(from, to)
-        .abortSignal(signal),
+        .range(from, to),
       supabase
         .from("inquiries")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
-        .eq("is_read", false)
-        .abortSignal(signal),
+        .eq("is_read", false),
       supabase
         .from("listings")
         .select("id, title_en, status, created_at", { count: "exact" })
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .range(from, to)
-        .abortSignal(signal),
+        .range(from, to),
       supabase
         .from("rfq_requests")
         .select("id, requester_name, city, project_type, status, created_at", { count: "exact" })
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .range(from, to)
-        .abortSignal(signal),
+        .range(from, to),
       supabase
         .from("subscription_payments")
         .select("id, amount, currency, method, reference, status, created_at", { count: "exact" })
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .range(from, to)
-        .abortSignal(signal),
+        .range(from, to),
     ])
 
     const failed = [inquiries, unreadInquiries, listings, rfqs, payments].find((r) => r.error)
