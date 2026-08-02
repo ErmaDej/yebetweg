@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n"
 import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, Trash2, CheckCircle, XCircle, Plus, Save, Search, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
@@ -61,6 +62,7 @@ export function AdminDashboardTab() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createAction, setCreateAction] = useState<string>("")
+  const [selectedListings, setSelectedListings] = useState<string[]>([])
 
   const safeCount = async (table: string, query?: (q: any) => any) => {
     try {
@@ -174,6 +176,29 @@ export function AdminDashboardTab() {
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBulkListing = async (status: string) => {
+    if (selectedListings.length === 0) return
+    setLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+    try {
+      await callAdminAction("moderate_listings", { listingIds: selectedListings, status })
+      setSuccessMessage(`${selectedListings.length} listings updated to ${status}`)
+      setSelectedListings([])
+      const result = await callAdminAction("moderate_listings")
+      setActionResult({
+        action: "moderate_listings",
+        data: Array.isArray(result?.data) ? result.data : undefined,
+        message: result?.message,
+      })
+      await loadMetrics()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update listings.")
     } finally {
       setLoading(false)
     }
@@ -345,6 +370,27 @@ export function AdminDashboardTab() {
           </CardHeader>
           {actionResult.data && actionResult.data.length > 0 && (
             <CardContent>
+              {actionResult.action === "moderate_listings" && (() => {
+                const currentIds = (actionResult.data || []).map((d) => (d as Record<string, any>).id)
+                return (
+                  <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={currentIds.length > 0 && selectedListings.length === currentIds.length}
+                        onCheckedChange={(checked) => setSelectedListings(checked ? currentIds : [])}
+                      />
+                      <span className="text-sm">{selectedListings.length} / {currentIds.length} selected</span>
+                    </div>
+                    {selectedListings.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" className="text-green-600" onClick={() => handleBulkListing("approved")} disabled={loading}>{language === "en" ? "Approve selected" : "መረጡትን አጽድቅ"}</Button>
+                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleBulkListing("rejected")} disabled={loading}>{language === "en" ? "Reject selected" : "መረጡትን አልተቀበለም"}</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedListings([])} disabled={loading}>{language === "en" ? "Clear" : "አጽዝ"}</Button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
               <div className="max-h-72 overflow-auto rounded-lg border border-border/60">
                 <div className="min-w-[600px] divide-y divide-border/60">
                   {actionResult.data.slice(0, 10).map((record, index) => {
@@ -352,6 +398,16 @@ export function AdminDashboardTab() {
                     const action = actionResult.action
                     return (
                       <div key={item.id || index} className="flex items-center justify-between gap-3 p-3 text-sm">
+                        {action === "moderate_listings" && (
+                          <Checkbox
+                            checked={selectedListings.includes(item.id)}
+                            onCheckedChange={(checked) => {
+                              const id = item.id as string
+                              setSelectedListings(checked ? [...selectedListings, id] : selectedListings.filter((i) => i !== id))
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">
                             {item.title_en || item.name || item.requester_name || item.email || item.username || item.advertiser || item.reference || item.id}

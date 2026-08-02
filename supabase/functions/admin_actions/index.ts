@@ -343,6 +343,24 @@ serve(async (req) => {
           return jsonResponse({ success: true, action, message: `Listing ${listingId} ${status}` })
         }
 
+        const listingIds = payload?.listingIds
+        if (Array.isArray(listingIds) && listingIds.length > 0) {
+          if (!allowedStatuses.includes(status)) {
+            return jsonResponse({ error: `Invalid listing status: ${status}` }, 400)
+          }
+          const { error: updateError } = await supabase
+            .from("listings")
+            .update({ status })
+            .in("id", listingIds as string[])
+          if (updateError) throw updateError
+          return jsonResponse({
+            success: true,
+            action,
+            message: `Updated ${listingIds.length} listings to ${status}`,
+            updated: listingIds.length,
+          })
+        }
+
         const listings = assertNoError(await supabase
           .from("listings")
           .select("id, title_en, category, status, created_at")
@@ -460,6 +478,24 @@ serve(async (req) => {
           if (updateError) throw updateError
 
           return jsonResponse({ success: true, action, message: `RFQ ${rfqId} status set to ${status}` })
+        }
+
+        const rfqIds = payload?.rfqIds
+        if (Array.isArray(rfqIds) && rfqIds.length > 0) {
+          if (!allowedStatuses.includes(status)) {
+            return jsonResponse({ error: `Invalid RFQ status: ${status}` }, 400)
+          }
+          const { error: updateError } = await supabase
+            .from("rfq_requests")
+            .update({ status, updated_at: new Date().toISOString() })
+            .in("id", rfqIds as string[])
+          if (updateError) throw updateError
+          return jsonResponse({
+            success: true,
+            action,
+            message: `Updated ${rfqIds.length} RFQs to ${status}`,
+            updated: rfqIds.length,
+          })
         }
 
         const rfqs = assertNoError(await supabase
