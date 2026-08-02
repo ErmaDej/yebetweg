@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n"
 import { callAdminAction } from "@/lib/api"
 
@@ -53,6 +54,7 @@ export function RfqManager() {
   const [selectedRfq, setSelectedRfq] = useState<RfqRequest | null>(null)
   const [statusFilter, setStatusFilter] = useState("all")
   const [adminNotes, setAdminNotes] = useState("")
+  const [selectedRfqs, setSelectedRfqs] = useState<string[]>([])
 
   const fetchRfqs = useCallback(async () => {
     setLoading(true)
@@ -91,6 +93,22 @@ export function RfqManager() {
       setSuccess(language === "en" ? "Notes saved" : "ማስታወሻ ተቀምጧል")
     } catch {
       // silent fail
+    }
+    setSaving(false)
+  }
+
+  const handleBulkRfqStatus = async (status: string) => {
+    if (selectedRfqs.length === 0) return
+    setSaving(true)
+    setError("")
+    setSuccess("")
+    try {
+      await callAdminAction("manage_rfqs", { rfqIds: selectedRfqs, status })
+      setSuccess(`${selectedRfqs.length} RFQs updated to ${status}`)
+      setSelectedRfqs([])
+      await fetchRfqs()
+    } catch {
+      // table/edge function may not be deployed yet - silent fail
     }
     setSaving(false)
   }
@@ -163,6 +181,23 @@ export function RfqManager() {
           </p>
         </div>
       ) : (
+        <>
+          {selectedRfqs.length > 0 && (
+          <div className="flex items-center gap-2 mb-2 p-2 bg-accent/5 border rounded">
+            <span className="text-sm">{selectedRfqs.length} {language === "en" ? "selected" : "ተመረጡ ሲሆን"}</span>
+            <Select onValueChange={handleBulkRfqStatus} defaultValue="">
+              <SelectTrigger className="h-7 w-36 text-xs">
+                <SelectValue placeholder={language === "en" ? "Apply status…" : "ሁኔታ አትይ…"} />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((s) => (
+                  <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedRfqs([])}>{language === "en" ? "Clear" : "አጽዝ"}</Button>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-2">
             {filtered.map((rfq) => (
@@ -173,6 +208,15 @@ export function RfqManager() {
               >
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Checkbox
+                        checked={selectedRfqs.includes(rfq.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedRfqs(checked ? [...selectedRfqs, rfq.id] : selectedRfqs.filter((i) => i !== rfq.id))
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{rfq.requester_name}</p>
                       <p className="text-xs text-muted-foreground truncate">{rfq.requester_email} • {rfq.requester_phone}</p>
@@ -304,6 +348,7 @@ export function RfqManager() {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   )
