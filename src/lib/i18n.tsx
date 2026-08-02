@@ -2,7 +2,7 @@ import * as React from "react"
 
 type Language = "am" | "en"
 
-type TranslationKey =
+export type TranslationKey =
   | "nav.knowledge"
   | "nav.tips"
   | "nav.market"
@@ -144,8 +144,67 @@ type TranslationKey =
   | "filter.experience"
   | "filter.freshness"
   | "filter.city"
-  | "filter.clear"
-  | "filter.all"
+   | "filter.clear"
+   | "filter.all"
+   // Dashboard
+   | "dashboard.title"
+   | "dashboard.currentPlan"
+   | "dashboard.accessStrength"
+   | "dashboard.tab.profile"
+   | "dashboard.tab.settings"
+   | "dashboard.tab.activity"
+   | "dashboard.tab.admin"
+   | "dashboard.stat.plan"
+   | "dashboard.stat.listings"
+   | "dashboard.stat.inquiries"
+   | "dashboard.stat.rfqs"
+   | "dashboard.stat.payments"
+   | "dashboard.loadMore"
+   | "dashboard.loadMoreRfqs"
+   | "dashboard.noActivity"
+   | "dashboard.noRfqs"
+   | "dashboard.submitRfq"
+   | "dashboard.assistant.title"
+   | "dashboard.assistant.subtitle"
+   | "dashboard.quickActions.title"
+   | "dashboard.quickActions.desc.free"
+   | "dashboard.quickActions.desc.admin"
+   | "dashboard.quickActions.desc.paid"
+   | "dashboard.plan.free"
+   | "dashboard.plan.premium"
+   | "dashboard.plan.pro"
+   | "dashboard.plan.admin"
+   | "dashboard.subscription.manage"
+   | "dashboard.benefits.title"
+   | "dashboard.benefit.free.estimate"
+   | "dashboard.benefit.free.prices"
+   | "dashboard.benefit.free.professionals"
+   | "dashboard.benefit.free.rfq"
+   | "dashboard.benefit.premium.insights"
+   | "dashboard.benefit.premium.priorityRfq"
+   | "dashboard.benefit.premium.badge"
+   | "dashboard.benefit.premium.exportPdf"
+   | "dashboard.benefit.pro.boqExport"
+   | "dashboard.benefit.pro.analytics"
+   | "dashboard.benefit.pro.unlimitedRfq"
+   | "dashboard.benefit.pro.support"
+   | "dashboard.benefit.admin.moderation"
+   | "dashboard.benefit.admin.users"
+   | "dashboard.benefit.admin.analytics"
+   | "dashboard.benefit.admin.pricing"
+   | "dashboard.cta.upgrade"
+   | "dashboard.cta.upgradeToPremium"
+   | "dashboard.cta.upgradeToPro"
+   | "dashboard.cta.explorePro"
+    | "dashboard.cta.reviewOps"
+    | "dashboard.assistant.placeholder"
+    | "dashboard.assistant.send"
+    | "dashboard.assistant.quick.myRfqs"
+    | "dashboard.assistant.quick.profile"
+    | "dashboard.assistant.quick.prices"
+    | "dashboard.assistant.quick.boq"
+    | "dashboard.assistant.quick.pro"
+    | "dashboard.assistant.fallback"
 
 const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -290,9 +349,67 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "filter.freshness": "Freshness",
     "filter.city": "City",
     "filter.clear": "Clear All",
-    "filter.all": "All",
-  },
-  am: {
+     "filter.all": "All",
+     "dashboard.title": "Dashboard",
+     "dashboard.currentPlan": "Current Plan",
+     "dashboard.accessStrength": "Access strength",
+     "dashboard.tab.profile": "Profile",
+     "dashboard.tab.settings": "Settings",
+     "dashboard.tab.activity": "Activity",
+     "dashboard.tab.admin": "Admin",
+     "dashboard.stat.plan": "Plan",
+     "dashboard.stat.listings": "Listings",
+     "dashboard.stat.inquiries": "Inquiries",
+     "dashboard.stat.rfqs": "RFQs",
+     "dashboard.stat.payments": "Payments",
+     "dashboard.loadMore": "Load more",
+     "dashboard.loadMoreRfqs": "Load more RFQs",
+     "dashboard.noActivity": "No activity yet",
+     "dashboard.noRfqs": "No RFQs submitted yet",
+     "dashboard.submitRfq": "Submit RFQ",
+     "dashboard.assistant.title": "YeBetWeg Assistant",
+     "dashboard.assistant.subtitle": "AI guidance coming soon — smarter quotes, BOQ help, and material insights.",
+     "dashboard.quickActions.title": "Quick Actions",
+     "dashboard.quickActions.desc.free": "Jump straight into what matters most",
+     "dashboard.quickActions.desc.admin": "Operational shortcuts for the marketplace",
+     "dashboard.quickActions.desc.paid": "Jump straight into what matters most",
+     "dashboard.plan.free": "Free",
+     "dashboard.plan.premium": "Premium",
+     "dashboard.plan.pro": "Pro",
+     "dashboard.plan.admin": "Admin",
+     "dashboard.subscription.manage": "Manage Subscription",
+     "dashboard.benefits.title": "Your plan includes",
+     "dashboard.benefit.free.estimate": "Project estimates",
+     "dashboard.benefit.free.prices": "Market prices",
+     "dashboard.benefit.free.professionals": "Professionals directory",
+     "dashboard.benefit.free.rfq": "Quote requests (limited)",
+     "dashboard.benefit.premium.insights": "Detailed market insights",
+     "dashboard.benefit.premium.priorityRfq": "Priority RFQ routing",
+     "dashboard.benefit.premium.badge": "Verification badge",
+     "dashboard.benefit.premium.exportPdf": "BOQ preview export",
+     "dashboard.benefit.pro.boqExport": "BOQ export (PDF & Excel)",
+     "dashboard.benefit.pro.analytics": "Advanced analytics",
+     "dashboard.benefit.pro.unlimitedRfq": "Unlimited RFQs",
+     "dashboard.benefit.pro.support": "Dedicated support",
+     "dashboard.benefit.admin.moderation": "Marketplace moderation",
+     "dashboard.benefit.admin.users": "User & role management",
+     "dashboard.benefit.admin.analytics": "Operational analytics",
+     "dashboard.benefit.admin.pricing": "Market price administration",
+      "dashboard.cta.upgrade": "Upgrade access",
+      "dashboard.cta.upgradeToPremium": "Upgrade to Premium",
+      "dashboard.cta.upgradeToPro": "Upgrade to Pro",
+      "dashboard.cta.explorePro": "Explore pro tools",
+      "dashboard.cta.reviewOps": "Review operations",
+      "dashboard.assistant.placeholder": "Ask about RFQs, profile strength, market prices, BOQ...",
+      "dashboard.assistant.send": "Send",
+      "dashboard.assistant.quick.myRfqs": "My RFQs",
+      "dashboard.assistant.quick.profile": "Profile strength",
+      "dashboard.assistant.quick.prices": "Market prices",
+      "dashboard.assistant.quick.boq": "BOQ estimate",
+      "dashboard.assistant.quick.pro": "Find a pro",
+      "dashboard.assistant.fallback": "I can help with RFQs, profile, market prices, BOQ, and professionals.",
+    },
+   am: {
     "nav.knowledge": "ዕውቀት",
     "nav.tips": "ምክሮች",
     "nav.market": "ዋጋዎች",
@@ -434,9 +551,67 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     "filter.freshness": "አዲስነት",
     "filter.city": "ከተማ",
     "filter.clear": "ሁሉንም ሰርዝ",
-    "filter.all": "ሁሉም",
-  },
-}
+     "filter.all": "ሁሉም",
+     "dashboard.title": "ዳሽቦርድ",
+     "dashboard.currentPlan": "የአሁኑ እቅድ",
+     "dashboard.accessStrength": "የመዳረሻ ጥንካሬ",
+     "dashboard.tab.profile": "ገለጻ",
+     "dashboard.tab.settings": "ቅናሾች",
+     "dashboard.tab.activity": "እንቅስቃሴ",
+     "dashboard.tab.admin": "አስተዳዳሪ",
+     "dashboard.stat.plan": "እቅድ",
+     "dashboard.stat.listings": "ዝርዝሮች",
+     "dashboard.stat.inquiries": "ጥያቄዎች",
+     "dashboard.stat.rfqs": "የዋጋ ጥያቄዎች",
+     "dashboard.stat.payments": "ክፍያዎች",
+     "dashboard.loadMore": "በቀላሉ ጨምር",
+     "dashboard.loadMoreRfqs": "የዋጋ ጥያቄዎችን ጨምር",
+     "dashboard.noActivity": "እንቅስቃሴ የለም",
+     "dashboard.noRfqs": "ገና ምንም የዋጋ ጥያቄ አልተላከም",
+     "dashboard.submitRfq": "ጥያቄ ላክ",
+     "dashboard.assistant.title": "የYeBetWeg ረዳት",
+     "dashboard.assistant.subtitle": "AI ረዳት በቅርቡ ይመጣል — ብልህ ዋጋ፣ የBOQ እርዳታ እና የቁሳቁስ ግንዛቤዎች።",
+     "dashboard.quickActions.title": "ፈጣን እርምጃዎች",
+     "dashboard.quickActions.desc.free": "በቀጥታ ወደ በጣም አስፈላጊው ይሂዱ",
+     "dashboard.quickActions.desc.admin": "ለገበያው የአሰራር አቋራጮች",
+     "dashboard.quickActions.desc.paid": "በቀጥታ ወደ በጣም አስፈላጊው ይሂዱ",
+     "dashboard.plan.free": "ነጻ",
+     "dashboard.plan.premium": "ፕሪሚየም",
+     "dashboard.plan.pro": "ፕሮ",
+     "dashboard.plan.admin": "አስተዳዳሪ",
+     "dashboard.subscription.manage": "ምዝገባ አስተዳድር",
+      "dashboard.benefits.title": "ዝርዝሮች",
+     "dashboard.benefit.free.estimate": "የፕሮጀክት ወልታዊ አስተዋውቅ",
+     "dashboard.benefit.free.prices": "የገበያ ዋጋዎች",
+     "dashboard.benefit.free.professionals": "የባለሙያዎች የመረጃ ቤት",
+     "dashboard.benefit.free.rfq": "የዋጋ ጥያቄዎች (የተላለፈ)",
+     "dashboard.benefit.premium.insights": "የተውሰነ ገበያ ግንዛቤዎች",
+     "dashboard.benefit.premium.priorityRfq": "የቅብል የዋጋ ጥያቄ ቅርጸት",
+     "dashboard.benefit.premium.badge": "የማረጋገጫ ልዩነት",
+     "dashboard.benefit.premium.exportPdf": "የBOQ ቅድሚያ አያዛዝ",
+     "dashboard.benefit.pro.boqExport": "የBOQ መደበኛ (PDF እና Excel)",
+     "dashboard.benefit.pro.analytics": "ቨርያቄ አቅማቅያን",
+     "dashboard.benefit.pro.unlimitedRfq": "ዘላለጠ የዋጋ ጥያቄዎች",
+     "dashboard.benefit.pro.support": "የቐጠረ ደንብ",
+     "dashboard.benefit.admin.moderation": "የገበያ የሚያሳይ እርዳታ",
+     "dashboard.benefit.admin.users": "አሰራር እና የሚያውቅ የተጠቃሚዎች",
+     "dashboard.benefit.admin.analytics": "የውቅና አቅማቅያን",
+     "dashboard.benefit.admin.pricing": "የገበያ ዋጋ አስተዳዳሪ",
+      "dashboard.cta.upgrade": "መዳረሻ ያሻሽሉ",
+      "dashboard.cta.upgradeToPremium": "ወደ ፕሪሚየም ዝቅ",
+      "dashboard.cta.upgradeToPro": "ወደ ፕሮ ዝቅ",
+      "dashboard.cta.explorePro": "የፕሮ መሳሪያዎች ያጠቀም",
+      "dashboard.cta.reviewOps": "ኦፕሬሽን ይመልከቱ",
+      "dashboard.assistant.placeholder": "ለዋጋ ጥያቄዎች፣ ግምገማ ጥንኩር፣ የገበያ ዋጋ፣ BOQ ጥያቄ ይጠይቁ።",
+      "dashboard.assistant.send": "አስቀምጥ",
+      "dashboard.assistant.quick.myRfqs": "የዋጋ ጥያቄዎች",
+      "dashboard.assistant.quick.profile": "የግምገማ ጥንኩር",
+      "dashboard.assistant.quick.prices": "የገበያ ዋጋዎች",
+      "dashboard.assistant.quick.boq": "BOQ ወልታዊ",
+      "dashboard.assistant.quick.pro": "ባለሙያ ይፈልጉ",
+      "dashboard.assistant.fallback": "ለዋጋ ጥያቄዎች፣ ግምገማ፣ የገበያ ዋጋ፣ BOQ እና ባለሙያዎች ጥያቄ ልክ ነው ማይደሱት።",
+    },
+  }
 
 const LanguageContext = React.createContext<{
   language: Language

@@ -138,6 +138,45 @@ serve(async (req) => {
         })
       }
 
+      case "operational_summary": {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+        const dayStart = new Date(Date.now()).toISOString().slice(0, 10) + "T00:00:00.000Z"
+        const soonThreshold = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+        const [newRfqs, newRfqsToday, pendingVerifications, churnRisk, expiringSoon, pendingListings, failedPayments7d, totalUsers, activeSubs] =
+          await Promise.all([
+            supabase.from("rfq_requests").select("id", { count: "exact", head: true }).eq("status", "new"),
+            supabase.from("rfq_requests").select("id", { count: "exact", head: true }).eq("status", "new").gte("created_at", dayStart),
+            supabase.from("professionals").select("id", { count: "exact", head: true }).eq("is_verified", false),
+            supabase.from("premium_subscriptions").select("id", { count: "exact", head: true }).in("tier", ["premium", "pro"]).eq("is_active", false),
+            supabase.from("premium_subscriptions").select("id", { count: "exact", head: true }).in("tier", ["premium", "pro"]).eq("is_active", true).lt("expires_at", soonThreshold),
+            supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "pending"),
+            supabase.from("subscription_payments").select("id", { count: "exact", head: true }).in("status", ["failed", "pending"]).gte("created_at", sevenDaysAgo),
+            supabase.from("users").select("id", { count: "exact", head: true }),
+            supabase.from("premium_subscriptions").select("id", { count: "exact", head: true }).eq("is_active", true).in("tier", ["premium", "pro"]),
+          ])
+
+        const counts = [newRfqs, newRfqsToday, pendingVerifications, churnRisk, expiringSoon, pendingListings, failedPayments7d, totalUsers, activeSubs]
+        const failed = counts.find((r) => r.error)
+        if (failed?.error) throw failed.error
+
+        return jsonResponse({
+          success: true,
+          action,
+          data: {
+            newRfqs: newRfqs.count || 0,
+            newRfqsToday: newRfqsToday.count || 0,
+            pendingVerifications: pendingVerifications.count || 0,
+            churnRisk: churnRisk.count || 0,
+            expiringSoon: expiringSoon.count || 0,
+            pendingListings: pendingListings.count || 0,
+            failedPayments7d: failedPayments7d.count || 0,
+            totalUsers: totalUsers.count || 0,
+            activeSubscriptions: activeSubs.count || 0,
+          },
+        })
+      }
+
       case "manage_blogs": {
         const blogId = payload?.id
         if (blogId && payload?.delete) {

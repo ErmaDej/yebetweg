@@ -63,7 +63,7 @@ DO $$ BEGIN
     WHERE u.username = 'PremiumUser' AND p.reference = 'CHAPA-PAY-0001'
   ) THEN
     INSERT INTO subscription_payments (user_id, subscription_id, amount, currency, method, reference, status)
-    SELECT u.id, s.id, 1200, 'ETB', 'chapa', 'CHAPA-PAY-0001', 'completed'
+    SELECT u.id, s.id, 500, 'ETB', 'chapa', 'CHAPA-PAY-0001', 'completed'
     FROM users u
     JOIN premium_subscriptions s ON s.user_id = u.id
     WHERE u.username = 'PremiumUser';
@@ -77,7 +77,7 @@ DO $$ BEGIN
     WHERE u.username = 'ProUser' AND p.reference = 'TELEBIRR-PAY-0001'
   ) THEN
     INSERT INTO subscription_payments (user_id, subscription_id, amount, currency, method, reference, status)
-    SELECT u.id, s.id, 1800, 'ETB', 'telebirr', 'TELEBIRR-PAY-0001', 'completed'
+    SELECT u.id, s.id, 1000, 'ETB', 'telebirr', 'TELEBIRR-PAY-0001', 'completed'
     FROM users u
     JOIN premium_subscriptions s ON s.user_id = u.id
     WHERE u.username = 'ProUser';

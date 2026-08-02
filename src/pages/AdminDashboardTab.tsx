@@ -12,6 +12,7 @@ import { useLanguage } from "@/lib/i18n"
 import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, Trash2, CheckCircle, XCircle, Plus, Save, Search, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
 import { supabase } from "@/lib/supabase"
+import { useAdminOperationalSummary } from "@/hooks/useAdminOperationalSummary"
 import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
 import { RfqManager } from "@/components/admin/RfqManager"
 
@@ -48,6 +49,7 @@ type AdminActionResult = {
 
 export function AdminDashboardTab() {
   const { language } = useLanguage()
+  const { summary, loading: summaryLoading, error: summaryError, refetch: refetchSummary } = useAdminOperationalSummary()
   const [loading, setLoading] = useState(false)
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -106,10 +108,10 @@ export function AdminDashboardTab() {
   }, [])
 
   const operationalHealth = useMemo(() => {
-    if (metrics.pendingListings > 5 || metrics.inquiries > 10 || metrics.rfqs > 10) return "attention"
+    if (metrics.pendingListings > 5 || metrics.inquiries > 10 || metrics.rfqs > 10 || summary.churnRisk > 5) return "attention"
     if (metrics.subscriptions > 0 && metrics.users > 0) return "healthy"
     return "warming"
-  }, [metrics])
+  }, [metrics, summary])
 
   const handleAction = async (action: string) => {
     setLoading(true)
@@ -232,6 +234,53 @@ export function AdminDashboardTab() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle>{language === "en" ? "Operational Summary" : "የኦፕሬሽን ስምምል"}</CardTitle>
+            <CardDescription>
+              {language === "en"
+                ? "Service-role counts for RFQs, verifications, and churn risk"
+                : "የዋጋ ጥያቄዎች፣ ማረጋገጥ እና የተለየ ጊዜ ቁጥሮች"}
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={refetchSummary} disabled={summaryLoading} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${summaryLoading ? "animate-spin" : ""}`} />
+            {language === "en" ? "Refresh" : "አድሲ"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {summaryError && (
+            <Alert variant="destructive">
+              <AlertDescription>{summaryError}</AlertDescription>
+            </Alert>
+          )}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <OperationalSummaryStat
+              icon={ClipboardList}
+              label={language === "en" ? "New RFQs" : "አዲስ የዋጋ ጥያቄዎች"}
+              value={summary.newRfqs}
+              today={summary.newRfqsToday}
+              todayLabel={language === "en" ? "today" : "ዛሬ"}
+              loading={summaryLoading}
+            />
+            <OperationalSummaryStat
+              icon={UserCheck}
+              label={language === "en" ? "Pending verifications" : "በመረጃ ያሉ"}
+              value={summary.pendingVerifications}
+              loading={summaryLoading}
+            />
+            <OperationalSummaryStat
+              icon={TrendingUp}
+              label={language === "en" ? "Churn risk" : "የተለየ ጊዜ"}
+              value={summary.churnRisk}
+              subLabel={language === "en" ? `${summary.expiringSoon} expiring soon` : `${summary.expiringSoon} በቅርብ ያል᎒ዘጠነ`}
+              loading={summaryLoading}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -836,5 +885,39 @@ function ExpandableSection({ title, children, defaultOpen = false }: { title: st
         </CardContent>
       )}
     </Card>
+  )
+}
+
+function OperationalSummaryStat({
+  icon: Icon,
+  label,
+  value,
+  today,
+  todayLabel,
+  subLabel,
+  loading,
+}: {
+  icon: LucideIcon
+  label: string
+  value: number
+  today?: number
+  todayLabel?: string
+  subLabel?: string
+  loading: boolean
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 p-4">
+      <Icon className="mb-2 h-5 w-5 text-primary" />
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : value}</p>
+        {today !== undefined && today > 0 && todayLabel && (
+          <Badge variant="secondary" className="text-[10px]">
+            {today} {todayLabel}
+          </Badge>
+        )}
+      </div>
+      {subLabel && <p className="mt-1 text-xs text-muted-foreground">{subLabel}</p>}
+    </div>
   )
 }

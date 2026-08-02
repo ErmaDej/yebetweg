@@ -23,7 +23,7 @@ import { useUserProfile } from "@/hooks/useUserProfile"
 const TIER_PRICES: Record<PremiumTier, number> = {
   free: 0,
   premium: 500,
-  pro: 1200,
+  pro: 1000,
 }
 
 export function usePayment() {
