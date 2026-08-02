@@ -10,7 +10,6 @@ import type {
 } from "@/types/payment"
 import {
   initializeChapaPayment,
-  verifyChapaPayment,
   formatAmount,
 } from "@/lib/chapa"
 import {
@@ -74,63 +73,6 @@ export function usePayment() {
 
     return data as Subscription
   }
-
-  const verifyChapaPaymentStatus = useCallback(
-    async (
-      reference: string,
-    ): Promise<{ success: boolean; status?: string; error?: string }> => {
-      try {
-        const result = await verifyChapaPayment(reference)
-
-        if (!result.success) {
-          return { success: false, error: result.error || "Failed to verify Chapa payment" }
-        }
-
-        if (result.status?.toLowerCase() !== "success") {
-          return {
-            success: false,
-            error: `Chapa payment status is not complete: ${result.status}`,
-          }
-        }
-
-        const { data: subscription, error } = await supabase
-          .from("premium_subscriptions")
-          .select("id")
-          .eq("chapa_reference", reference)
-          .single()
-
-        if (error || !subscription) {
-          console.error("Chapa verification succeeded but subscription record was not found", error)
-          return {
-            success: false,
-            error: "Payment verified but subscription record not found",
-          }
-        }
-
-        const { error: updateError } = await supabase
-          .from("premium_subscriptions")
-          .update({
-            is_active: true,
-            status: "active",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", subscription.id)
-
-        if (updateError) {
-          console.error("Failed to activate subscription after Chapa verification:", updateError)
-          return { success: false, error: updateError.message }
-        }
-
-        return { success: true, status: result.status }
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unexpected verification error",
-        }
-      }
-    },
-    [],
-  )
 
   const initiatePayment = useCallback(
     async (
@@ -266,7 +208,6 @@ export function usePayment() {
     loading,
     error,
     initiatePayment,
-    verifyChapaPaymentStatus,
     tierPrices: TIER_PRICES,
     formatAmount,
   }

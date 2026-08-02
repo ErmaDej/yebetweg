@@ -50,7 +50,7 @@ serve(async (req: Request) => {
         encoder.encode(CHAPA_WEBHOOK_SECRET),
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["verify"]
       )
       const expectedSignature = Array.from(
         new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(bodyText)))
