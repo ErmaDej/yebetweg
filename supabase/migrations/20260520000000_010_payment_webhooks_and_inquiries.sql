@@ -76,6 +76,23 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'User not found. Please ensure your profile is set up.');
   END IF;
 
+  -- Free-tier cap: max 3 active (approved) listings. Enforced server-side so
+  -- the "List up to 3 active free listings" benefit cannot be bypassed.
+  IF NOT EXISTS (
+    SELECT 1 FROM premium_subscriptions s
+    WHERE s.user_id = v_user_id
+      AND s.is_active
+      AND s.expires_at > now()
+      AND s.tier IN ('premium', 'pro')
+  ) THEN
+    IF (SELECT COUNT(*) FROM listings WHERE user_id = v_user_id AND status = 'approved') >= 3 THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Free tier is limited to 3 active listings. Upgrade to premium to list more.'
+      );
+    END IF;
+  END IF;
+
   INSERT INTO listings (
     listing_type, title_am, title_en, description, price,
     location, contact_phone, contact_email, category, images,

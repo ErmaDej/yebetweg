@@ -115,6 +115,26 @@ BEGIN
   FROM users u
   WHERE u.auth_uid = auth.uid();
 
+  -- Free-tier RFQ cap (default: 3 requests this month). Enforced server-side so
+  -- the "Quote requests (limited)" benefit cannot be bypassed. Premium/Pro = unlimited.
+  IF v_user_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM premium_subscriptions s
+    WHERE s.user_id = v_user_id
+      AND s.is_active
+      AND s.expires_at > now()
+      AND s.tier IN ('premium', 'pro')
+  ) THEN
+    IF (
+      SELECT COUNT(*) FROM rfq_requests
+      WHERE user_id = v_user_id AND created_at >= date_trunc('month', now())
+    ) >= 3 THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Free tier is limited to 3 quote requests per month. Upgrade to premium for unlimited RFQs.'
+      );
+    END IF;
+  END IF;
+
   INSERT INTO rfq_requests (
     user_id,
     source_type,
