@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { useRequireAuth } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
-import { useLanguage } from "@/lib/i18n"
+import { useLanguage, type TranslationKey } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,7 +16,7 @@ import { navigateTo } from "@/lib/navigation"
 import { AdminDashboardTab } from "./AdminDashboardTab"
 import { Progress } from "@/components/ui/progress"
 import { useDashboardData, buildActivityFeed, type ActivityKind } from "@/hooks/useDashboardData"
-import { profileStrength } from "@/lib/entitlements"
+import { profileStrength, roleKeyFor, planBenefits } from "@/lib/entitlements"
 import { RfqModal } from "@/components/sections/RfqModal"
 
 export function Dashboard() {
@@ -84,14 +84,37 @@ export function Dashboard() {
     navigateTo("/")
   }
 
-  const roleKey = useMemo(() => {
-    if (!profile) return "user"
-    if (profile.role === "admin") return "admin"
-    const tier = subscription?.tier || profile.role || "free"
-    return tier === "free" ? "user" : tier
-  }, [profile, subscription?.tier])
+  const roleKey = useMemo(() => roleKeyFor(profile, subscription), [profile, subscription?.tier])
+
+  const planLabel = useMemo(() => {
+    switch (roleKey) {
+      case "admin":
+        return t("dashboard.plan.admin")
+      case "pro":
+        return t("dashboard.plan.pro")
+      case "premium":
+        return t("dashboard.plan.premium")
+      default:
+        return t("dashboard.plan.free")
+    }
+  }, [roleKey, t])
+
+  const planBenefitsList = useMemo(() => planBenefits(roleKey), [roleKey])
 
   const roleStyle = ROLE_STYLES[roleKey] || ROLE_STYLES.user
+
+  const accessCta = useMemo(() => {
+    switch (roleKey) {
+      case "admin":
+        return { label: t("dashboard.cta.reviewOps"), target: "/dashboard" }
+      case "pro":
+        return { label: t("dashboard.cta.explorePro"), target: "/dashboard" }
+      case "premium":
+        return { label: t("dashboard.cta.upgradeToPro"), target: "/#plans" }
+      default:
+        return { label: t("dashboard.cta.upgrade"), target: "/#plans" }
+    }
+  }, [roleKey, t])
 
   const planProgress = useMemo(() => {
     if (!subscription) return profile?.role === "admin" ? 100 : 20
@@ -114,6 +137,10 @@ export function Dashboard() {
     if (!profile) return 0
     return Math.round(planProgress * 0.6 + profileStrength(profile).score * 0.4)
   }, [planProgress, profile])
+
+  const benefits = useMemo(() => {
+    return planBenefits(roleKey).map((key) => t(key as TranslationKey))
+  }, [roleKey, t])
 
   const activityFeed = useMemo(() => {
     if (!dashboardData) return []
@@ -206,17 +233,33 @@ export function Dashboard() {
                     : `መገለጫዎን ያጠናቅቁ: ${profileGaps.map((k) => PROFILE_FIELD_LABELS[k]?.am || k).join(", ")}`}
                 </button>
               )}
-              <Button className="mt-4 w-full gap-2" onClick={() => navigateTo(profile.role === "admin" ? "/dashboard" : "/#plans")}>
-                <Sparkles className="h-4 w-4" />
-                {profile.role === "admin"
-                  ? language === "en" ? "Review operations" : "ኦፕሬሽን ይመልከቱ"
-                  : subscription?.tier === "pro"
-                    ? language === "en" ? "Explore pro tools" : "የፕሮ መሳሪያዎች"
-                    : language === "en" ? "Upgrade access" : "መዳረሻ ያሻሽሉ"}
-              </Button>
+               <Button className="mt-4 w-full gap-2" onClick={() => navigateTo(accessCta.target)}>
+                 <Sparkles className="h-4 w-4" />
+                 {accessCta.label}
+               </Button>
             </div>
           </div>
         </div>
+
+        {/* Plan Benefits */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              {t("dashboard.benefits.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {benefits.map((benefit, index) => (
+                <li key={index} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
 
         {error && (
           <Alert variant="destructive" className="mb-6">
@@ -608,9 +651,9 @@ export function Dashboard() {
                                 </div>
                                 <div>
                                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                    {language === "en" ? "Current Plan" : "የአሁኑ እቅድ"}
+                                     {t("dashboard.currentPlan")}
                                   </p>
-                                  <p className="text-3xl font-bold capitalize">{subscription.tier}</p>
+                                  <p className="text-3xl font-bold capitalize">{planLabel}</p>
                                 </div>
                               </div>
 
@@ -652,28 +695,45 @@ export function Dashboard() {
 
                       {/* Action Buttons */}
                       <div className="grid grid-cols-1 gap-3 pt-2">
-                        {subscription.tier !== "pro" && (
+                        {roleKey === "user" && (
                           <Button
                             onClick={() => navigateTo("/#plans")}
                             className="gap-2"
-                            variant={subscription.tier === "premium" ? "default" : "default"}
+                            variant="default"
                           >
                             <TrendingUp className="h-4 w-4" />
-                            {subscription.tier === "free"
-                              ? language === "en"
-                                ? "Upgrade to Premium"
-                                : "ወደ ፕሪሚየም ዝቅ"
-                              : language === "en"
-                              ? "Upgrade to Pro"
-                              : "ወደ ፕሮ ዝቅ"}
+                            {t("dashboard.cta.upgradeToPremium")}
                           </Button>
                         )}
-                        {subscription.tier !== "free" && (
+                        {roleKey === "premium" && (
+                          <Button
+                            onClick={() => navigateTo("/#plans")}
+                            className="gap-2"
+                            variant="default"
+                          >
+                            <TrendingUp className="h-4 w-4" />
+                            {t("dashboard.cta.upgradeToPro")}
+                          </Button>
+                        )}
+                        {roleKey !== "user" && (
                           <Button onClick={() => navigateTo("/#plans")} variant="outline" className="gap-2">
                             <ArrowRight className="h-4 w-4" />
-                            {language === "en" ? "Manage Subscription" : "ምዝገባ አስተዳድር"}
+                            {t("dashboard.subscription.manage")}
                           </Button>
                         )}
+                        <div className="rounded-lg border border-border/60 p-3">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t("dashboard.benefits.title")}
+                          </p>
+                          <ul className="mt-2 space-y-1.5 text-sm">
+                            {planBenefitsList.map((benefitKey) => (
+                              <li key={benefitKey} className="flex items-center gap-2 text-muted-foreground">
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <span>{t(benefitKey as TranslationKey)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     </>
                   ) : (
