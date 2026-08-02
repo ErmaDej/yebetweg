@@ -196,7 +196,15 @@ export type TranslationKey =
    | "dashboard.cta.upgradeToPremium"
    | "dashboard.cta.upgradeToPro"
    | "dashboard.cta.explorePro"
-   | "dashboard.cta.reviewOps"
+    | "dashboard.cta.reviewOps"
+    | "dashboard.assistant.placeholder"
+    | "dashboard.assistant.send"
+    | "dashboard.assistant.quick.myRfqs"
+    | "dashboard.assistant.quick.profile"
+    | "dashboard.assistant.quick.prices"
+    | "dashboard.assistant.quick.boq"
+    | "dashboard.assistant.quick.pro"
+    | "dashboard.assistant.fallback"
 
 const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -387,13 +395,21 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
      "dashboard.benefit.admin.users": "User & role management",
      "dashboard.benefit.admin.analytics": "Operational analytics",
      "dashboard.benefit.admin.pricing": "Market price administration",
-     "dashboard.cta.upgrade": "Upgrade access",
-     "dashboard.cta.upgradeToPremium": "Upgrade to Premium",
-     "dashboard.cta.upgradeToPro": "Upgrade to Pro",
-     "dashboard.cta.explorePro": "Explore pro tools",
-     "dashboard.cta.reviewOps": "Review operations",
-   },
-  am: {
+      "dashboard.cta.upgrade": "Upgrade access",
+      "dashboard.cta.upgradeToPremium": "Upgrade to Premium",
+      "dashboard.cta.upgradeToPro": "Upgrade to Pro",
+      "dashboard.cta.explorePro": "Explore pro tools",
+      "dashboard.cta.reviewOps": "Review operations",
+      "dashboard.assistant.placeholder": "Ask about RFQs, profile strength, market prices, BOQ...",
+      "dashboard.assistant.send": "Send",
+      "dashboard.assistant.quick.myRfqs": "My RFQs",
+      "dashboard.assistant.quick.profile": "Profile strength",
+      "dashboard.assistant.quick.prices": "Market prices",
+      "dashboard.assistant.quick.boq": "BOQ estimate",
+      "dashboard.assistant.quick.pro": "Find a pro",
+      "dashboard.assistant.fallback": "I can help with RFQs, profile, market prices, BOQ, and professionals.",
+    },
+   am: {
     "nav.knowledge": "ዕውቀት",
     "nav.tips": "ምክሮች",
     "nav.market": "ዋጋዎች",
@@ -586,6 +602,14 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
       "dashboard.cta.upgradeToPro": "ወደ ፕሮ ዝቅ",
       "dashboard.cta.explorePro": "የፕሮ መሳሪያዎች ያጠቀም",
       "dashboard.cta.reviewOps": "ኦፕሬሽን ይመልከቱ",
+      "dashboard.assistant.placeholder": "ለዋጋ ጥያቄዎች፣ ግምገማ ጥንኩር፣ የገበያ ዋጋ፣ BOQ ጥያቄ ይጠይቁ።",
+      "dashboard.assistant.send": "አስቀምጥ",
+      "dashboard.assistant.quick.myRfqs": "የዋጋ ጥያቄዎች",
+      "dashboard.assistant.quick.profile": "የግምገማ ጥንኩር",
+      "dashboard.assistant.quick.prices": "የገበያ ዋጋዎች",
+      "dashboard.assistant.quick.boq": "BOQ ወልታዊ",
+      "dashboard.assistant.quick.pro": "ባለሙያ ይፈልጉ",
+      "dashboard.assistant.fallback": "ለዋጋ ጥያቄዎች፣ ግምገማ፣ የገበያ ዋጋ፣ BOQ እና ባለሙያዎች ጥያቄ ልክ ነው ማይደሱት።",
     },
   }
 

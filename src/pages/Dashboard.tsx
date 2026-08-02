@@ -9,14 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Bot, type LucideIcon } from "lucide-react"
+import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, type LucideIcon } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 import { navigateTo } from "@/lib/navigation"
 import { AdminDashboardTab } from "./AdminDashboardTab"
 import { Progress } from "@/components/ui/progress"
 import { useDashboardData, buildActivityFeed, type ActivityKind } from "@/hooks/useDashboardData"
-import { profileStrength, roleKeyFor, planBenefits } from "@/lib/entitlements"
+import { profileStrength, roleKeyFor, planBenefits, planFromRole } from "@/lib/entitlements"
+import type { PremiumTier } from "@/types/payment"
+import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
 
 export function Dashboard() {
@@ -102,6 +104,11 @@ export function Dashboard() {
   const planBenefitsList = useMemo(() => planBenefits(roleKey), [roleKey])
 
   const roleStyle = ROLE_STYLES[roleKey] || ROLE_STYLES.user
+
+  const plan = useMemo<PremiumTier>(() => {
+    if (subscription?.isActive && subscription?.status === "active") return subscription.tier
+    return planFromRole(profile?.role)
+  }, [subscription, profile?.role])
 
   const accessCta = useMemo(() => {
     switch (roleKey) {
@@ -420,20 +427,13 @@ export function Dashboard() {
                     <QuickActionButton key={action.key} config={action} handlers={actionHandlers} language={language} />
                   ))}
                 </div>
-                <div className="rounded-lg border border-dashed border-border/70 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-accent/15">
-                      <Bot className="h-4 w-4 animate-pulse text-primary" />
-                      <span className="absolute -right-0.5 -top-0.5 h-2 w-2 animate-ping rounded-full bg-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{t("dashboard.assistant.title")}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("dashboard.assistant.subtitle")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <AssistantCard
+                  language={language}
+                  profile={profile}
+                  plan={plan}
+                  openRfqs={dashboardData?.stats.rfqs ?? 0}
+                  unreadInquiries={dashboardData?.stats.unread ?? 0}
+                />
               </CardContent>
             </Card>
           </div>
