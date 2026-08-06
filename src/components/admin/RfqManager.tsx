@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n"
 import { callAdminAction } from "@/lib/api"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type RfqItem = {
   material_name: string
@@ -59,6 +60,7 @@ function statusLabel(status: string, language: string): string {
 
 export function RfqManager() {
   const { language } = useLanguage()
+  const isMobile = useIsMobile()
   const [rfqs, setRfqs] = useState<RfqRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -197,7 +199,7 @@ export function RfqManager() {
       ) : (
         <>
           {selectedRfqs.length > 0 && (
-          <div className="flex items-center gap-2 mb-2 p-2 bg-accent/5 border rounded">
+           <div className={`flex gap-2 mb-2 p-2 bg-accent/5 border rounded ${isMobile ? "flex-col" : "items-center"}`}>
             <span className="text-sm">{selectedRfqs.length} {language === "en" ? "selected" : "ተመረጡ ሲሆን"}</span>
             <Select onValueChange={handleBulkRfqStatus} defaultValue="">
               <SelectTrigger className="h-7 w-36 text-xs">
@@ -276,7 +278,7 @@ export function RfqManager() {
                     <Badge variant={statusColors[selectedRfq.status] || "outline"}>{statusLabel(selectedRfq.status, language)}</Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className={`grid gap-2 text-sm ${isMobile ? "grid-cols-1" : "grid-cols-2"}`}>
                     <div>
                       <p className="text-xs text-muted-foreground">{language === "en" ? "Email" : "ኢሜይል"}</p>
                       <p className="font-medium truncate">{selectedRfq.requester_email}</p>
