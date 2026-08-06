@@ -65,7 +65,7 @@ const tiers = [
   },
   {
     key: "pro" as const,
-    price: 1200,
+    price: 1000,
     highlight: false,
     features: {
       blogs: true,
@@ -204,7 +204,7 @@ export function PremiumSection({
                     {tier.key === "free" ? t("premium.free") : tier.key === "premium" ? "Premium" : t("premium.pro")}
                   </CardTitle>
                   <div className="mt-2">
-                    <span className="text-3xl font-bold">{tier.price.toLocaleString()}</span>
+                    <span className="text-3xl font-bold">{tierPrices[tier.key].toLocaleString()}</span>
                     <span className="text-sm text-muted-foreground"> {t("common.etb")}{t("premium.month")}</span>
                   </div>
                   {tier.highlight && (

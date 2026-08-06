@@ -33,6 +33,7 @@ export function Dashboard() {
   const [editForm, setEditForm] = useState({
     full_name: "",
     phone: "",
+    profile_image: "",
     language_preference: "en",
   })
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -56,6 +57,7 @@ export function Dashboard() {
     setEditForm({
       full_name: profile.full_name || "",
       phone: profile.phone || "",
+      profile_image: profile.profile_image || "",
       language_preference: profile.language_preference || "en",
     })
     setIsEditing(true)
@@ -69,6 +71,7 @@ export function Dashboard() {
     const result = await updateProfile({
       full_name: editForm.full_name,
       phone: editForm.phone,
+      profile_image: editForm.profile_image,
       language_preference: editForm.language_preference,
     })
 
@@ -145,7 +148,7 @@ export function Dashboard() {
 
   const accessStrength = useMemo(() => {
     if (!profile) return 0
-    return Math.round(planProgress * 0.6 + profileStrength(profile).score * 0.4)
+    return Math.round(Math.min(100, Math.max(0, planProgress * 0.6 + profileStrength(profile).score * 0.4)))
   }, [planProgress, profile])
 
   const benefits = useMemo(() => {
@@ -235,7 +238,7 @@ export function Dashboard() {
               <Progress value={accessStrength} />
               {profileGaps.length > 0 && (
                 <button
-                  onClick={() => setActiveTab("profile")}
+                  onClick={() => { setActiveTab("profile"); handleEditClick() }}
                   className="mt-3 block w-full rounded-md border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
                 >
                   {language === "en"
@@ -425,6 +428,11 @@ export function Dashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 text-xs mb-2">
+                  <span className="w-24 shrink-0">{t("dashboard.accessStrength")}</span>
+                  <Progress value={accessStrength} className="h-2 flex-1" />
+                  <span className="font-medium w-9 text-right">{accessStrength}%</span>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   {(QUICK_ACTIONS[roleKey] || QUICK_ACTIONS.user).map((action) => (
                     <QuickActionButton key={action.key} config={action} handlers={actionHandlers} language={language} />
@@ -537,6 +545,28 @@ export function Dashboard() {
                         </select>
                       </div>
                     </div>
+
+                    <div>
+
+                        <Label htmlFor="profile_image">{PROFILE_FIELD_LABELS["profile_image"][language === "en" ? "en" : "am"]}</Label>
+
+                        {editForm.profile_image ? (
+
+                          <div className="flex items-center gap-3 mt-1">
+
+                            <img src={editForm.profile_image} alt={language === "en" ? "Profile photo preview" : "የመገለጫ ፎቶ"} className="h-16 w-16 rounded-full object-cover" />
+
+                            <Input id="profile_image" value={editForm.profile_image} onChange={(e) => setEditForm({ ...editForm, profile_image: e.target.value })} placeholder="https://example.com/avatar.jpg" className="max-w-xs" />
+
+                          </div>
+
+                        ) : (
+
+                          <Input id="profile_image" value={editForm.profile_image} onChange={(e) => setEditForm({ ...editForm, profile_image: e.target.value })} placeholder={language === "en" ? "Photo URL (optional)" : "ፎቶ URL"} className="mt-1" />
+
+                        )}
+
+                      </div>
 
                     <div className="flex gap-2">
                       <Button
