@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n"
 import { Edit, Eye, Ban, TrendingUp, DollarSign, Users, ShieldCheck, Loader2, Newspaper, Megaphone, PackageCheck, UserCheck, RefreshCw, AlertTriangle, ClipboardList, ChevronDown, ChevronRight, Trash2, CheckCircle, XCircle, Plus, Save, Search, type LucideIcon } from "lucide-react"
 import { callAdminAction } from "@/lib/api"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { supabase } from "@/lib/supabase"
 import { useAdminOperationalSummary } from "@/hooks/useAdminOperationalSummary"
 import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
@@ -63,6 +64,7 @@ export function AdminDashboardTab() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createAction, setCreateAction] = useState<string>("")
   const [selectedListings, setSelectedListings] = useState<string[]>([])
+  const isMobile = useIsMobile()
 
   const safeCount = async (table: string, query?: (q: any) => any) => {
     try {
@@ -382,10 +384,19 @@ export function AdminDashboardTab() {
                       <span className="text-sm">{selectedListings.length} / {currentIds.length} selected</span>
                     </div>
                     {selectedListings.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" className="text-green-600" onClick={() => handleBulkListing("approved")} disabled={loading}>{language === "en" ? "Approve selected" : "መረጡትን አጽድቅ"}</Button>
-                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleBulkListing("rejected")} disabled={loading}>{language === "en" ? "Reject selected" : "መረጡትን አልተቀበለም"}</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setSelectedListings([])} disabled={loading}>{language === "en" ? "Clear" : "አጽዝ"}</Button>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Button size="sm" variant="ghost" className="text-green-600" onClick={() => handleBulkListing("approved")} disabled={loading} aria-label="Approve selected">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          <span className={isMobile ? "sr-only" : ""}>{language === "en" ? "Approve selected" : "መረጡትን አጽድቅ"}</span>
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => handleBulkListing("rejected")} disabled={loading} aria-label="Reject selected">
+                          <XCircle className="h-3.5 w-3.5" />
+                          <span className={isMobile ? "sr-only" : ""}>{language === "en" ? "Reject selected" : "መረጡትን አልተቀበለም"}</span>
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setSelectedListings([])} disabled={loading} aria-label={language === "en" ? "Clear" : "አጽዝ"}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className={isMobile ? "sr-only" : ""}>{language === "en" ? "Clear" : "አጽዝ"}</span>
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -397,7 +408,7 @@ export function AdminDashboardTab() {
                     const item = record as Record<string, any>
                     const action = actionResult.action
                     return (
-                      <div key={item.id || index} className="flex items-center justify-between gap-3 p-3 text-sm">
+                      <div key={item.id || index} className={`flex gap-3 p-3 text-sm ${isMobile ? "flex-col" : "items-center justify-between"}`}>
                         {action === "moderate_listings" && (
                           <Checkbox
                             checked={selectedListings.includes(item.id)}

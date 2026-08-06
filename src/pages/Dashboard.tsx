@@ -13,6 +13,7 @@ import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, Che
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 import { navigateTo } from "@/lib/navigation"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { AdminDashboardTab } from "./AdminDashboardTab"
 import { Progress } from "@/components/ui/progress"
 import { useDashboardData, buildActivityFeed, type ActivityKind } from "@/hooks/useDashboardData"
@@ -47,6 +48,8 @@ export function Dashboard() {
     hasMore: activityHasMore,
     loadMore: loadMoreActivity,
   } = useDashboardData(profile?.id ?? null)
+
+  const isMobile = useIsMobile()
 
   const handleEditClick = () => {
     if (!profile) return
@@ -287,7 +290,7 @@ export function Dashboard() {
         )}
 
         {/* Quick Stats */}
-         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+         <div className={`grid gap-4 mb-8 ${isMobile ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"}`}>
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
