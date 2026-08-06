@@ -43,6 +43,20 @@ const statusColors: Record<string, "default" | "secondary" | "outline" | "destru
   spam: "destructive",
 }
 
+const statusLabels: Record<string, { en: string; am: string }> = {
+  new: { en: "New", am: "አዲስ" },
+  reviewing: { en: "Reviewing", am: "ያጠᙙመው" },
+  sent_to_supplier: { en: "Sent to supplier", am: "አላቸገ ለደረሰኛ" },
+  quoted: { en: "Quoted", am: "የቋሚ መረጡ" },
+  closed: { en: "Closed", am: "ዝግጁ" },
+  spam: { en: "Spam", am: "ስፖም" },
+}
+
+function statusLabel(status: string, language: string): string {
+  const entry = statusLabels[status] || { en: status, am: status }
+  return language === "en" ? entry.en : entry.am
+}
+
 export function RfqManager() {
   const { language } = useLanguage()
   const [rfqs, setRfqs] = useState<RfqRequest[]>([])
@@ -77,7 +91,7 @@ export function RfqManager() {
       await callAdminAction("manage_rfqs", { rfqId, status })
       setRfqs((prev) => prev.map((r) => (r.id === rfqId ? { ...r, status } : r)))
       if (selectedRfq?.id === rfqId) setSelectedRfq((prev) => prev ? { ...prev, status } : null)
-      setSuccess(language === "en" ? `Status updated to ${status}` : `ሁኔታ ወደ ${status} ተቀይሯል`)
+      setSuccess(language === "en" ? `Status updated to ${statusLabel(status, "en")}` : `ሁኔታ ወደ ${statusLabel(status, "am")} ተቀይሯል`)
     } catch {
       // silently fail - table may not be deployed yet
     }
@@ -104,7 +118,7 @@ export function RfqManager() {
     setSuccess("")
     try {
       await callAdminAction("manage_rfqs", { rfqIds: selectedRfqs, status })
-      setSuccess(`${selectedRfqs.length} RFQs updated to ${status}`)
+      setSuccess(language === "en" ? `${selectedRfqs.length} RFQs updated to ${statusLabel(status, "en")}` : `${selectedRfqs.length} የዋጋ ጥያቄዎች ወደ ${statusLabel(status, "am")} ተቀይሯል`)
       setSelectedRfqs([])
       await fetchRfqs()
     } catch {
@@ -191,7 +205,7 @@ export function RfqManager() {
               </SelectTrigger>
               <SelectContent>
                 {statuses.map((s) => (
-                  <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                  <SelectItem key={s} value={s} className="text-xs">{statusLabel(s, language)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -223,7 +237,7 @@ export function RfqManager() {
                       <p className="text-xs text-muted-foreground mt-1">{rfq.city} • {formatDate(rfq.created_at)}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-[10px]">{rfq.source_type}</Badge>
-                        <Badge variant={statusColors[rfq.status] || "outline"} className="text-[10px]">{rfq.status}</Badge>
+                        <Badge variant={statusColors[rfq.status] || "outline"} className="text-[10px]">{statusLabel(rfq.status, language)}</Badge>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -237,7 +251,7 @@ export function RfqManager() {
                         </SelectTrigger>
                         <SelectContent>
                           {statuses.map((s) => (
-                            <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                            <SelectItem key={s} value={s} className="text-xs">{statusLabel(s, language)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -259,7 +273,7 @@ export function RfqManager() {
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">{selectedRfq.requester_name}</h3>
-                    <Badge variant={statusColors[selectedRfq.status] || "outline"}>{selectedRfq.status}</Badge>
+                    <Badge variant={statusColors[selectedRfq.status] || "outline"}>{statusLabel(selectedRfq.status, language)}</Badge>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-sm">
@@ -296,7 +310,7 @@ export function RfqManager() {
                       </SelectTrigger>
                       <SelectContent>
                         {statuses.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
+  <SelectItem key={s} value={s}>{statusLabel(s, language)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
