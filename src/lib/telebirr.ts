@@ -1,81 +1,11 @@
 import { supabase } from "@/lib/supabase"
 
-const TELEBIRR_API_KEY = import.meta.env.VITE_TELEBIRR_API_KEY
-const TELEBIRR_MERCHANT_APP_ID = import.meta.env.VITE_TELEBIRR_MERCHANT_APP_ID
-const TELEBIRR_FABRIC_APP_ID = import.meta.env.VITE_TELEBIRR_FABRIC_APP_ID
-const TELEBIRR_SHORT_CODE = import.meta.env.VITE_TELEBIRR_SHORT_CODE
-
-const TELEBIRR_BASE_URL = "https://api.telebirr.com/v1"
-
-// Validate required environment variables
-function validateTeleBirrConfig(): string | null {
-  if (!TELEBIRR_API_KEY) {
-    return "VITE_TELEBIRR_API_KEY is not configured"
-  }
-  if (!TELEBIRR_MERCHANT_APP_ID) {
-    return "VITE_TELEBIRR_MERCHANT_APP_ID is not configured"
-  }
-  if (!TELEBIRR_FABRIC_APP_ID) {
-    return "VITE_TELEBIRR_FABRIC_APP_ID is not configured"
-  }
-  if (!TELEBIRR_SHORT_CODE) {
-    return "VITE_TELEBIRR_SHORT_CODE is not configured"
-  }
-  return null
-}
-
-if (typeof window !== "undefined") {
-  const configError = validateTeleBirrConfig()
-  if (configError) {
-    console.warn(`[TeleBirr Config Warning] ${configError}`)
-  }
-}
-
-export interface TeleBirrPaymentRequest {
-  appId: string
-  fabricAppId: string
-  nonce: string
-  publicKey: string
-  shortCode: string
-  amount: number
-  phoneNumber: string
-  subject: string
-  description: string
-  outTradeNo: string // Renamed from reference to outTradeNo
-  receiveName: string
-  returnUrl: string
-  timeoutExpress: string
-  sign: string
-}
-
-export interface TeleBirrPaymentResponse {
-  code: string
-  msg: string
-  data?: {
-    toPayUrl: string
-    payExchangeId: string
-    outTradeNo: string
-    qrCode: string
-  }
-  success: boolean
-  message: string
-}
-
-export interface TeleBirrQueryResult {
-  code: string
-  msg: string
-  data?: {
-    status: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED"
-    amount: string
-    outTradeNo: string
-    transactionId: string
-  }
-}
-
+// TeleBirr is proxied through the Supabase Edge Function `telebirr-service`,
+// which holds the merchant private key and signs requests server-side. The
+// client only needs the Supabase URL/anon key — never TeleBirr credentials.
 export interface InitializeTeleBirrPaymentParams {
   amount: number
-  phoneNumber: string
-  reference: string // This will be mapped to outTradeNo
+  reference: string
   notifyUrl: string
   returnUrl: string
   subject?: string
@@ -84,16 +14,9 @@ export interface InitializeTeleBirrPaymentParams {
 
 export interface InitializeTeleBirrResult {
   success: boolean
-  toPayUrl?: string
-  outTradeNo?: string
-  qrCode?: string
-  error?: string
-}
-
-export interface QueryTeleBirrResult {
-  success: boolean
-  status?: string
-  data?: TeleBirrQueryResult["data"]
+  checkoutUrl?: string
+  prepayId?: string
+  reference?: string
   error?: string
 }
 
@@ -101,45 +24,24 @@ export async function initializeTeleBirrPayment(
   params: InitializeTeleBirrPaymentParams,
 ): Promise<InitializeTeleBirrResult> {
   try {
-    // Validate input parameters
-    if (!params.phoneNumber || !params.amount || !params.reference) {
-      return {
-        success: false,
-        error: "Missing required payment parameters",
-      }
+    if (!params.amount || params.amount <= 0) {
+      return { success: false, error: "Amount must be greater than zero" }
     }
-
-    if (params.amount <= 0) {
-      return {
-        success: false,
-        error: "Amount must be greater than zero",
-      }
+    if (!params.reference || !/^[A-Za-z0-9]+$/.test(params.reference)) {
+      return { success: false, error: "Invalid reference" }
     }
-
-    console.debug("[TeleBirr Client] Initializing payment:", {
-      reference: params.reference,
-      amount: params.amount,
-      phone: params.phoneNumber.replace(/(?<=.{3}).(?=.*(?:.{3})+$)/g, "X"), // Mask phone for security
-    })
 
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return { success: false, error: "Payment service is not configured" }
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession()
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return {
-        success: false,
-        error: "Payment service is not configured",
-      }
-    }
-
-    // Call the Supabase Edge Function directly so production Vercel deploys do not need a proxy.
     const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/telebirr-service`
-    
-    console.debug("[TeleBirr Client] Calling backend service:", serviceUrl)
-
     const response = await fetch(serviceUrl, {
       method: "POST",
       headers: {
@@ -149,169 +51,45 @@ export async function initializeTeleBirrPayment(
       },
       body: JSON.stringify({
         amount: params.amount,
-        phoneNumber: params.phoneNumber,
-        subject: params.subject || "YeBetWeg Premium Subscription",
-        description:
-          params.description || "Payment for YeBetWeg premium membership",
         reference: params.reference,
         notifyUrl: params.notifyUrl,
         returnUrl: params.returnUrl,
+        subject: params.subject,
+        description: params.description,
       }),
     })
 
-    const data = await response.json()
-
-    console.debug("[TeleBirr Client] Service response received:", {
-      status: response.status,
-      success: data.success,
-      hasData: !!(data.prepayId || data.data?.payExchangeId),
-    })
+    const rawText = await response.text()
+    let data: any
+    try {
+      data = JSON.parse(rawText)
+    } catch {
+      return {
+        success: false,
+        error: `Service error: HTTP ${response.status}`,
+      }
+    }
 
     if (!response.ok || !data.success) {
-      console.error("[TeleBirr Client] Service error:", {
-        status: response.status,
-        message: data.message || data.msg,
-        code: data.code,
-      })
       return {
         success: false,
-        error: data.error || data.message || data.msg || `Service error: ${response.status}`,
+        error: data.error || `Service error: ${response.status}`,
       }
     }
-
-    const toPayUrl = data.toPayUrl || data.codeUrl || data.data?.toPayUrl
-    const qrCode = data.qrCode || data.data?.qrCode || data.codeUrl
-    const outTradeNo = data.reference || data.data?.outTradeNo || params.reference
-    const payExchangeId = data.prepayId || data.data?.payExchangeId
-
-    if (!toPayUrl && !qrCode) {
-      console.error("[TeleBirr Client] Invalid response: missing payment URL")
-      return {
-        success: false,
-        error: "Invalid response from payment service: missing payment URL",
-      }
-    }
-
-    console.info("[TeleBirr Client] Payment initialized successfully:", {
-      reference: params.reference,
-      payExchangeId: payExchangeId ? payExchangeId.substring(0, 8) + "..." : undefined,
-      toPayUrl,
-    })
 
     return {
       success: true,
-      toPayUrl,
-      outTradeNo,
-      qrCode,
+      checkoutUrl: data.checkoutUrl,
+      prepayId: data.prepayId,
+      reference: data.reference,
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error"
-    console.error("[TeleBirr Client] Payment initialization error:", errorMessage)
     return {
       success: false,
       error:
         error instanceof Error
           ? `Network error: ${error.message}`
           : "Network error occurred while initializing payment",
-    }
-  }
-}
-
-export async function queryTeleBirrPayment(
-  reference: string,
-): Promise<QueryTeleBirrResult> {
-  try {
-    // Validate configuration
-    const configError = validateTeleBirrConfig()
-    if (configError) {
-      console.error(`[TeleBirr] Configuration error: ${configError}`)
-      return {
-        success: false,
-        error: "Payment service is not properly configured",
-      }
-    }
-
-    if (!reference) {
-      return {
-        success: false,
-        error: "Reference is required to query payment status",
-      }
-    }
-
-    console.debug("[TeleBirr] Querying payment status:", { reference })
-
-    const authHeader = TELEBIRR_API_KEY?.startsWith("Bearer ")
-      ? TELEBIRR_API_KEY
-      : `Bearer ${TELEBIRR_API_KEY}`
-
-    const response = await fetch(
-      `${TELEBIRR_BASE_URL}/payment/query?outTradeNo=${encodeURIComponent(reference)}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
-      },
-    )
-
-    const data: TeleBirrQueryResult = await response.json()
-
-    console.debug("[TeleBirr] Query response received:", {
-      code: data.code,
-      msg: data.msg,
-      status: data.data?.status,
-    })
-
-    if (!response.ok) {
-      console.error("[TeleBirr] Query HTTP error:", {
-        status: response.status,
-        message: data.msg,
-      })
-      return {
-        success: false,
-        error: data.msg || `HTTP ${response.status}: Failed to query payment`,
-      }
-    }
-
-    if (data.code !== "0000") {
-      console.error("[TeleBirr] Query API error:", {
-        code: data.code,
-        message: data.msg,
-      })
-      return {
-        success: false,
-        error: data.msg || `Error code ${data.code}: Failed to query payment status`,
-      }
-    }
-
-    if (!data.data) {
-      console.warn("[TeleBirr] Query returned no data:", { reference })
-      return {
-        success: false,
-        error: "Invalid response from TeleBirr: missing payment data",
-      }
-    }
-
-    console.info("[TeleBirr] Payment status queried successfully:", {
-      reference,
-      status: data.data.status,
-    })
-
-    return {
-      success: true,
-      status: data.data.status,
-      data: data.data,
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error"
-    console.error("[TeleBirr] Query error:", errorMessage)
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? `Network error: ${error.message}`
-          : "Network error occurred while querying payment status",
     }
   }
 }

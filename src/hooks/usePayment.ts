@@ -39,10 +39,12 @@ export function usePayment() {
     return name.charAt(0).toUpperCase() + name.slice(1)
   }, [user])
 
+  // TeleBirr `merch_order_id` must be alphanumeric per the gateway contract,
+  // so the reference must contain no hyphens or other separators.
   const generateTxRef = useCallback(() => {
-    const timestamp = Date.now()
+    const timestamp = Date.now().toString(36).toUpperCase()
     const random = Math.random().toString(36).substring(2, 8).toUpperCase()
-    return `YB-${timestamp}-${random}`
+    return `YB${timestamp}${random}`.slice(0, 32)
   }, [])
 
   const createSubscriptionRecord = async (
@@ -161,7 +163,6 @@ export function usePayment() {
 
           const result = await initializeTeleBirrPayment({
             amount,
-            phoneNumber: formattedPhone,
             reference: txRef,
             notifyUrl: callbackUrl,
             returnUrl,
@@ -182,12 +183,11 @@ export function usePayment() {
             amount,
           })
 
-          // Return TeleBirr specific data (qrCode / toPayUrl / outTradeNo)
+          // TeleBirr uses a hosted checkout URL; redirect the browser to it.
           return {
             success: true,
-            toPayUrl: result.toPayUrl,
-            qrCode: result.qrCode,
-            reference: result.outTradeNo,
+            redirectUrl: result.checkoutUrl,
+            reference: result.reference ?? txRef,
           }
         }
 

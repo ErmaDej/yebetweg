@@ -1,4 +1,4 @@
-import { Check, X, Crown, Zap, CreditCard, Smartphone, Loader2, AlertCircle, CheckCircle } from "lucide-react"
+import { Check, X, Crown, Zap, CreditCard, Smartphone, Loader2, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -121,7 +121,6 @@ export function PremiumSection({
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"chapa" | "telebirr">("chapa")
-  const [teleBirrResult, setTeleBirrResult] = useState<{ qrCode?: string; reference?: string } | null>(null)
 
   const handleChoosePlan = (tier: PremiumTier, method: "chapa" | "telebirr") => {
     setSelectedTier(tier)
@@ -133,28 +132,23 @@ export function PremiumSection({
   const handlePayment = async () => {
     if (!selectedTier) return
 
-    // Validate phone for TeleBirr
     if (paymentMethod === "telebirr" && !phoneNumber) {
-      // Error already shown in the UI
       return
     }
 
+    // Both Chapa and TeleBirr redirect to a hosted checkout.
     const result = await initiatePayment(
       selectedTier,
       paymentMethod,
       paymentMethod === "telebirr" ? phoneNumber : undefined,
     )
 
-    if (paymentMethod === "telebirr") {
-      if (result.success) {
-        setTeleBirrResult({ qrCode: result.qrCode, reference: result.reference })
-      } else {
-        // Error is shown via the error alert
-      }
+    if (!result.success) {
+      // Error is surfaced via the `error` alert below.
       return
     }
 
-    if (result.success && result.redirectUrl) {
+    if (result.redirectUrl) {
       window.location.href = result.redirectUrl
     }
   }
@@ -385,98 +379,57 @@ export function PremiumSection({
             </DialogDescription>
           </DialogHeader>
 
-          {teleBirrResult?.qrCode ? (
-            // TeleBirr Success State
-            <div className="space-y-4 py-4">
-              <div className="flex items-center justify-center text-center">
-                <div className="rounded-full bg-green-500/10 p-4 mb-4">
-                  <CheckCircle className="h-8 w-8 text-green-500" />
-                </div>
-              </div>
-              <div className="text-center">
-                <h3 className="font-semibold text-lg">
-                  {language === "en" ? "Payment Ready" : "ክፍያ ዝግጁ ነው"}
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {language === "en"
-                    ? "Scan the QR code below with your TeleBirr app to complete payment"
-                    : "ከ TeleBirr አፕ ጋር QR ኮድን ይቅረፁ ክፍያ ለመጨረስ"}
-                </p>
-              </div>
-              <div className="space-y-3 p-4 rounded-lg border border-border/70 bg-muted/80">
-                <img
-                  src={teleBirrResult.qrCode}
-                  alt={language === "en" ? "TeleBirr QR code" : "የቴሌቢር QR ኮድ"}
-                  className="mx-auto max-h-72 rounded-lg border border-border/50"
-                />
-                {teleBirrResult.reference && (
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {language === "en" ? "Reference:" : "የማገናኘያ መለያ:"}
-                    </p>
-                    <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                      {teleBirrResult.reference}
-                    </code>
-                  </div>
-                )}
-              </div>
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                <p className="text-xs text-blue-700">
-                  {language === "en"
-                    ? "✓ Keep this window open. Your payment will be verified automatically."
-                    : "✓ ይህን ስክሪን ክፍት ያቆዩ። ክፍያዎ በራስ-ሰር ይረጋገጋል።"}
-                </p>
-              </div>
-            </div>
-          ) : (
-            // Payment Input State
             <>
-              {paymentMethod === "telebirr" && (
+              {paymentMethod === "telebirr" ? (
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">
-                      {language === "en" ? "Phone Number" : "ስልክ ቁጥር"}
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+2519XXXXXXXX"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className={phoneNumber && !/^(\+251|0)?9\d{8}$/.test(phoneNumber) ? "border-red-500" : ""}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {language === "en"
-                        ? "Enter your TeleBirr registered phone number"
-                        : "የቴሌቢር ስልክ ቁጥርዎን ያስገቡ"
-                      }
-                    </p>
-                    {phoneNumber && !/^(\+251|0)?9\d{8}$/.test(phoneNumber) && (
-                      <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                        <AlertCircle className="h-3 w-3" />
-                        {language === "en" ? "Invalid phone number" : "ዋጋ በሌለው ስልክ ቁጥር"}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
+                 <div className="space-y-2">
+                   <Label htmlFor="phone">
+                     {language === "en" ? "Phone Number" : "ስልክ ቁጥር"}
+                   </Label>
+                   <Input
+                     id="phone"
+                     type="tel"
+                     placeholder="+2519XXXXXXXX"
+                     value={phoneNumber}
+                     onChange={(e) => setPhoneNumber(e.target.value)}
+                     className={phoneNumber && !/^(\+251|0)?9\d{8}$/.test(phoneNumber) ? "border-red-500" : ""}
+                   />
+                   <p className="text-xs text-muted-foreground">
+                     {language === "en"
+                       ? "Enter your TeleBirr registered phone number"
+                       : "የቴሌቢር ስልክ ቁጥርዎን ያስገቡ"
+                     }
+                   </p>
+                   {phoneNumber && !/^(\+251|0)?9\d{8}$/.test(phoneNumber) && (
+                     <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                       <AlertCircle className="h-3 w-3" />
+                       {language === "en" ? "Invalid phone number" : "ዋጋ በሌለው ስልክ ቁጥር"}
+                     </p>
+                   )}
+                 </div>
+               </div>
+             ) : (
+               <div className="py-4">
+                 <p className="text-sm text-muted-foreground">
+                   {language === "en"
+                     ? "You will be redirected to Chapa to complete your payment."
+                     : "ወደ ቻፓ ለመጨረሻ የሚተማሩበትና ክፍያዎን ይጠቃሉ።"}
+                 </p>
+               </div>
+             )}
 
-              {error && (
-                <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2 mb-4">
-                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <div>{error}</div>
-                </div>
-              )}
-            </>
-          )}
+             {error && (
+               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2 mb-4">
+                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                 <div>{error}</div>
+               </div>
+             )}
+           </>
 
           <div className="flex justify-end gap-3">
             <Button 
               variant="outline" 
-              onClick={() => {
-                setPaymentDialogOpen(false)
-                setTeleBirrResult(null)
-              }}
+              onClick={() => setPaymentDialogOpen(false)}
               disabled={loading}
             >
               {teleBirrResult?.qrCode 
