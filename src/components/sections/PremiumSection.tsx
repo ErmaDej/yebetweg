@@ -125,7 +125,6 @@ export function PremiumSection({
   const handleChoosePlan = (tier: PremiumTier, method: "chapa" | "telebirr") => {
     setSelectedTier(tier)
     setPaymentMethod(method)
-    setTeleBirrResult(null)
     setPaymentDialogOpen(true)
   }
 
@@ -432,15 +431,12 @@ export function PremiumSection({
               onClick={() => setPaymentDialogOpen(false)}
               disabled={loading}
             >
-              {teleBirrResult?.qrCode 
-                ? (language === "en" ? "Keep Scanning" : "ከዚህ ሂድ")
-                : (language === "en" ? "Cancel" : "ሰርዝ")}
+              {language === "en" ? "Cancel" : "ሰርዝ"}
             </Button>
-            {!teleBirrResult?.qrCode && (
-              <Button 
-                onClick={handlePayment} 
-                disabled={loading || (paymentMethod === "telebirr" && (!phoneNumber || !/^(\+251|0)?9\d{8}$/.test(phoneNumber)))}
-              >
+            <Button 
+              onClick={handlePayment} 
+              disabled={loading || (paymentMethod === "telebirr" && (!phoneNumber || !/^(\+251|0)?9\d{8}$/.test(phoneNumber)))}
+            >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -450,8 +446,7 @@ export function PremiumSection({
                   language === "en" ? "Confirm Payment" : "ክፍያ ያረጋግጁ"
                 )}
               </Button>
-            )}
-          </div>
+            </div>
         </DialogContent>
       </Dialog>
     </>
