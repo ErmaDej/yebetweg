@@ -32,7 +32,7 @@ serve(async (req) => {
       .insert({
         gateway: "telebirr",
         event_type: body.status || body.code || "payment.notification",
-        reference: body.outTradeNo || body.reference || body.transactionId || "unknown",
+        reference: body.reference || body.outTradeNo || body.transactionId || "unknown",
         payload: body,
         status: "received",
       })
@@ -44,8 +44,8 @@ serve(async (req) => {
     // If we have a successful transaction, activate the subscription
     
     // Note: TeleBirr specific fields might need adjustment based on actual API version
-    const reference = body.outTradeNo || body.reference
-    const status = body.status === "SUCCESS" || body.code === "0" ? "success" : "failed"
+    const reference = body.reference || body.outTradeNo || body.transactionId
+    const status = body.status === "SUCCESS" || body.code === "0000" ? "success" : "failed"
 
     if (status === "success" && reference) {
       const { data, error: rpcError } = await supabase.rpc("activate_subscription", {

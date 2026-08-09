@@ -49,7 +49,7 @@ export interface TeleBirrPaymentRequest {
 }
 
 export interface TeleBirrPaymentResponse {
-  code: number
+  code: string
   msg: string
   data?: {
     toPayUrl: string
@@ -175,7 +175,7 @@ export async function initializeTeleBirrPayment(
       })
       return {
         success: false,
-        error: data.message || data.msg || `Service error: ${response.status}`,
+        error: data.error || data.message || data.msg || `Service error: ${response.status}`,
       }
     }
 

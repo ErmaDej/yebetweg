@@ -32,6 +32,7 @@ export function Dashboard() {
   const [isSaving, setIsSaving] = useState(false)
   const [editForm, setEditForm] = useState({
     full_name: "",
+    username: "",
     phone: "",
     profile_image: "",
     language_preference: "en",
@@ -56,6 +57,7 @@ export function Dashboard() {
     if (!profile) return
     setEditForm({
       full_name: profile.full_name || "",
+      username: profile.username || "",
       phone: profile.phone || "",
       profile_image: profile.profile_image || "",
       language_preference: profile.language_preference || "en",
@@ -70,6 +72,7 @@ export function Dashboard() {
 
     const result = await updateProfile({
       full_name: editForm.full_name,
+      username: editForm.username,
       phone: editForm.phone,
       profile_image: editForm.profile_image,
       language_preference: editForm.language_preference,
@@ -512,6 +515,15 @@ export function Dashboard() {
                   <>
                     {/* Edit Mode */}
                     <div className="space-y-4">
+                      <div>
+                          <Label htmlFor="username">{PROFILE_FIELD_LABELS["username"][language === "en" ? "en" : "am"]}</Label>
+                          <Input
+                            id="username"
+                            value={editForm.username}
+                            onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                            placeholder={PROFILE_FIELD_LABELS["username"][language === "en" ? "en" : "am"]}
+                          />
+                        </div>
                       <div>
                         <Label htmlFor="full-name">{language === "en" ? "Full Name" : "ሙሉ ስም"}</Label>
                         <Input
