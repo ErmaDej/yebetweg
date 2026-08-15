@@ -126,9 +126,9 @@ export function Dashboard() {
       case "pro":
         return { label: t("dashboard.cta.explorePro"), target: "/dashboard" }
       case "premium":
-        return { label: t("dashboard.cta.upgradeToPro"), target: "/#plans" }
+        return { label: t("dashboard.cta.upgradeToPro"), target: "/#premium" }
       default:
-        return { label: t("dashboard.cta.upgrade"), target: "/#plans" }
+        return { label: t("dashboard.cta.upgrade"), target: "/#premium" }
     }
   }, [roleKey, t])
 
@@ -174,7 +174,7 @@ export function Dashboard() {
     market: () => navigateTo("/#market"),
     marketplace: () => navigateTo("/#marketplace"),
     professionals: () => navigateTo("/#professionals"),
-    upgrade: () => navigateTo("/#plans"),
+    upgrade: () => navigateTo("/#premium"),
     adminConsole: () => setActiveTab("admin"),
     reviewContent: () => setActiveTab("admin"),
   }
@@ -742,7 +742,7 @@ export function Dashboard() {
                       <div className="grid grid-cols-1 gap-3 pt-2">
                         {roleKey === "user" && (
                           <Button
-                            onClick={() => navigateTo("/#plans")}
+                            onClick={() => navigateTo("/#premium")}
                             className="gap-2"
                             variant="default"
                           >
@@ -752,7 +752,7 @@ export function Dashboard() {
                         )}
                         {roleKey === "premium" && (
                           <Button
-                            onClick={() => navigateTo("/#plans")}
+                            onClick={() => navigateTo("/#premium")}
                             className="gap-2"
                             variant="default"
                           >
@@ -761,7 +761,7 @@ export function Dashboard() {
                           </Button>
                         )}
                         {roleKey !== "user" && (
-                          <Button onClick={() => navigateTo("/#plans")} variant="outline" className="gap-2">
+                          <Button onClick={() => navigateTo("/#premium")} variant="outline" className="gap-2">
                             <ArrowRight className="h-4 w-4" />
                             {t("dashboard.subscription.manage")}
                           </Button>
@@ -794,7 +794,7 @@ export function Dashboard() {
                           ? "Upgrade to unlock premium features and exclusive content."
                           : "ፕሪሚየም ባህሪዎችን እና ብቸኛ ይዘትን ለመክፈት ዝቅ አድርግ።"}
                       </p>
-                      <Button onClick={() => navigateTo("/#plans")} className="gap-2">
+                      <Button onClick={() => navigateTo("/#premium")} className="gap-2">
                         <Crown className="h-4 w-4" />
                         {language === "en" ? "Choose a Plan" : "እቅድ ይምረጡ"}
                       </Button>

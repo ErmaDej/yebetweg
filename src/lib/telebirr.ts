@@ -10,6 +10,7 @@ export interface InitializeTeleBirrPaymentParams {
   returnUrl: string
   subject?: string
   description?: string
+  phoneNumber?: string
 }
 
 export interface InitializeTeleBirrResult {
@@ -17,6 +18,7 @@ export interface InitializeTeleBirrResult {
   checkoutUrl?: string
   prepayId?: string
   reference?: string
+  rawRequest?: string
   error?: string
 }
 
@@ -56,6 +58,7 @@ export async function initializeTeleBirrPayment(
         returnUrl: params.returnUrl,
         subject: params.subject,
         description: params.description,
+        phoneNumber: params.phoneNumber,
       }),
     })
 
@@ -82,6 +85,7 @@ export async function initializeTeleBirrPayment(
       checkoutUrl: data.checkoutUrl,
       prepayId: data.prepayId,
       reference: data.reference,
+      rawRequest: data.rawRequest,
     }
   } catch (error) {
     return {
@@ -95,17 +99,23 @@ export async function initializeTeleBirrPayment(
 }
 
 export function validateEthiopianPhoneNumber(phone: string): boolean {
-  const phoneRegex = /^(\+251|0)?9\d{8}$/
-  return phoneRegex.test(phone)
+  if (!phone) return false
+  const cleaned = phone.replace(/[\s\-()]/g, "")
+  const phoneRegex = /^(\+251|251|0)?[79]\d{8}$/
+  return phoneRegex.test(cleaned)
 }
 
 export function formatEthiopianPhoneNumber(phone: string): string {
+  if (!phone) return ""
   const cleaned = phone.replace(/\D/g, "")
-  if (cleaned.startsWith("251")) {
-    return "+" + cleaned
+  if (cleaned.startsWith("251") && cleaned.length >= 12) {
+    return "+" + cleaned.slice(0, 12)
   }
-  if (cleaned.startsWith("0")) {
-    return "+251" + cleaned.slice(1)
+  if (cleaned.startsWith("0") && cleaned.length >= 10) {
+    return "+251" + cleaned.slice(1, 10)
   }
-  return cleaned
+  if ((cleaned.startsWith("9") || cleaned.startsWith("7")) && cleaned.length === 9) {
+    return "+251" + cleaned
+  }
+  return phone.trim()
 }

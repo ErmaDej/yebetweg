@@ -141,8 +141,8 @@ const FAQS: FaqIntent[] = [
     am: ["ምዝገና", "እቅድ", "ቲሃ", "ክፍያ"],
     answer: (ctx, language) =>
       language === "am"
-        ? `የአሁኑ እቅድ ${PLAN_LABEL[ctx.plan].am} ነው። ለመዝሙሪያ ወይም ለመለዕክት ወደ '/#plans' ይሄድዎት።`
-        : `Your current plan is ${PLAN_LABEL[ctx.plan].en}. To renew, upgrade, or see pricing, go to "/#plans".`,
+        ? `የአሁኑ እቅድ ${PLAN_LABEL[ctx.plan].am} ነው። ለማደስ፣ ለማሻሻል ወይም ዋጋዎችን ለማየት ወደ '/#premium' ይሂዱ።`
+        : `Your current plan is ${PLAN_LABEL[ctx.plan].en}. To renew, upgrade, or see pricing, go to "/#premium".`,
   },
 ]
 

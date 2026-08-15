@@ -20,6 +20,7 @@ import { SearchResults } from "@/pages/SearchResults"
 import { PaymentSuccessPage } from "@/pages/PaymentSuccessPage"
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
+import { scrollToAnchor } from "@/lib/navigation"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { getActivePlan } from "@/lib/entitlements"
@@ -85,7 +86,7 @@ export function App() {
   const [currentPage, setCurrentPage] = useState<"home" | "dashboard" | "search" | "payment" | "auth-callback" | "reset-password">("home")
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleLocationChange = () => {
       const pathname = window.location.pathname
       const search = window.location.search
       
@@ -104,19 +105,18 @@ export function App() {
       }
     }
 
-    handleHashChange()
-    window.addEventListener("popstate", handleHashChange)
-    return () => window.removeEventListener("popstate", handleHashChange)
+    handleLocationChange()
+    window.addEventListener("popstate", handleLocationChange)
+    window.addEventListener("hashchange", handleLocationChange)
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange)
+      window.removeEventListener("hashchange", handleLocationChange)
+    }
   }, [])
 
   useEffect(() => {
     if (currentPage !== "home" || !window.location.hash) return
-
-    window.setTimeout(() => {
-      document
-        .getElementById(window.location.hash.slice(1))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 0)
+    scrollToAnchor(window.location.hash)
   }, [currentPage])
 
   if (currentPage === "auth-callback") {
