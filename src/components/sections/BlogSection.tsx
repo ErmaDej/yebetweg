@@ -118,8 +118,17 @@ export function BlogSection() {
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const [page, setPage] = useState(1)
-  const { blogs, loading } = useBlogs(category, page, BLOGS_PER_PAGE)
+  const [searchInput, setSearchInput] = useState("")
+  const [serverQuery, setServerQuery] = useState("")
   const { ref, isInView } = useInView()
+
+  // Debounce the raw input before triggering server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setServerQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { blogs, loading, total } = useBlogs(category, page, BLOGS_PER_PAGE, serverQuery)
 
   // Client-side smart search for blogs
   const blogSearchFields = useMemo(() => ["title_en", "title_am", "content", "category", "author"] as (keyof Blog)[], [])
@@ -131,16 +140,27 @@ export function BlogSection() {
   })
 
   const searchableBlogs = smartSearch.items
-  const totalFiltered = smartSearch.totalCount
+  const isSearching = Boolean(serverQuery.trim())
+  // While searching, the hook returns the full match set and smartSearch owns
+  // pagination; otherwise server pages drive it via the exact table total.
+  const totalFiltered = isSearching ? smartSearch.totalCount : total
   const pageCount = Math.max(1, Math.ceil(totalFiltered / BLOGS_PER_PAGE))
-  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+  const currentPage = isSearching ? smartSearch.state.page : page
+  const visiblePages = useMemo(() => getVisiblePages(currentPage, pageCount), [currentPage, pageCount])
 
   useEffect(() => {
     setPage(1)
   }, [category])
 
+  useEffect(() => {
+    if (isSearching) smartSearch.setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverQuery])
+
   const goToPage = (nextPage: number) => {
-    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    const clamped = Math.min(Math.max(nextPage, 1), pageCount)
+    if (isSearching) smartSearch.setPage(clamped)
+    else setPage(clamped)
     document.getElementById("knowledge")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
@@ -165,8 +185,8 @@ export function BlogSection() {
         {/* Smart Search Bar */}
         <div className="mb-6 max-w-md mx-auto">
           <SmartSearchBar
-            query={smartSearch.state.query}
-            onQueryChange={smartSearch.setQuery}
+            query={searchInput}
+            onQueryChange={setSearchInput}
             totalCount={totalFiltered}
             placeholder={language === "en" ? "Search articles..." : "ጽሁፎች ይፈልጉ..."}
             compact
@@ -191,9 +211,9 @@ export function BlogSection() {
           </div>
         ) : (
           <>
-            <div key={`${category}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
+            <div key={`${category}-${serverQuery}-${currentPage}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
               {searchableBlogs.map((blog, i) => (
-                <BlogCard key={blog.id} blog={blog} featured={blog.is_featured && page === 1} index={i} />
+                <BlogCard key={blog.id} blog={blog} featured={blog.is_featured && currentPage === 1} index={i} />
               ))}
             </div>
 
@@ -203,11 +223,11 @@ export function BlogSection() {
                   <PaginationItem>
                     <PaginationPrevious
                       href="#knowledge"
-                      aria-disabled={page === 1}
-                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page - 1)
+                        goToPage(currentPage - 1)
                       }}
                     />
                   </PaginationItem>
@@ -215,7 +235,7 @@ export function BlogSection() {
                     <PaginationItem key={pageNumber}>
                       <PaginationLink
                         href="#knowledge"
-                        isActive={pageNumber === page}
+                        isActive={pageNumber === currentPage}
                         onClick={(event) => {
                           event.preventDefault()
                           goToPage(pageNumber)
@@ -228,11 +248,11 @@ export function BlogSection() {
                   <PaginationItem>
                     <PaginationNext
                       href="#knowledge"
-                      aria-disabled={page === pageCount}
-                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === pageCount}
+                      className={currentPage === pageCount ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page + 1)
+                        goToPage(currentPage + 1)
                       }}
                     />
                   </PaginationItem>
