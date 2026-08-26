@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useLanguage } from "@/lib/i18n"
 import { activateChapaPayment } from "@/lib/chapa"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
@@ -8,7 +8,15 @@ export function PaymentSuccessPage() {
   const [status, setStatus] = useState<"loading" | "success" | "failed">("loading")
   const [message, setMessage] = useState("")
 
+  // Idempotency guard: track references we've already verified successfully in this session
+  const verifiedRefs = useRef<Set<string>>(new Set())
+  // Mounted guard to prevent re-verification on unmount/remount
+  const mountedRef = useRef(false)
+
   useEffect(() => {
+    if (mountedRef.current) return
+    mountedRef.current = true
+
     const verifyPayment = async () => {
       const urlParams = new URLSearchParams(window.location.search)
       const reference = urlParams.get("reference")
@@ -23,9 +31,21 @@ export function PaymentSuccessPage() {
         return
       }
 
+      // Idempotency: skip if already verified in this session
+      if (verifiedRefs.current.has(reference)) {
+        setStatus("success")
+        setMessage(
+          language === "am"
+            ? "ክፍያዎ በተሳካይ ተጠናቅል"
+            : "Payment completed successfully"
+        )
+        return
+      }
+
       const result = await activateChapaPayment(reference)
 
       if (result.success) {
+        verifiedRefs.current.add(reference)
         setStatus("success")
         setMessage(
           language === "am"
@@ -43,7 +63,7 @@ export function PaymentSuccessPage() {
     }
 
     verifyPayment()
-  }, [language])
+  }, []) // Run once on mount only — no language dep, no re-verification on language toggle
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">

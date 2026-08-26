@@ -123,7 +123,10 @@ export function PremiumSection({
   const [phoneNumber, setPhoneNumber] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"chapa" | "telebirr">("chapa")
 
+  const enableTeleBirr = import.meta.env.VITE_ENABLE_TELEBIRR === "true"
+
   const handleChoosePlan = (tier: PremiumTier, method: "chapa" | "telebirr") => {
+    if (method === "telebirr" && !enableTeleBirr) return
     setSelectedTier(tier)
     setPaymentMethod(method)
     setPaymentDialogOpen(true)
@@ -225,7 +228,7 @@ export function PremiumSection({
                         </li>
                       ))}
                     </ul>
-                    {isCurrentPlan ? (
+{isCurrentPlan ? (
                       <Button className="w-full mt-4" variant="outline" disabled>
                         {language === "en" ? "Active" : "ንቁ"}
                       </Button>
@@ -245,15 +248,17 @@ export function PremiumSection({
                             ? language === "en" ? "Included" : "ተካቷል"
                             : language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
                         </Button>
-                        <Button
-                          className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                          disabled={isLowerPlan}
-                          onClick={() => handleChoosePlan(tier.key, "telebirr")}
-                        >
-                          {isLowerPlan
-                            ? language === "en" ? "Included" : "ተካቷል"
-                            : language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
-                        </Button>
+                        {enableTeleBirr && (
+                          <Button
+                            className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                            disabled={isLowerPlan}
+                            onClick={() => handleChoosePlan(tier.key, "telebirr")}
+                          >
+                            {isLowerPlan
+                              ? language === "en" ? "Included" : "ተካቷል"
+                              : language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <Button
@@ -336,13 +341,15 @@ export function PremiumSection({
                   <CreditCard className="h-4 w-4" />
                   {activePlan === "free" ? (language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ") : (language === "en" ? "Manage from dashboard" : "ከዳሽቦርድ ያስተዳድሩ")}
                 </Button>
-                <Button
-                  className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
-                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigateTo("/dashboard")}
-                >
-                  <Smartphone className="h-4 w-4" />
-                  {activePlan === "free" ? (language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ") : (language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ")}
-                </Button>
+                {enableTeleBirr && (
+                  <Button
+                    className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
+                    onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigateTo("/dashboard")}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    {activePlan === "free" ? (language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ") : (language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ")}
+                  </Button>
+                )}
               </div>
             </div>
             <div className="rounded-3xl border border-border/60 bg-muted/70 p-6 shadow-sm">
