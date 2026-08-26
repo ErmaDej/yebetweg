@@ -39,6 +39,8 @@ export interface SmartSearchResult<T> {
   error: string | null
   /** Current state (useful for reset) */
   state: SmartSearchState
+  /** Debounced search query — use to trigger server-side fetching */
+  searchQuery: string
   /** Set the search query (debounced) */
   setQuery: (q: string) => void
   /** Set/clear a single filter value */
@@ -260,6 +262,7 @@ export function useSmartSearch<T extends Record<string, any>>({
     loading: false,
     error: null,
     state: { query, filters, sort, page, pageSize },
+    searchQuery: debouncedQuery,
     setQuery,
     setFilter,
     setFilters,

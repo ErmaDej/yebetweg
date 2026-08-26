@@ -277,10 +277,19 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
   const { t, language } = useLanguage()
   const [tab, setTab] = useState("all")
   const [page, setPage] = useState(1)
-  const { listings, loading,  } = useListings(tab, page, LISTINGS_PER_PAGE)
+  const [searchInput, setSearchInput] = useState("")
+  const [serverQuery, setServerQuery] = useState("")
   const { ref, isInView } = useInView()
   const [listDialogOpen, setListDialogOpen] = useState(false)
   const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
+
+  // Debounce the raw input before triggering server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setServerQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { listings, loading, total } = useListings(tab, page, LISTINGS_PER_PAGE, serverQuery)
 
   // Client-side smart search for listings
   const smartSearch = useSmartSearch<Listing>({
@@ -291,9 +300,13 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
   })
 
   const searchableListings = smartSearch.items
-  const totalFiltered = smartSearch.totalCount
+  const isSearching = Boolean(serverQuery.trim())
+  // While searching, the hook returns the full match set and smartSearch owns
+  // pagination; otherwise server pages drive it via the exact table total.
+  const totalFiltered = isSearching ? smartSearch.totalCount : total
   const pageCount = Math.max(1, Math.ceil(totalFiltered / LISTINGS_PER_PAGE))
-  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+  const currentPage = isSearching ? smartSearch.state.page : page
+  const visiblePages = useMemo(() => getVisiblePages(currentPage, pageCount), [currentPage, pageCount])
   const canContact = activePlan === "premium" || activePlan === "pro"
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -301,8 +314,15 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
     setPage(1)
   }, [tab])
 
+  useEffect(() => {
+    if (isSearching) smartSearch.setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverQuery])
+
   const goToPage = (nextPage: number) => {
-    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    const clamped = Math.min(Math.max(nextPage, 1), pageCount)
+    if (isSearching) smartSearch.setPage(clamped)
+    else setPage(clamped)
     document.getElementById("marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
@@ -370,8 +390,8 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
         {/* Smart Search Bar */}
         <div className="mb-6">
           <SmartSearchBar
-            query={smartSearch.state.query}
-            onQueryChange={smartSearch.setQuery}
+            query={searchInput}
+            onQueryChange={setSearchInput}
             chips={activeFilterChips}
             onToggleFilters={() => setFiltersOpen(!filtersOpen)}
             filtersOpen={filtersOpen}
@@ -417,11 +437,11 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
                   <PaginationItem>
                     <PaginationPrevious
                       href="#marketplace"
-                      aria-disabled={page === 1}
-                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page - 1)
+                        goToPage(currentPage - 1)
                       }}
                     />
                   </PaginationItem>
@@ -429,7 +449,7 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
                     <PaginationItem key={pageNumber}>
                       <PaginationLink
                         href="#marketplace"
-                        isActive={pageNumber === page}
+                        isActive={pageNumber === currentPage}
                         onClick={(event) => {
                           event.preventDefault()
                           goToPage(pageNumber)
@@ -442,11 +462,11 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
                   <PaginationItem>
                     <PaginationNext
                       href="#marketplace"
-                      aria-disabled={page === pageCount}
-                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === pageCount}
+                      className={currentPage === pageCount ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page + 1)
+                        goToPage(currentPage + 1)
                       }}
                     />
                   </PaginationItem>

@@ -278,12 +278,26 @@ export function ProfessionalsSection() {
   const { t, language } = useLanguage()
   const [specialty, setSpecialty] = useState("all")
   const [page, setPage] = useState(1)
-  const { professionals, loading } = useProfessionals(specialty, page, PROFESSIONALS_PER_PAGE)
+  const [searchInput, setSearchInput] = useState("")
+  const [serverQuery, setServerQuery] = useState("")
   const { ref, isInView } = useInView()
   const [joinOpen, setJoinOpen] = useState(false)
   const [joinError, setJoinError] = useState("")
   const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Debounce the raw input before triggering server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setServerQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { professionals, loading, total } = useProfessionals(
+    specialty,
+    page,
+    PROFESSIONALS_PER_PAGE,
+    serverQuery
+  )
 
   // Client-side smart search for professionals
   const smartSearch = useSmartSearch<Professional>({
@@ -294,13 +308,22 @@ export function ProfessionalsSection() {
   })
 
   const searchableProfessionals = smartSearch.items
-  const totalFiltered = smartSearch.totalCount
+  const isSearching = Boolean(serverQuery.trim())
+  // While searching, the hook returns the full match set and smartSearch owns
+  // pagination; otherwise server pages drive it via the exact table total.
+  const totalFiltered = isSearching ? smartSearch.totalCount : total
   const pageCount = Math.max(1, Math.ceil(totalFiltered / PROFESSIONALS_PER_PAGE))
-  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+  const currentPage = isSearching ? smartSearch.state.page : page
+  const visiblePages = useMemo(() => getVisiblePages(currentPage, pageCount), [currentPage, pageCount])
 
   useEffect(() => {
     setPage(1)
   }, [specialty])
+
+  useEffect(() => {
+    if (isSearching) smartSearch.setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverQuery])
 
   useEffect(() => {
     if (page > pageCount) {
@@ -309,7 +332,9 @@ export function ProfessionalsSection() {
   }, [page, pageCount])
 
   const goToPage = (nextPage: number) => {
-    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    const clamped = Math.min(Math.max(nextPage, 1), pageCount)
+    if (isSearching) smartSearch.setPage(clamped)
+    else setPage(clamped)
     document.getElementById("professionals")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
@@ -453,8 +478,8 @@ export function ProfessionalsSection() {
         {/* Smart Search Bar */}
         <div className="mb-6">
           <SmartSearchBar
-            query={smartSearch.state.query}
-            onQueryChange={smartSearch.setQuery}
+            query={searchInput}
+            onQueryChange={setSearchInput}
             chips={activeFilterChips}
             onToggleFilters={() => setFiltersOpen(!filtersOpen)}
             filtersOpen={filtersOpen}
@@ -495,7 +520,7 @@ export function ProfessionalsSection() {
           </div>
         ) : (
           <>
-            <div key={`${specialty}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
+            <div key={`${specialty}-${serverQuery}-${currentPage}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up">
               {searchableProfessionals.map((pro, i) => (
                 <ProfessionalCard key={pro.id} professional={pro} index={i} onRequestQuote={(ctx) => setRfqContext(ctx)} />
               ))}
@@ -507,11 +532,11 @@ export function ProfessionalsSection() {
                   <PaginationItem>
                     <PaginationPrevious
                       href="#professionals"
-                      aria-disabled={page === 1}
-                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page - 1)
+                        goToPage(currentPage - 1)
                       }}
                     />
                   </PaginationItem>
@@ -519,7 +544,7 @@ export function ProfessionalsSection() {
                     <PaginationItem key={pageNumber}>
                       <PaginationLink
                         href="#professionals"
-                        isActive={pageNumber === page}
+                        isActive={pageNumber === currentPage}
                         onClick={(event) => {
                           event.preventDefault()
                           goToPage(pageNumber)
@@ -532,11 +557,11 @@ export function ProfessionalsSection() {
                   <PaginationItem>
                     <PaginationNext
                       href="#professionals"
-                      aria-disabled={page === pageCount}
-                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === pageCount}
+                      className={currentPage === pageCount ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page + 1)
+                        goToPage(currentPage + 1)
                       }}
                     />
                   </PaginationItem>
