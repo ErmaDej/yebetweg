@@ -116,7 +116,7 @@ export function Navbar() {
             title={language === "en" ? "Switch to Amharic" : "Switch to English"}
           >
             <Globe className="h-4 w-4 shrink-0" />
-            <span className="hidden xs:inline">
+            <span className="hidden sm:inline">
               {language === "en" ? "AM" : "EN"}
             </span>
           </Button>
@@ -124,9 +124,11 @@ export function Navbar() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="h-9 px-3">
-                  <UserCircle2 className="h-4 w-4 mr-2" />
-                  <span className="hidden xs:inline">{user.email?.split("@")[0]}</span>
+                <Button size="sm" variant="outline" className="h-9 px-3 min-w-0">
+                  <UserCircle2 className="h-4 w-4 mr-2 shrink-0" />
+                  <span className="hidden sm:inline max-w-[12ch] truncate">
+                    {user.email?.split("@")[0]}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

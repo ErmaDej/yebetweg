@@ -21,6 +21,7 @@ import { useLanguage } from "@/lib/i18n"
 import { useProfessionals, type Professional } from "@/hooks/useProfessionals"
 import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
+import { FilterPanel, useActiveFilterCount } from "@/components/search/FilterPanel"
 import { useInView } from "@/hooks/useInView"
 import { supabase } from "@/lib/supabase"
 import { validateProfessionalForm, sanitizeText } from "@/lib/validation"
@@ -351,17 +352,45 @@ export function ProfessionalsSection() {
         onRemove: () => smartSearch.setFilter("location", undefined),
       })
     }
-    if (vals.min_rating) {
+    if (vals.rating && typeof vals.rating === "object" && vals.rating.min !== undefined) {
       chips.push({
-        key: "min_rating",
+        key: "rating",
         label: language === "en" ? "Min Rating" : "ዝቅተኛ ደረጃ",
-        value: `⭐ ${vals.min_rating}+`,
-        onRemove: () => smartSearch.setFilter("min_rating", undefined),
+        value: `⭐ ${vals.rating.min}+`,
+        onRemove: () => smartSearch.setFilter("rating", undefined),
       })
     }
 
     return chips
   }, [smartSearch.state.filters, smartSearch.setFilter, language])
+
+  // Filter panel definitions — location options derive from loaded rows
+  const professionalFilters = useMemo(
+    () => [
+      {
+        key: "location",
+        label: language === "en" ? "Location" : "ቦታ",
+        type: "select" as const,
+        placeholder: language === "en" ? "All locations" : "ሁሉም ቦታዎች",
+        options: Array.from(
+          new Set(professionals.map((p) => p.location).filter(Boolean))
+        )
+          .sort()
+          .slice(0, 40)
+          .map((v) => ({ value: v as string, label: v as string })),
+      },
+      {
+        key: "rating",
+        label: language === "en" ? "Rating (min — max)" : "ደረጃ (ከ— እስከ)",
+        type: "range" as const,
+        rangeMin: 1,
+        rangeMax: 5,
+        rangeStep: 1,
+      },
+    ],
+    [language, professionals]
+  )
+  const activeFilterCount = useActiveFilterCount(smartSearch.state.filters)
 
   return (
     <section id="professionals" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -488,6 +517,21 @@ export function ProfessionalsSection() {
             compact
           />
         </div>
+
+        {/* Filter Panel */}
+        {filtersOpen && (
+          <div className="mb-6">
+            <FilterPanel
+              filters={professionalFilters}
+              values={smartSearch.state.filters}
+              onFilterChange={smartSearch.setFilter}
+              onClear={() => smartSearch.clearFilters(true)}
+              open={filtersOpen}
+              activeCount={activeFilterCount}
+              title={language === "en" ? "Filter professionals" : "ሙያተኞች ማጣሪያ"}
+            />
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

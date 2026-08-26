@@ -20,6 +20,7 @@ import { useLanguage } from "@/lib/i18n"
 import { useListings, type Listing } from "@/hooks/useListings"
 import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
+import { FilterPanel, useActiveFilterCount } from "@/components/search/FilterPanel"
 import { useInView } from "@/hooks/useInView"
 import { supabase } from "@/lib/supabase"
 import { sanitizeText } from "@/lib/validation"
@@ -339,18 +340,44 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
         onRemove: () => smartSearch.setFilter("location", undefined),
       })
     }
-    if (vals.price_range) {
-      const r = vals.price_range as { min?: number; max?: number }
+    if (vals.price && typeof vals.price === "object") {
+      const r = vals.price as { min?: number; max?: number }
       chips.push({
-        key: "price_range",
+        key: "price",
         label: language === "en" ? "Price" : "ዋጋ",
         value: `${r.min?.toLocaleString() || "0"} - ${r.max?.toLocaleString() || "∞"} ETB`,
-        onRemove: () => smartSearch.setFilter("price_range", undefined),
+        onRemove: () => smartSearch.setFilter("price", undefined),
       })
     }
 
     return chips
   }, [smartSearch.state.filters, smartSearch.setFilter, language])
+
+  // Filter panel definitions — location options derive from loaded rows
+  const listingFilters = useMemo(
+    () => [
+      {
+        key: "location",
+        label: language === "en" ? "Location" : "ቦታ",
+        type: "select" as const,
+        placeholder: language === "en" ? "All locations" : "ሁሉም ቦታዎች",
+        options: Array.from(new Set(listings.map((l) => l.location).filter(Boolean)))
+          .sort()
+          .slice(0, 40)
+          .map((v) => ({ value: v as string, label: v as string })),
+      },
+      {
+        key: "price",
+        label: language === "en" ? "Price (ETB)" : "ዋጋ (ብር)",
+        type: "range" as const,
+        rangeMin: 0,
+        rangeMax: 3000000,
+        rangeStep: 50000,
+      },
+    ],
+    [language, listings]
+  )
+  const activeFilterCount = useActiveFilterCount(smartSearch.state.filters)
 
   return (
     <section id="marketplace" ref={ref} className="py-16 sm:py-24 bg-muted/30">
@@ -400,6 +427,21 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
             compact
           />
         </div>
+
+        {/* Filter Panel */}
+        {filtersOpen && (
+          <div className="mb-6">
+            <FilterPanel
+              filters={listingFilters}
+              values={smartSearch.state.filters}
+              onFilterChange={smartSearch.setFilter}
+              onClear={() => smartSearch.clearFilters(true)}
+              open={filtersOpen}
+              activeCount={activeFilterCount}
+              title={language === "en" ? "Filter listings" : "ዝርዝሮች ማጣሪያ"}
+            />
+          </div>
+        )}
 
         {loading || smartSearch.loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
