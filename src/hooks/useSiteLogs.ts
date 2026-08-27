@@ -21,23 +21,26 @@ export function useSiteLogs(userId?: string) {
   const [loading, setLoading] = useState(true)
 
   const fetchLogs = useCallback(async () => {
+    if (!userId) {
+      setLogs([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("site_logs")
         .select("*")
+        .eq("user_id", userId)
         .order("date", { ascending: false })
 
-      if (userId) {
-        query = query.eq("user_id", userId)
-      }
-
-      const { data, error } = await query
       if (!error && data) {
         setLogs(data as SiteLog[])
+      } else {
+        setLogs([])
       }
     } catch {
-      // table may not exist yet
+      setLogs([])
     }
     setLoading(false)
   }, [userId])

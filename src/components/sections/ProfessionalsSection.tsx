@@ -23,6 +23,7 @@ import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { FilterPanel, useActiveFilterCount } from "@/components/search/FilterPanel"
 import { useInView } from "@/hooks/useInView"
+import { useAuthContext } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
 import { validateProfessionalForm, sanitizeText } from "@/lib/validation"
 import { RfqModal, type RfqContext } from "./RfqModal"
@@ -50,6 +51,7 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
   onRequestQuote: (ctx: RfqContext) => void
 }) {
   const { t, language } = useLanguage()
+  const { user } = useAuthContext()
   const [hireOpen, setHireOpen] = useState(false)
   const [inquirySent, setInquirySent] = useState(false)
   const [hireError, setHireError] = useState("")
@@ -79,9 +81,12 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
       return
     }
 
+    const inquiryEmail =
+      user?.email || `${hireData.phone.replace(/\D/g, "")}@phone.yebetweg.local`
+
     const { error } = await supabase.from("inquiries").insert({
       name: sanitizeText(hireData.name, 100),
-      email: "hire@yebetweg.com",
+      email: inquiryEmail,
       phone: hireData.phone,
       subject: `Hiring inquiry for ${professional.name}`,
       message: `Hiring request from ${hireData.name} - Phone: ${hireData.phone} - Professional ID: ${professional.id}`,

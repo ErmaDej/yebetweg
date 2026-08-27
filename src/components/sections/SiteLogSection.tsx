@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Plus, ClipboardList, Trash2, Calendar, Users, DollarSign, AlertTriangle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/lib/i18n"
 import { useAuthContext } from "@/context/AuthContext"
@@ -63,8 +73,9 @@ function SiteLogCard({ log, onDelete }: { log: SiteLog; onDelete: (id: string) =
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+            className="shrink-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity text-destructive hover:text-destructive"
             onClick={() => onDelete(log.id)}
+            aria-label={language === "en" ? "Delete entry" : "ግቤት ሰርዝ"}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -94,8 +105,14 @@ export function SiteLogSection() {
   const [form, setForm] = useState(emptyLog)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), [])
 
   const handleSubmit = async () => {
+    if (!user) {
+      setError(language === "en" ? "Please sign in to create a site log entry." : "የግንባታ ምዝግብ ለመፍጠር እባክዎ ይግቡ።")
+      return
+    }
     if (!form.work_completed.trim()) {
       setError(language === "en" ? "Please describe the work completed" : "እባክዎ የተሰራውን ስራ ይግለጹ")
       return
@@ -105,7 +122,7 @@ export function SiteLogSection() {
 
     const { error: err } = await createLog({
       ...form,
-      user_id: user?.id || null,
+      user_id: user.id,
       project_name: form.project_name || "My Project",
     })
 
@@ -116,6 +133,13 @@ export function SiteLogSection() {
       setDialogOpen(false)
     }
     setSaving(false)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
+    const id = pendingDeleteId
+    setPendingDeleteId(null)
+    await deleteLog(id)
   }
 
   return (
@@ -134,7 +158,11 @@ export function SiteLogSection() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90">
+              <Button
+                className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-60"
+                disabled={!user}
+                title={!user ? (language === "en" ? "Sign in to create entries" : "ግቤት ለመፍጠር ይግቡ") : undefined}
+              >
                 <Plus className="h-4 w-4" />
                 {language === "en" ? "New Entry" : "አዲስ ግቤት"}
               </Button>
@@ -163,7 +191,13 @@ export function SiteLogSection() {
                   <Input
                     type="date"
                     value={form.date.slice(0, 10)}
-                    onChange={(e) => setForm({ ...form, date: new Date(e.target.value).toISOString() })}
+                    max={todayStr}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      if (!v) return
+                      // Use local noon to avoid timezone shift when converting to ISO
+                      setForm({ ...form, date: new Date(`${v}T12:00:00`).toISOString() })
+                    }}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -266,10 +300,34 @@ export function SiteLogSection() {
         ) : (
           <div className="space-y-3">
             {logs.map((log) => (
-              <SiteLogCard key={log.id} log={log} onDelete={deleteLog} />
+              <SiteLogCard key={log.id} log={log} onDelete={(id) => setPendingDeleteId(id)} />
             ))}
           </div>
         )}
+
+        <AlertDialog open={pendingDeleteId !== null} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {language === "en" ? "Delete this entry?" : "ይህን ግቤት ይሰርዙ?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === "en"
+                  ? "This action cannot be undone."
+                  : "ይህ እርምጃ ወደ ኋላ አይመለስም።"}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{language === "en" ? "Cancel" : "ይቅር"}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {language === "en" ? "Delete" : "ሰርዝ"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </section>
   )

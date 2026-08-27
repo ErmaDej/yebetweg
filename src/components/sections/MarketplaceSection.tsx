@@ -22,6 +22,7 @@ import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { FilterPanel, useActiveFilterCount } from "@/components/search/FilterPanel"
 import { useInView } from "@/hooks/useInView"
+import { useAuthContext } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
 import { sanitizeText } from "@/lib/validation"
 import { useNavigate } from "react-router-dom"
@@ -58,6 +59,7 @@ function InquiryModal({
   listingTitle: string;
 }) {
   const { language, t } = useLanguage()
+  const { user } = useAuthContext()
   const [inquirySent, setInquirySent] = useState(false)
   const [inquiryError, setInquiryError] = useState("")
   const [inquiryData, setInquiryData] = useState({ name: "", phone: "" })
@@ -67,9 +69,12 @@ function InquiryModal({
       return
     }
 
+    const inquiryEmail =
+      user?.email || `${inquiryData.phone.replace(/\D/g, "")}@phone.yebetweg.local`
+
     const { error } = await supabase.from("inquiries").insert({
       name: sanitizeText(inquiryData.name, 100),
-      email: "marketplace@yebetweg.com",
+      email: inquiryEmail,
       phone: inquiryData.phone,
       subject: `Inquiry for ${listingTitle}`,
       message: `Inquiry from ${inquiryData.name} - Phone: ${inquiryData.phone}`,

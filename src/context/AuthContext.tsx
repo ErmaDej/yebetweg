@@ -9,43 +9,11 @@ interface AuthContextProps {
   loading: boolean
   error: string | null
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>
-  signUp: (email: string, password: string, fullName?: string, role?: string) => Promise<{ error?: string }>
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error?: string }>
   updatePassword: (newPassword: string) => Promise<{ error?: string }>
   clearError: () => void
-}
-
-const CUSTOM_AUTH_USER_KEY = "yebetweg-custom-auth-user"
-
-function loadCustomAuthUser(): User | null {
-  if (typeof window === "undefined") return null
-
-  try {
-    const stored = window.localStorage.getItem(CUSTOM_AUTH_USER_KEY)
-    if (!stored) return null
-    return JSON.parse(stored) as User
-  } catch {
-    return null
-  }
-}
-
-function saveCustomAuthUser(user: User) {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.setItem(CUSTOM_AUTH_USER_KEY, JSON.stringify(user))
-  } catch {
-    // Ignore storage failures
-  }
-}
-
-function clearCustomAuthUser() {
-  if (typeof window === "undefined") return
-  try {
-    window.localStorage.removeItem(CUSTOM_AUTH_USER_KEY)
-  } catch {
-    // Ignore storage failures
-  }
 }
 
 export const AuthContext = createContext<AuthContextProps>({
@@ -76,30 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initAuth() {
       try {
-        // First check for custom auth (seeded users)
-        const storedCustomUser = loadCustomAuthUser()
         const {
           data: { session: currentSession },
         } = await supabase.auth.getSession()
         if (!isMounted) return
 
-        if (currentSession) {
-          setSession(currentSession)
-          setUser(currentSession.user)
-          clearCustomAuthUser()
-        } else if (storedCustomUser) {
-          setSession(null)
-          setUser(storedCustomUser)
-        } else {
-          setSession(null)
-          setUser(null)
-        }
-
-        // No return here, allow the onAuthStateChange listener to handle subsequent state updates.
-        // If there\"s an active session, the listener will be triggered right after this.
-        // If there\"s no session, user and session will be null, and loading will be false.
-      } catch (e: any) {
-        if (isMounted) setError(e.message)
+        setSession(currentSession)
+        setUser(currentSession?.user ?? null)
+      } catch (e: unknown) {
+        if (isMounted) setError(e instanceof Error ? e.message : String(e))
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -111,14 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription: authSubscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!isMounted) return
-      if (currentSession) {
-        setSession(currentSession)
-        setUser(currentSession.user)
-        clearCustomAuthUser()
-      } else if (!loadCustomAuthUser()) {
-        setSession(null)
-        setUser(null)
-      }
+      setSession(currentSession)
+      setUser(currentSession?.user ?? null)
       setLoading(false)
     })
 
@@ -128,60 +75,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-
   async function signInWithPassword(email: string, password: string) {
     setLoading(true)
     setError(null)
     try {
-      // Try Supabase auth first
       const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (!error) {
-        setSession(data.session)
-        setUser(data.session?.user ?? null)
-        clearCustomAuthUser()
-        return {}
+      if (error) {
+        setError(error.message)
+        return { error: error.message }
       }
 
-      // If Supabase auth fails, try custom user authentication via RPC
-      const { data: authResult, error: rpcError } = await supabase.rpc("login", {
-        p_email: email,
-        p_password: password,
-      })
-
-      if (rpcError || !authResult?.success) {
-        setError(error.message || rpcError?.message || "Invalid email or password")
-        return { error: error.message || rpcError?.message || "Invalid email or password" }
-      }
-
-      // Create a mock session/user object from RPC result for custom auth
-      const customUser = {
-        id: authResult.user_id,
-        email: email,
-        user_metadata: {
-          username: authResult.username,
-          role: authResult.role,
-          full_name: authResult.username,
-        },
-        aud: "authenticated",
-        role: "authenticated",
-      }
-      setUser(customUser as any)
-      setSession(null)
-      saveCustomAuthUser(customUser as any)
+      setSession(data.session)
+      setUser(data.session?.user ?? null)
       return {}
-    } catch (e: any) {
-      setError(e.message)
-      return { error: e.message }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg)
+      return { error: msg }
     } finally {
       setLoading(false)
     }
   }
 
-  async function signUp(email: string, password: string, fullName?: string, role: string = "user") {
+  async function signUp(email: string, password: string, fullName?: string) {
     setLoading(true)
     setError(null)
     try {
@@ -191,7 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             full_name: fullName,
-            role: role, // Assign role during signup
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -202,11 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setSession(data.session)
       setUser(data.session?.user ?? null)
-      clearCustomAuthUser()
       return {}
-    } catch (e: any) {
-      setError(e.message)
-      return { error: e.message }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg)
+      return { error: msg }
     } finally {
       setLoading(false)
     }
@@ -216,11 +135,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     try {
       await supabase.auth.signOut()
-      clearCustomAuthUser()
       setSession(null)
       setUser(null)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
@@ -238,9 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error.message }
       }
       return {}
-    } catch (e: any) {
-      setError(e.message)
-      return { error: e.message }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg)
+      return { error: msg }
     } finally {
       setLoading(false)
     }
@@ -258,9 +177,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error.message }
       }
       return {}
-    } catch (e: any) {
-      setError(e.message)
-      return { error: e.message }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg)
+      return { error: msg }
     } finally {
       setLoading(false)
     }
