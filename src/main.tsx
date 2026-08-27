@@ -6,6 +6,7 @@ import App from "./App.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { LanguageProvider } from "@/lib/i18n.tsx"
 import { AuthProvider } from "@/context/AuthContext.tsx"
+import { QueryProvider } from "@/lib/queryClient.tsx"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 createRoot(document.getElementById("root")!).render(
@@ -14,7 +15,9 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <ThemeProvider defaultTheme="light">
           <LanguageProvider>
-            <App />
+            <QueryProvider>
+              <App />
+            </QueryProvider>
           </LanguageProvider>
         </ThemeProvider>
       </AuthProvider>

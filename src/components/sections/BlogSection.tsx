@@ -213,7 +213,15 @@ export function BlogSection() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const { blogs, loading, total } = useBlogs(category, page, BLOGS_PER_PAGE, serverQuery)
+  const { data: blogsData, isLoading: loading } = useBlogs({
+    category,
+    page,
+    pageSize: BLOGS_PER_PAGE,
+    searchQuery: serverQuery,
+  })
+
+  const blogs = blogsData?.data ?? []
+  const total = blogsData?.total ?? 0
 
   // Client-side smart search for blogs
   const blogSearchFields = useMemo(() => ["title_en", "title_am", "content", "category", "author"] as (keyof Blog)[], [])

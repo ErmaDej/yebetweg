@@ -125,13 +125,16 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
 
   // While searching the hook returns the full match set (page pinned to 1);
   // otherwise it server-paginates.
-  const { tips, loading, total } = useTips(
-    selectedCategory,
-    isSearching ? 1 : page,
-    TIPS_PER_PAGE,
-    serverQuery,
-    premiumFilter
-  )
+  const { data: tipsData, isLoading: loading } = useTips({
+    category: selectedCategory,
+    page: isSearching ? 1 : page,
+    pageSize: TIPS_PER_PAGE,
+    searchQuery: serverQuery,
+    isPremium: premiumFilter,
+  })
+
+  const tips = tipsData?.data ?? []
+  const total = tipsData?.total ?? 0
 
   const visibleTips = isSearching
     ? tips.slice((page - 1) * TIPS_PER_PAGE, page * TIPS_PER_PAGE)
@@ -218,7 +221,7 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
 
         {/* Category & Premium filter badges */}
         <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {tipCategories.slice(0, 10).map((cat) => (
+          {(tipCategories.data?.slice(0, 10) ?? []).map((cat: string) => (
             <Badge
               key={cat}
               variant={selectedCategory === cat ? "default" : "outline"}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { sanitizeSearchTerm, orIlike } from "@/lib/searchUtils"
 
@@ -15,91 +15,80 @@ export type Tip = {
 
 const SEARCH_FETCH_CAP = 200
 
-export function useTips(
-  category?: string,
+function fetchTips({
+  category,
   page = 1,
   pageSize = 6,
-  searchQuery?: string,
+  searchQuery,
+  isPremium,
+}: {
+  category?: string
+  page?: number
+  pageSize?: number
+  searchQuery?: string
   isPremium?: boolean
-) {
-  const [tips, setTips] = useState<Tip[]>([])
-  const [loading, setLoading] = useState(true)
-  const [total, setTotal] = useState(0)
+}) {
+  return async () => {
+    const term = sanitizeSearchTerm(searchQuery ?? "")
 
-  useEffect(() => {
-    let cancelled = false
+    let query = supabase
+      .from("tips")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
 
-    async function fetchTips() {
-      setLoading(true)
-      const term = sanitizeSearchTerm(searchQuery ?? "")
-
-      let query = supabase
-        .from("tips")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-
-      if (category && category !== "all") {
-        query = query.eq("category", category)
-      }
-      if (isPremium !== undefined) {
-        query = query.eq("is_premium", isPremium)
-      }
-
-      if (term) {
-        // Search mode: fetch the full server-side match set so pagination
-        // operates across every page of the results, not just one.
-        query = query.or(orIlike(["title_en", "title_am"], term))
-        query = query.range(0, SEARCH_FETCH_CAP - 1)
-      } else {
-        const from = (page - 1) * pageSize
-        const to = from + pageSize - 1
-        query = query.range(from, to)
-      }
-
-      const { data, error, count } = await query
-      if (cancelled) return
-      if (!error && data) {
-        setTips(data as Tip[])
-        setTotal(count ?? 0)
-      } else {
-        if (error) console.warn("[useTips] fetch failed:", error.message)
-        setTips([])
-        setTotal(0)
-      }
-      setLoading(false)
+    if (category && category !== "all") {
+      query = query.eq("category", category)
     }
-    fetchTips()
-
-    return () => {
-      cancelled = true
+    if (isPremium !== undefined) {
+      query = query.eq("is_premium", isPremium)
     }
-  }, [category, page, pageSize, searchQuery, isPremium])
 
-  return { tips, loading, total }
+    if (term) {
+      query = query.or(orIlike(["title_en", "title_am"], term))
+      query = query.range(0, SEARCH_FETCH_CAP - 1)
+    } else {
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      query = query.range(from, to)
+    }
+
+    const { data, error, count } = await query
+    if (error) throw error
+    return { data: data as Tip[], total: count ?? 0 }
+  }
 }
 
-// Distinct tip categories for filter chips. The tips table is small, so a
-// single lightweight column select is enough to build the facet list.
+export function useTips({
+  category,
+  page = 1,
+  pageSize = 6,
+  searchQuery,
+  isPremium,
+}: {
+  category?: string
+  page?: number
+  pageSize?: number
+  searchQuery?: string
+  isPremium?: boolean
+}) {
+  return useQuery({
+    queryKey: ["tips", category, page, pageSize, searchQuery, isPremium],
+    queryFn: fetchTips({ category, page, pageSize, searchQuery, isPremium }),
+    placeholderData: (prev) => prev,
+  })
+}
+
+// Distinct tip categories for filter chips
 export function useTipCategories() {
-  const [categories, setCategories] = useState<string[]>([])
-
-  useEffect(() => {
-    let cancelled = false
-    supabase
-      .from("tips")
-      .select("category")
-      .then(({ data }) => {
-        if (cancelled || !data) return
-        setCategories(
-          Array.from(new Set(data.map((row) => row.category).filter(Boolean)))
-            .sort()
-            .map(String)
-        )
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return categories
+  return useQuery({
+    queryKey: ["tip-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tips").select("category")
+      if (error) throw error
+      return Array.from(new Set(data.map((row) => row.category).filter(Boolean)))
+        .sort()
+        .map(String)
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+  })
 }

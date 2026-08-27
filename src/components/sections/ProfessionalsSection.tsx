@@ -293,12 +293,15 @@ export function ProfessionalsSection() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const { professionals, loading, total } = useProfessionals(
+  const { data: prosData, isLoading: loading } = useProfessionals({
     specialty,
     page,
-    PROFESSIONALS_PER_PAGE,
-    serverQuery
-  )
+    pageSize: PROFESSIONALS_PER_PAGE,
+    searchQuery: serverQuery,
+  })
+
+  const professionals = prosData?.data ?? []
+  const total = prosData?.total ?? 0
 
   // Client-side smart search for professionals
   const smartSearch = useSmartSearch<Professional>({
@@ -373,7 +376,7 @@ export function ProfessionalsSection() {
         type: "select" as const,
         placeholder: language === "en" ? "All locations" : "ሁሉም ቦታዎች",
         options: Array.from(
-          new Set(professionals.map((p) => p.location).filter(Boolean))
+          new Set(professionals.map((p: Professional) => p.location).filter(Boolean))
         )
           .sort()
           .slice(0, 40)

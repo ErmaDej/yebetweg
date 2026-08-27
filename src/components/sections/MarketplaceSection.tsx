@@ -290,7 +290,15 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const { listings, loading, total } = useListings(tab, page, LISTINGS_PER_PAGE, serverQuery)
+  const { data: listingsData, isLoading: loading } = useListings({
+    listingType: tab,
+    page,
+    pageSize: LISTINGS_PER_PAGE,
+    searchQuery: serverQuery,
+  })
+
+  const listings = listingsData?.data ?? []
+  const total = listingsData?.total ?? 0
 
   // Client-side smart search for listings
   const smartSearch = useSmartSearch<Listing>({
@@ -361,7 +369,8 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
         label: language === "en" ? "Location" : "ቦታ",
         type: "select" as const,
         placeholder: language === "en" ? "All locations" : "ሁሉም ቦታዎች",
-        options: Array.from(new Set(listings.map((l) => l.location).filter(Boolean)))
+        options: Array.from(
+          new Set(listings.map((l: Listing) => l.location).filter(Boolean)))
           .sort()
           .slice(0, 40)
           .map((v) => ({ value: v as string, label: v as string })),
