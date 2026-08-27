@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { callEdge, EdgeError } from "./edge"
 
 export interface InitializePaymentParams {
   amount: number
@@ -33,26 +33,17 @@ export interface VerifyPaymentResult {
 }
 
 export async function initializeChapaPayment(
-  params: InitializePaymentParams,
+  params: InitializePaymentParams
 ): Promise<InitializePaymentResult> {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return { success: false, error: "Payment service is not configured" }
-    }
-
-    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/chapa-service`
-    const response = await fetch(serviceUrl, {
+    const data = await callEdge<{
+      success: boolean
+      checkoutUrl?: string
+      reference?: string
+      error?: string
+    }>("chapa-service", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
-      },
-      body: JSON.stringify({
+      body: {
         amount: params.amount,
         currency: "ETB",
         email: params.email,
@@ -66,13 +57,11 @@ export async function initializeChapaPayment(
           description: "Premium membership",
         },
         ...(params.subscription ? { subscription: params.subscription } : {}),
-      }),
+      },
     })
 
-    const data = await response.json()
-
-    if (!response.ok || !data.success) {
-      return { success: false, error: typeof data.error === "string" ? data.error : `Service error: ${response.status}` }
+    if (!data.success) {
+      return { success: false, error: typeof data.error === "string" ? data.error : "Service error" }
     }
 
     return {
@@ -81,74 +70,67 @@ export async function initializeChapaPayment(
       reference: data.reference,
     }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Network error" }
+    const msg =
+      error instanceof EdgeError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Network error"
+    return { success: false, error: msg }
   }
 }
 
 export async function verifyChapaPayment(txRef: string): Promise<VerifyPaymentResult> {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    const { data: { session } } = await supabase.auth.getSession()
+    const data = await callEdge<{ success: boolean; status?: string; error?: string }>(
+      "chapa-service",
+      {
+        method: "GET",
+        query: { tx_ref: txRef },
+      }
+    )
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return { success: false, error: "Payment service is not configured" }
-    }
-
-    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/chapa-service?tx_ref=${encodeURIComponent(txRef)}`
-    const response = await fetch(serviceUrl, {
-      method: "GET",
-      headers: {
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
-      },
-    })
-
-    const data = await response.json()
-    if (!response.ok || !data.success) {
-      return { success: false, error: typeof data.error === "string" ? data.error : `Verify error: ${response.status}` }
+    if (!data.success) {
+      return { success: false, error: typeof data.error === "string" ? data.error : "Verify error" }
     }
 
     return { success: true, status: data.status }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Network error" }
+    const msg =
+      error instanceof EdgeError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Network error"
+    return { success: false, error: msg }
   }
 }
 
 export async function activateChapaPayment(txRef: string): Promise<VerifyPaymentResult> {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return { success: false, error: "Payment service is not configured" }
-    }
-
-    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/chapa-service`
-    const response = await fetch(serviceUrl, {
+    const data = await callEdge<{ success: boolean; error?: string }>("chapa-service", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
-      },
-      body: JSON.stringify({ action: "activate", tx_ref: txRef }),
+      body: { action: "activate", tx_ref: txRef },
     })
 
-    const result = await response.json()
-    if (!response.ok || !result.success) {
-      return { success: false, error: typeof result.error === "string" ? result.error : "Activation failed" }
+    if (!data.success) {
+      return { success: false, error: typeof data.error === "string" ? data.error : "Activation failed" }
     }
 
     return { success: true, status: "success" }
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : "Network error" }
+    const msg =
+      error instanceof EdgeError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Network error"
+    return { success: false, error: msg }
   }
 }
 
 export function formatAmount(amount: number): string {
-  return new Intl.NumberFormat("en-ET", {
+  return new Intl.NumberFormat("en", {
     style: "currency",
     currency: "ETB",
     minimumFractionDigits: 2,

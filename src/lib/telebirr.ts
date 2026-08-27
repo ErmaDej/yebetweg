@@ -1,8 +1,8 @@
-import { supabase } from "@/lib/supabase"
-
 // TeleBirr is proxied through the Supabase Edge Function `telebirr-service`,
 // which holds the merchant private key and signs requests server-side. The
 // client only needs the Supabase URL/anon key — never TeleBirr credentials.
+import { callEdge, EdgeError } from "./edge"
+
 export interface InitializeTeleBirrPaymentParams {
   amount: number
   reference: string
@@ -23,7 +23,7 @@ export interface InitializeTeleBirrResult {
 }
 
 export async function initializeTeleBirrPayment(
-  params: InitializeTeleBirrPaymentParams,
+  params: InitializeTeleBirrPaymentParams
 ): Promise<InitializeTeleBirrResult> {
   try {
     if (!params.amount || params.amount <= 0) {
@@ -33,25 +33,16 @@ export async function initializeTeleBirrPayment(
       return { success: false, error: "Invalid reference" }
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return { success: false, error: "Payment service is not configured" }
-    }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    const serviceUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/telebirr-service`
-    const response = await fetch(serviceUrl, {
+    const data = await callEdge<{
+      success: boolean
+      checkoutUrl?: string
+      prepayId?: string
+      reference?: string
+      rawRequest?: string
+      error?: string
+    }>("telebirr-service", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseAnonKey,
-        Authorization: `Bearer ${session?.access_token || supabaseAnonKey}`,
-      },
-      body: JSON.stringify({
+      body: {
         amount: params.amount,
         reference: params.reference,
         notifyUrl: params.notifyUrl,
@@ -59,25 +50,11 @@ export async function initializeTeleBirrPayment(
         subject: params.subject,
         description: params.description,
         phoneNumber: params.phoneNumber,
-      }),
+      },
     })
 
-    const rawText = await response.text()
-    let data: any
-    try {
-      data = JSON.parse(rawText)
-    } catch {
-      return {
-        success: false,
-        error: `Service error: HTTP ${response.status}`,
-      }
-    }
-
-    if (!response.ok || !data.success) {
-      return {
-        success: false,
-        error: data.error || `Service error: ${response.status}`,
-      }
+    if (!data.success) {
+      return { success: false, error: data.error || "Service error" }
     }
 
     return {
@@ -88,13 +65,13 @@ export async function initializeTeleBirrPayment(
       rawRequest: data.rawRequest,
     }
   } catch (error) {
-    return {
-      success: false,
-      error:
-        error instanceof Error
+    const msg =
+      error instanceof EdgeError
+        ? error.message
+        : error instanceof Error
           ? `Network error: ${error.message}`
-          : "Network error occurred while initializing payment",
-    }
+          : "Network error occurred while initializing payment"
+    return { success: false, error: msg }
   }
 }
 

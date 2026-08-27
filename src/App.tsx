@@ -25,6 +25,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { getActivePlan } from "@/lib/entitlements"
 import { scrollToAnchor } from "@/lib/navigation"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 function HomePage() {
   const { profile } = useUserProfile()
@@ -120,14 +121,59 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePageWrapper />} />
-        <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-        <Route path="/search" element={<MainLayout><SearchResults /></MainLayout>} />
-        <Route path="/payment/success" element={<PaymentSuccessPage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        {/* Legacy hash-based routes redirect to home with hash for backward compatibility */}
-        <Route path="/:legacy*" element={<Navigate to="/" replace />} />
+        <Route
+          path="/"
+          element={
+            <ErrorBoundary>
+              <HomePageWrapper />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ErrorBoundary>
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ErrorBoundary>
+              <MainLayout>
+                <SearchResults />
+              </MainLayout>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/payment/success"
+          element={
+            <ErrorBoundary>
+              <PaymentSuccessPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/auth/callback"
+          element={
+            <ErrorBoundary>
+              <AuthCallbackPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <ErrorBoundary>
+              <ResetPasswordPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

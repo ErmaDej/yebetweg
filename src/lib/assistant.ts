@@ -1,8 +1,7 @@
 import { profileStrength } from "@/lib/entitlements"
 import type { UserProfile } from "@/hooks/useUserProfile"
 import type { PremiumTier } from "@/types/payment"
-
-export type Language = "en" | "am"
+import type { Language } from "@/lib/i18n"
 
 export type AssistantContext = {
   openRfqs: number
