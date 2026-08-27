@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, type LucideIcon } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { AdminDashboardTab } from "./AdminDashboardTab"
 import { Progress } from "@/components/ui/progress"
@@ -52,6 +52,7 @@ export function Dashboard() {
   } = useDashboardData(profile?.id ?? null)
 
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
 
   const handleEditClick = () => {
     if (!profile) return
@@ -92,7 +93,7 @@ export function Dashboard() {
 
   const handleSignOut = async () => {
     await signOut()
-    navigateTo("/")
+    navigate("/")
   }
 
   const roleKey = useMemo(() => roleKeyFor(profile, subscription), [profile, subscription?.tier])
@@ -171,10 +172,10 @@ export function Dashboard() {
 
   const actionHandlers: Record<QuickActionKey, () => void> = {
     submitRfq: () => setRfqModalOpen(true),
-    market: () => navigateTo("/#market"),
-    marketplace: () => navigateTo("/#marketplace"),
-    professionals: () => navigateTo("/#professionals"),
-    upgrade: () => navigateTo("/#premium"),
+    market: () => navigate("/#market"),
+    marketplace: () => navigate("/#marketplace"),
+    professionals: () => navigate("/#professionals"),
+    upgrade: () => navigate("/#premium"),
     adminConsole: () => setActiveTab("admin"),
     reviewContent: () => setActiveTab("admin"),
   }
@@ -249,7 +250,7 @@ export function Dashboard() {
                     : `መገለጫዎን ያጠናቅቁ: ${profileGaps.map((k) => PROFILE_FIELD_LABELS[k]?.am || k).join(", ")}`}
                 </button>
               )}
-               <Button className="mt-4 w-full gap-2" onClick={() => navigateTo(accessCta.target)}>
+                <Button className="mt-4 w-full gap-2" onClick={() => navigate(accessCta.target)}>
                  <Sparkles className="h-4 w-4" />
                  {accessCta.label}
                </Button>
@@ -742,7 +743,7 @@ export function Dashboard() {
                       <div className="grid grid-cols-1 gap-3 pt-2">
                         {roleKey === "user" && (
                           <Button
-                            onClick={() => navigateTo("/#premium")}
+                            onClick={() => navigate("/#premium")}
                             className="gap-2"
                             variant="default"
                           >
@@ -752,7 +753,7 @@ export function Dashboard() {
                         )}
                         {roleKey === "premium" && (
                           <Button
-                            onClick={() => navigateTo("/#premium")}
+                            onClick={() => navigate("/#premium")}
                             className="gap-2"
                             variant="default"
                           >
@@ -761,7 +762,7 @@ export function Dashboard() {
                           </Button>
                         )}
                         {roleKey !== "user" && (
-                          <Button onClick={() => navigateTo("/#premium")} variant="outline" className="gap-2">
+                          <Button onClick={() => navigate("/#premium")} variant="outline" className="gap-2">
                             <ArrowRight className="h-4 w-4" />
                             {t("dashboard.subscription.manage")}
                           </Button>
@@ -794,7 +795,7 @@ export function Dashboard() {
                           ? "Upgrade to unlock premium features and exclusive content."
                           : "ፕሪሚየም ባህሪዎችን እና ብቸኛ ይዘትን ለመክፈት ዝቅ አድርግ።"}
                       </p>
-                      <Button onClick={() => navigateTo("/#premium")} className="gap-2">
+                      <Button onClick={() => navigate("/#premium")} className="gap-2">
                         <Crown className="h-4 w-4" />
                         {language === "en" ? "Choose a Plan" : "እቅድ ይምረጡ"}
                       </Button>

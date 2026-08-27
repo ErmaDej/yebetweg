@@ -24,7 +24,7 @@ import { FilterPanel, useActiveFilterCount } from "@/components/search/FilterPan
 import { useInView } from "@/hooks/useInView"
 import { supabase } from "@/lib/supabase"
 import { sanitizeText } from "@/lib/validation"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import { CreateListingForm } from "./CreateListingForm"
 import { RfqModal, type RfqContext } from "./RfqModal"
 import type { PremiumTier } from "@/types/payment"
@@ -152,6 +152,7 @@ function ListingCard({ listing, index, canContact, onRequestQuote }: {
   canContact: boolean
   onRequestQuote: (ctx: RfqContext) => void
 }) {
+  const navigate = useNavigate()
   const { language, t } = useLanguage()
   const title = language === "am" ? listing.title_am : listing.title_en
   const [contactOpen, setContactOpen] = useState(false)
@@ -242,7 +243,7 @@ function ListingCard({ listing, index, canContact, onRequestQuote }: {
               size="sm"
               variant="outline"
               className="gap-2"
-              onClick={() => navigateTo("/#premium")}
+              onClick={() => navigate("/#premium")}
             >
               <Lock className="h-3.5 w-3.5" />
               {language === "en" ? "Unlock contact" : "ግንኙነት ይክፈቱ"}

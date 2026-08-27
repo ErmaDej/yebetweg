@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Globe, LayoutDashboard, LogOut, Menu, UserCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -16,7 +17,6 @@ import { useLanguage } from "@/lib/i18n"
 import { useAuthContext } from "@/context/AuthContext"
 import { AuthSheet } from "@/components/layout/AuthSheet"
 import { cn } from "@/lib/utils"
-import { navigateTo } from "@/lib/navigation"
 import { YeBetWegLogoMarkOnly } from "@/components/icons/logo-image"
 
 const navLinks = [
@@ -32,6 +32,7 @@ const navLinks = [
 export function Navbar() {
   const { t, language, setLanguage } = useLanguage()
   const { user, signOut } = useAuthContext()
+  const navigate = useNavigate()
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
@@ -44,20 +45,24 @@ export function Navbar() {
 
   const goToDashboard = () => {
     setMobileOpen(false)
-    navigateTo("/dashboard")
+    navigate("/dashboard")
   }
 
   const goToSection = (href: string) => {
     setMobileOpen(false)
     const hash = href.startsWith("#") ? href : `#${href}`
-    const path = window.location.pathname === "/" ? hash : `/${hash}`
-    navigateTo(path)
+    // If on home page, just update hash; otherwise navigate to home with hash
+    if (window.location.pathname === "/") {
+      window.location.hash = hash
+    } else {
+      navigate(`/${hash}`)
+    }
   }
 
   const handleSignOut = async () => {
     await signOut()
     setMobileOpen(false)
-    navigateTo("/")
+    navigate("/")
   }
 
   return (
@@ -101,7 +106,7 @@ export function Navbar() {
           <SmartSearchBar
             query=""
             onQueryChange={(q) => {
-              if (q.trim()) navigateTo(`/search?q=${encodeURIComponent(q)}`)
+              if (q.trim()) navigate(`/search?q=${encodeURIComponent(q)}`)
             }}
             compact
           />

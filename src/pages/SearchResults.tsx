@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useSearch, useAdvancedFilter, type SearchFilters } from "@/hooks/useSearch"
 import { useLanguage } from "@/lib/i18n"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,7 @@ const PRICE_MAX = 10000
 
 export function SearchResults() {
   const { language } = useLanguage()
+  const navigate = useNavigate()
   const { results, loading, error, totalCount, search, clearSearch } = useSearch()
   const { filters, updateFilter, resetFilters } = useAdvancedFilter()
   const [showFilters, setShowFilters] = useState(false)
@@ -297,8 +298,8 @@ export function SearchResults() {
                     className="block w-full text-left"
                     onClick={() =>
                       result.url
-                        ? navigateTo(result.url)
-                        : scrollToHomeSection(result.type)
+                        ? navigate(result.url)
+                        : navigate(scrollToHomeSection(result.type))
                     }
                   >
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
@@ -405,5 +406,5 @@ function scrollToHomeSection(type: string) {
     professional: "/#professionals",
     price: "/#market",
   }
-  navigateTo(anchors[type] ?? "/")
+  return anchors[type] ?? "/"
 }

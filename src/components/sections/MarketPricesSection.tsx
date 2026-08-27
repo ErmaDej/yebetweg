@@ -18,7 +18,7 @@ import { useMarketPrices, type MarketPrice } from "@/hooks/useMarketPrices"
 import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import type { PremiumTier } from "@/types/payment"
 import { RfqModal } from "./RfqModal"
 
@@ -74,6 +74,7 @@ function getFreshnessVariant(status?: string) {
 }
 
 export function MarketPricesSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
+  const navigate = useNavigate()
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const { data: prices, isLoading: fetchLoading } = useMarketPrices(category)
@@ -390,7 +391,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                     </p>
                     <Button
                       className="bg-accent text-accent-foreground hover:bg-accent/90"
-                      onClick={() => navigateTo("/#premium")}
+                      onClick={() => navigate("/#premium")}
                     >
                       {t("premium.choosePlan")}
                     </Button>

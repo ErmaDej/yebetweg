@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select"
 import { useInView } from "@/hooks/useInView"
 import { useLanguage } from "@/lib/i18n"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import { RfqModal, type RfqContext } from "./RfqModal"
 
 type ProjectType = "residential" | "apartment" | "commercial" | "renovation"
@@ -127,6 +127,7 @@ function formatEtb(value: number) {
 }
 
 export function BoqLiteSection() {
+  const navigate = useNavigate()
   const { language } = useLanguage()
   const { ref, isInView } = useInView()
   const text = labels[language]
@@ -304,7 +305,7 @@ export function BoqLiteSection() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <Button className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigateTo("/#premium")}>
+                <Button className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigate("/#premium")}>
                   <FileText className="h-4 w-4" />
                   <span>{text.export}</span>
                 </Button>
@@ -321,7 +322,7 @@ export function BoqLiteSection() {
                   <Send className="h-4 w-4" />
                   <span>{text.rfq}</span>
                 </Button>
-                <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight sm:col-span-2 xl:col-span-1" onClick={() => navigateTo("/#professionals")}>
+                <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight sm:col-span-2 xl:col-span-1" onClick={() => navigate("/#professionals")}>
                   <ShieldCheck className="h-4 w-4" />
                   <span>{text.review}</span>
                 </Button>

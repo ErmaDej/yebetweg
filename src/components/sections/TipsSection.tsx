@@ -16,7 +16,7 @@ import { useLanguage } from "@/lib/i18n"
 import { useTips, useTipCategories } from "@/hooks/useTips"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import type { PremiumTier } from "@/types/payment"
 
 const TIPS_PER_PAGE = 9
@@ -40,6 +40,7 @@ const iconMap: Record<string, any> = {
 }
 
 function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canReadPremium: boolean }) {
+  const navigate = useNavigate()
   const { language, t } = useLanguage()
   const title = language === "am" ? tip.title_am : tip.title_en
   const IconComponent = iconMap[tip.icon] || Shield
@@ -59,7 +60,7 @@ function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canR
           <Button
             size="sm"
             className="bg-accent text-accent-foreground hover:bg-accent/90"
-            onClick={() => navigateTo("/#premium")}
+            onClick={() => navigate("/#premium")}
           >
             {t("premium.choosePlan")}
           </Button>

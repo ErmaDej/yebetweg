@@ -24,8 +24,8 @@ import { useInView } from "@/hooks/useInView"
 import { usePayment } from "@/hooks/usePayment"
 import { validateEthiopianPhoneNumber } from "@/lib/telebirr"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import type { Subscription } from "@/types/payment"
-import { navigateTo } from "@/lib/navigation"
 
 type PremiumTier = "free" | "premium" | "pro"
 
@@ -118,6 +118,7 @@ export function PremiumSection({
   const { t, language } = useLanguage()
   const { ref, isInView } = useInView()
   const { loading, error, initiatePayment, tierPrices } = usePayment()
+  const navigate = useNavigate()
   const [selectedTier, setSelectedTier] = useState<PremiumTier | null>(null)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
@@ -264,7 +265,7 @@ export function PremiumSection({
                       <Button
                         className="w-full mt-6"
                         variant="outline"
-                        onClick={() => navigateTo("/#market")}
+                        onClick={() => navigate("/#market")}
                       >
                         {t("premium.getStarted")}
                       </Button>
@@ -336,7 +337,7 @@ export function PremiumSection({
                 <Button
                   variant="outline"
                   className="gap-2 w-full sm:w-auto"
-                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "chapa") : navigateTo("/dashboard")}
+                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "chapa") : navigate("/dashboard")}
                 >
                   <CreditCard className="h-4 w-4" />
                   {activePlan === "free" ? (language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ") : (language === "en" ? "Manage from dashboard" : "ከዳሽቦርድ ያስተዳድሩ")}
@@ -344,7 +345,7 @@ export function PremiumSection({
                 {enableTeleBirr && (
                   <Button
                     className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigateTo("/dashboard")}
+                    onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigate("/dashboard")}
                   >
                     <Smartphone className="h-4 w-4" />
                     {activePlan === "free" ? (language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ") : (language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ")}
