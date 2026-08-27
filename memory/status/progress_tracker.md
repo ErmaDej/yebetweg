@@ -21,6 +21,7 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Aug 26, 2026 — **Auth consolidation + Batch D** (`aac32f4`): removed mock-user + RPC login + client role; `edge` + `useUserProfile` cleaned; `useSiteLogs` early return, `SiteLogSection` AlertDialog + mobile-visible delete + `max=today`; `useVerification` interval ref leak fixed; fake inquiry emails → real/placeholder; `AdsSection` button-in-anchor fixed. typecheck/build/tests green
 - [x] Aug 26, 2026 — **Phase 2 batch: centralized edge API + error boundaries + dead-weight cleanup**: `edge.ts` single entry-point (timeout/abort, EdgeError), `api/chapa/telebirr` refactored, `<Toaster>` + per-route `ErrorBoundary`, `crypto-js` removed, `Language` deduped, `PaymentHookResult` removed, package renamed, favicon/og:image fixed. typecheck/build/tests green (`b960ab9`)
 - [x] Aug 26, 2026 — **Phase 2: React Router migration**: `App.tsx` `BrowserRouter` + 6 routes with per-route boundaries; `navigateTo` → `useNavigate` in 9 files (Navbar, Dashboard, etc.); `handleSignOut` restored; `useBlogs` now options-object API. (`5e3dc3a`)
 - [x] Aug 26, 2026 — **Phase 2: TanStack Query migration** across all 5 data hooks (Tips, Blogs, Listings, Professionals, Market Prices), `QueryProvider` installed, all sections wired to new typed shape. typecheck/test(11)/build green (`7c0e771`)
@@ -49,10 +50,11 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Phase 2 remaining (queued per owner: auth last):** `Phase 2: Consolidate auth` — retire localStorage mock-user + `login` RPC fallback + client-supplied `role` at signup (needs seed migration for legacy `BYG123` accounts; keep as next dedicated batch).
-2. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank (tracker, dev plan, changelog).
-3. On Phase 2 completion: PR `dev`→`main`, tag `phase-2-complete`, then Phase 3 Data Trust (BOQ persistence, server-side premium gating, price freshness cron).
-4. Phase 1 Batch D still open if you want it before Phase 2 auth: SiteLog unfiltered fetch + hover-only delete, `useVerification` timer leak, fake inquiry emails, `AdsSection` `<button>` in `<a>`.
+1. **Phase 2 remaining:** dead-weight sweep (chart lib duplication decision, `FilterPanel`/`InquiryModal` adoption if wanted) + repo hygiene (seed `BYG123` Supabase migration for legacy accounts) — optional polish before `phase-2-complete` tag.
+2. **Phase 3 Data Trust:** BOQ persistence (`boq_estimates` table + save/load/share), server-side premium gating (currently blur-only), price freshness `expired` cron + admin badge, admin model alignment (ads `raw_app_meta_data` → `public.users.role`, destructive confirm dialogs).
+3. **Phase 4 UI/UX & Accessibility:** Amharic copy pass (many `am` strings are garbled MT), per-form `Label htmlFor` + `aria-label` on icon-only buttons, mobile search in Sheet, fabricated-stats honesty pass (`Hero` counters, ticker, trust score).
+4. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
+5. On Phase 2 completion: PR `dev`→`main`, tag `phase-2-complete`, then Phase 3.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — checklist in `memory/security/project_rules.md`

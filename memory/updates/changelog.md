@@ -25,6 +25,13 @@
 - PWA or native app work
 
 ## Changelog
+### August 26, 2026 — Auth consolidation + Batch D (SiteLog, verification, inquiries, Ads)
+- `AuthContext`: removed `CUSTOM_AUTH_USER_KEY` + localStorage mock-user + `login` RPC fallback + `role` param at signup (now Supabase-only); `edge.ts`: removed `_customUserId` injection; `useUserProfile`: removed synthetic `provider:"local"` profile for custom auth (now returns null when no session)
+- `useSiteLogs`: early return when `!userId` (no longer fetches all rows when logged out); `SiteLogSection`: delete button now `opacity-60 sm:opacity-0...` (visible on touch), `AlertDialog` confirm, New Entry disabled when logged out with title, date `max=today` + local-noon conversion
+- `useVerification`: `intervalRef` + `clearTimer` + `phoneRef` + `useEffect` cleanup (fixes stacked intervals and unmount leak)
+- `MarketplaceSection`/`ProfessionalsSection`: `marketplace@`/`hire@` fake emails → `user.email` or `phone@yebetweg.local`; `AdsSection`: fixed `<button>` inside `<a>` in `native_card` by splitting into separate anchors
+- Verified: typecheck ✓ · build ✓ · tests 11/11 ✓ (`aac32f4`)
+
 ### August 26, 2026 — Phase 2: centralized edge API, error boundaries, dead weight cleanup
 - `supabase.ts` now exports `supabaseUrl`/`supabaseAnonKey` centrally; new `lib/edge.ts` `callEdge()` is the single edge-function entry-point (timeout 15s + abort, safe JSON, `EdgeError`, centralized `_customUserId` injection until auth consolidation)
 - `lib/api.ts` now thin wrappers over `callEdge`; `lib/chapa.ts` + `lib/telebirr.ts` refactored to `callEdge` (3 duplicated fetch blocks each removed), `formatAmount` locale `en-ET` → `en` fixed
