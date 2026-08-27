@@ -21,6 +21,7 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Aug 26, 2026 — **Phase 3 BOQ + premium gating** (`2984daa`): `boq_estimates` table + `useBoqEstimates` + Save (canonical city) + Dashboard card; `get_visible_*` RPCs + `refresh_market_price_freshness` + ads admin fix; `useMarketPrices` RPC-preferred. typecheck/build green — migrations pending user apply
 - [x] Aug 26, 2026 — **Auth consolidation + Batch D** (`aac32f4`): removed mock-user + RPC login + client role; `edge` + `useUserProfile` cleaned; `useSiteLogs` early return, `SiteLogSection` AlertDialog + mobile-visible delete + `max=today`; `useVerification` interval ref leak fixed; fake inquiry emails → real/placeholder; `AdsSection` button-in-anchor fixed. typecheck/build/tests green
 - [x] Aug 26, 2026 — **Phase 2 batch: centralized edge API + error boundaries + dead-weight cleanup**: `edge.ts` single entry-point (timeout/abort, EdgeError), `api/chapa/telebirr` refactored, `<Toaster>` + per-route `ErrorBoundary`, `crypto-js` removed, `Language` deduped, `PaymentHookResult` removed, package renamed, favicon/og:image fixed. typecheck/build/tests green (`b960ab9`)
 - [x] Aug 26, 2026 — **Phase 2: React Router migration**: `App.tsx` `BrowserRouter` + 6 routes with per-route boundaries; `navigateTo` → `useNavigate` in 9 files (Navbar, Dashboard, etc.); `handleSignOut` restored; `useBlogs` now options-object API. (`5e3dc3a`)
@@ -50,11 +51,11 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Phase 2 remaining:** dead-weight sweep (chart lib duplication decision, `FilterPanel`/`InquiryModal` adoption if wanted) + repo hygiene (seed `BYG123` Supabase migration for legacy accounts) — optional polish before `phase-2-complete` tag.
-2. **Phase 3 Data Trust:** BOQ persistence (`boq_estimates` table + save/load/share), server-side premium gating (currently blur-only), price freshness `expired` cron + admin badge, admin model alignment (ads `raw_app_meta_data` → `public.users.role`, destructive confirm dialogs).
-3. **Phase 4 UI/UX & Accessibility:** Amharic copy pass (many `am` strings are garbled MT), per-form `Label htmlFor` + `aria-label` on icon-only buttons, mobile search in Sheet, fabricated-stats honesty pass (`Hero` counters, ticker, trust score).
-4. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
-5. On Phase 2 completion: PR `dev`→`main`, tag `phase-2-complete`, then Phase 3.
+1. **Apply pending migrations** (same manual step as blogs fix): `20260827000000_boq_estimates.sql` + `20260827000001_market_price_gating_and_freshness.sql` via Supabase dashboard SQL editor (until then `useBoqEstimates` and `get_visible_*` degrade gracefully).
+2. **Phase 2 wrap (optional polish):** chart-lib duplication decision + seed `BYG123` Supabase migration for legacy accounts — then `phase-2-complete` tag + `dev`→`main` PR.
+3. **Phase 3 remaining:** admin destructive confirms already done for SiteLog (Batch D) — add to `AdminDashboardTab` content delete if desired; BOQ share permalink (`/boq/:id`) and Dashboard deep-link.
+4. **Phase 4 UI/UX & Accessibility:** Amharic copy pass (many `am` strings are garbled MT), per-form `Label htmlFor` + `aria-label` on icon-only buttons, mobile search in Sheet, fabricated-stats honesty pass (`Hero` counters, ticker, trust score).
+5. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — checklist in `memory/security/project_rules.md`

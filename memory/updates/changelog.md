@@ -25,6 +25,14 @@
 - PWA or native app work
 
 ## Changelog
+### August 26, 2026 — Phase 3: BOQ persistence + premium gating + freshness (pending migration apply)
+- `20260827000000_boq_estimates.sql`: `boq_estimates` (user_id FK users, inputs/outputs jsonb, RLS via `users.auth_uid`, indexes, `updated_at` trigger)
+- `useBoqEstimates` (TanStack Query, graceful 42P01) + `BoqLiteSection` Save (canonical `city` key, `cityLabel` separate), toast + count badge, Dashboard Saved BOQ Estimates card (delete with confirm)
+- Fixed `BoqLiteSection` → `RfqModal` DB pollution: `city: labels[language][city]` → `city: city`
+- `20260827000001_market_price_gating_and_freshness.sql`: `get_visible_market_prices`/`get_visible_tips` (premium gating via `premium_subscriptions`), `refresh_market_price_freshness` (7-day expiry), ads admin policy fix (`users.role`); `useMarketPrices` now prefers RPC (premium-gated) with fallback
+- Dashboard: Saved BOQ Estimates card (`Calculator` + `Badge` + delete)
+- Verified: typecheck ✓ · build ✓ — migrations pending user `supabase db push` / dashboard (code degrades gracefully until applied) (`2984daa`)
+
 ### August 26, 2026 — Auth consolidation + Batch D (SiteLog, verification, inquiries, Ads)
 - `AuthContext`: removed `CUSTOM_AUTH_USER_KEY` + localStorage mock-user + `login` RPC fallback + `role` param at signup (now Supabase-only); `edge.ts`: removed `_customUserId` injection; `useUserProfile`: removed synthetic `provider:"local"` profile for custom auth (now returns null when no session)
 - `useSiteLogs`: early return when `!userId` (no longer fetches all rows when logged out); `SiteLogSection`: delete button now `opacity-60 sm:opacity-0...` (visible on touch), `AlertDialog` confirm, New Entry disabled when logged out with title, date `max=today` + local-noon conversion
