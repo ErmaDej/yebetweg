@@ -22,8 +22,28 @@ export type MarketPrice = {
   access_level?: "free" | "premium"
 }
 
+async function fetchViaRpc(category?: string): Promise<MarketPrice[] | null> {
+  try {
+    const { data, error } = await supabase.rpc("get_visible_market_prices")
+    if (error) return null
+    const rows = (data as MarketPrice[]) ?? []
+    if (!category || category === "all") return rows
+    return rows.filter((r) => r.category === category)
+  } catch {
+    return null
+  }
+}
+
 function fetchMarketPrices({ category }: { category?: string }) {
   return async () => {
+    // Prefer server-side premium-gated RPC (Phase 3). Falls back to direct select when migration pending.
+    const rpcRows = await fetchViaRpc(category)
+    if (rpcRows !== null) {
+      // Best-effort freshness refresh (no-op if function missing or already fresh)
+      supabase.rpc("refresh_market_price_freshness").then(() => {}, () => {})
+      return rpcRows
+    }
+
     let query = supabase
       .from("market_prices")
       .select("*")

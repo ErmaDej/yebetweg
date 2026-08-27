@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Calculator, FileText, Send, ShieldCheck, TrendingUp } from "lucide-react"
+import { Bookmark, Calculator, FileText, Loader2, Send, ShieldCheck, TrendingUp } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +17,9 @@ import { useInView } from "@/hooks/useInView"
 import { useLanguage } from "@/lib/i18n"
 import { useNavigate } from "react-router-dom"
 import { RfqModal, type RfqContext } from "./RfqModal"
+import { useAuthContext } from "@/context/AuthContext"
+import { useBoqEstimates, useCreateBoqEstimate } from "@/hooks/useBoqEstimates"
+import { toast } from "sonner"
 
 type ProjectType = "residential" | "apartment" | "commercial" | "renovation"
 type City = "addis_ababa" | "adama" | "hawassa" | "bahir_dar" | "mekelle" | "dire_dawa" | "outside_addis"
@@ -138,6 +141,29 @@ export function BoqLiteSection() {
   const [floors, setFloors] = useState(2)
   const [contingency, setContingency] = useState(10)
   const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
+  const { user } = useAuthContext()
+  const { data: savedEstimates } = useBoqEstimates()
+  const createEstimate = useCreateBoqEstimate()
+
+  const handleSave = async () => {
+    try {
+      await createEstimate.mutateAsync({
+        inputs: {
+          projectType,
+          city, // canonical key — never the localized label
+          cityLabel: text[city],
+          area,
+          floors,
+          finishLevel,
+          contingency,
+        },
+        outputs: estimate,
+      })
+      toast.success(language === "en" ? "Estimate saved" : "ግምት ተቀምጧል")
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save estimate")
+    }
+  }
 
   const estimate = useMemo(() => {
     const safeArea = Math.max(area || 0, 20)
@@ -304,8 +330,25 @@ export function BoqLiteSection() {
                 ))}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <Button className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigate("/#premium")}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight"
+                  onClick={handleSave}
+                  disabled={createEstimate.isPending || !user}
+                  title={!user ? (language === "en" ? "Sign in to save" : "ለማስቀመጥ ይግቡ") : undefined}
+                >
+                  {createEstimate.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Bookmark className="h-4 w-4" />
+                  )}
+                  <span>
+                    {language === "en" ? "Save estimate" : "ግምት አስቀምጥ"}
+                    {savedEstimates && savedEstimates.length > 0 ? ` (${savedEstimates.length})` : ""}
+                  </span>
+                </Button>
+                <Button className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigate("/dashboard")}>
                   <FileText className="h-4 w-4" />
                   <span>{text.export}</span>
                 </Button>
@@ -315,14 +358,14 @@ export function BoqLiteSection() {
                     itemName: `${text[projectType]} - ${text[city]}`,
                     specification: text[finishLevel],
                     targetPrice: estimate.total,
-                    city: labels[language][city] || "Addis Ababa",
+                    city: city,
                     projectType: projectType,
                   })
                 }>
                   <Send className="h-4 w-4" />
                   <span>{text.rfq}</span>
                 </Button>
-                <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight sm:col-span-2 xl:col-span-1" onClick={() => navigate("/#professionals")}>
+                <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigate("/#professionals")}>
                   <ShieldCheck className="h-4 w-4" />
                   <span>{text.review}</span>
                 </Button>
