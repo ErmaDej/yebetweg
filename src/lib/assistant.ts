@@ -83,7 +83,7 @@ const FAQS: FaqIntent[] = [
     am: ["የዋጋ ጥያቄ", "የዋጋ ጥያቄዎች"],
     answer: (ctx, language) =>
       language === "am"
-        ? `አሁን በሂዎ የዋጋ ጥያቄዎች ${ctx.openRfqs} አሉ። የዋጋ ጥያቄዎች በ1 የሥራ ቀን ውስጥ ይተግበርታል፣ እና ሊሰጥዎ የተሰጠ ማረጫ ከሆነ በቀይር ይὈምልዎታል።`
+        ? `አሁን በሂዎ የዋጋ ጥያቄዎች ${ctx.openRfqs} አሉ። የዋጋ ጥያቄዎች በ1 የሥራ ቀን ውስጥ ይተግበርታል፣ እና ሊሰጥዎ የተሰጠ ማረጫ ከሆነ በቀይር ይሰጣል።`
         : ctx.openRfqs === 0
           ? "You have no open RFQs yet. Go to the RFQ Tracking card and click 'Submit RFQ' to send your first request for quotation."
           : `You have ${ctx.openRfqs} open RFQ${ctx.openRfqs === 1 ? "" : "s"}. They're reviewed within 1 business day, and you'll get a notification when suppliers respond. You can track status on the RFQ Tracking card.`,
@@ -169,12 +169,12 @@ export function answerQuestion(
     }
   }
 
-  return {
-    role: "assistant",
-    key: "fallback",
-    content:
-      language === "am"
-        ? "እኔ ለዋጋ ጥያቄዎች፣ የግምገማ ጥንኩር፣ የገበያ ዋጋ፣ BOQ እና ባለሙያዎች ጥያቄ ልክ ነው ማይደሱት። እንዴት ጥያቄ አሉዎት?"
-        : "I can help with your RFQs, profile strength, market prices, BOQ estimates, and finding professionals. What would you like to know?",
-  }
+return {
+      role: "assistant",
+      key: "fallback",
+      content:
+        language === "am"
+          ? "እኔ ለዋጋ ጥያቄዎች፣ የግምገማ ጥንኩር፣ የገበያ ዋጋ፣ BOQ እና ባለሙያዎች ጥያቄ ልክ ነው የማይደርሱት። እንዴት ጥያቄ አሉዎት?"
+          : "I can help with your RFQs, profile strength, market prices, BOQ estimates, and finding professionals. What would you like to know?",
+    }
 }
