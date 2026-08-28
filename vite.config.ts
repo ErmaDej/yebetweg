@@ -26,7 +26,7 @@ export default defineConfig({
           'vendor-supabase': ['@supabase/supabase-js'],
           // Feature chunks
           'feature-dashboard': ['./src/pages/Dashboard.tsx', './src/hooks/useDashboardData.ts', './src/components/assistant/AssistantCard.tsx'],
-          'feature-payment': ['./src/pages/PaymentPage.tsx', './src/pages/PaymentSuccessPage.tsx', './src/lib/chapa.ts', './src/lib/telebirr.ts', './src/hooks/usePayment.ts'],
+          'feature-payment': ['./src/pages/PaymentPage.tsx', './src/pages/PaymentSuccessPage.tsx', './src/lib/chapa.ts', './src/hooks/usePayment.ts'],
           'feature-marketplace': ['./src/components/sections/MarketplaceSection.tsx', './src/components/sections/RfqModal.tsx', './src/hooks/useListings.ts'],
           'feature-professionals': ['./src/components/sections/ProfessionalsSection.tsx', './src/hooks/useProfessionals.ts'],
           'feature-boq': ['./src/components/sections/BoqLiteSection.tsx', './src/hooks/useBoqEstimates.ts', './src/hooks/useCityMultipliers.ts'],

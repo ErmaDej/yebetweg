@@ -25,6 +25,17 @@
 - PWA or native app work
 
 ## Changelog
+### August 28, 2026 — Phase 7 finalization (TeleBirr removal + PremiumSection cleanup)
+- TeleBirr completely removed from codebase: `src/lib/telebirr.ts` (already deleted), edge functions `telebirr-service/` + `telebirr-webhook/` (already deleted), `tests/telebirr.test.mjs` (deleted)
+- `PremiumSection.tsx` rewritten Chapa-only: removed all TeleBirr UI/logic, fixed "Get Started" button (disabled for signed-in users, sign-up redirect for unsigned users)
+- `usePayment.ts` cleaned: removed unused `createSubscriptionRecord`, `phoneNumber` param, `supabase` import
+- `useUserProfile.ts`: removed `telebirr_reference` from SubscriptionRow mapping
+- `PaymentPage.tsx` rewritten Chapa-only
+- `vite.config.ts`: removed `telebirr.ts` from manualChunks
+- `i18n.tsx`: updated Amharic payment strings to remove TeleBirr references
+- D3 deferral register entry closed (TeleBirr permanently removed, not frozen)
+- Verified: typecheck ✓ · build ✓ · tests ✓
+
 ### August 26, 2026 — Phase 7 wrap — phase-7-complete
 - SEO: sitemap.xml, manifest.json, Open Graph/Twitter cards, hreflang, canonical, robots
 - PWA: manifest.json, service worker (cache-first for assets, network-first for HTML), manifest.json with shortcuts
