@@ -59,8 +59,11 @@ serve(async (req: Request) => {
         .join("")
 
       if (signature !== expectedSignature) {
-        // Log the failed verification but still process (for development)
-        console.warn("Webhook signature mismatch. Expected:", expectedSignature, "Got:", signature)
+        console.error("Webhook signature mismatch. Expected:", expectedSignature, "Got:", signature)
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        })
       }
     }
 

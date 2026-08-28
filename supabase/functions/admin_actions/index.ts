@@ -69,22 +69,6 @@ serve(async (req) => {
     }
   }
 
-  // Fallback: custom auth via _customUserId in request body
-  if (!adminUserId) {
-    const customUserId = body?._customUserId
-    if (customUserId) {
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("id, role, status")
-        .eq("id", customUserId)
-        .single()
-
-      if (!profileError && profile && profile.role === "admin" && profile.status === "active") {
-        adminUserId = profile.id
-      }
-    }
-  }
-
   if (!adminUserId) {
     return jsonResponse({ error: "Unauthorized or insufficient permissions" }, 401)
   }
