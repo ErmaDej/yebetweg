@@ -1,0 +1,54 @@
+{
+  "name": "YeBetWeg",
+  "short_name": "YeBetWeg",
+  "description": "Ethiopia's leading construction knowledge platform — BOQ estimator, market prices, marketplace, and professionals directory",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/Logo1x.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Logo2x.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Logo3x.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "BOQ Estimator",
+      "short_name": "BOQ",
+      "description": "Estimate construction costs",
+      "url": "/#boq",
+      "icons": [{ "src": "/Logo2x.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Market Prices",
+      "short_name": "Prices",
+      "description": "Live construction material prices",
+      "url": "/#market",
+      "icons": [{ "src": "/Logo2x.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Professionals",
+      "short_name": "Pros",
+      "description": "Find verified professionals",
+      "url": "/#professionals",
+      "icons": [{ "src": "/Logo2x.png", "sizes": "192x192" }]
+    }
+  ]
+}
