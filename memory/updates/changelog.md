@@ -25,6 +25,15 @@
 - PWA or native app work
 
 ## Changelog
+### August 26, 2026 — Phase 7 wrap — phase-7-complete
+- SEO: sitemap.xml, manifest.json, Open Graph/Twitter cards, hreflang, canonical, robots
+- PWA: manifest.json, service worker (cache-first for assets, network-first for HTML), manifest.json with shortcuts
+- Analytics: useAnalytics hook (event + funnel tracking, offline queue), useErrorReporting (error boundary + unhandled rejection), API endpoints (event, funnel, error)
+- Performance: vite.config.ts code splitting (vendor chunks, feature chunks), sourcemap, CSS code splitting, chunkSizeWarningLimit
+- Vercel: vercel.json (edge functions, security headers, rewrites, SPA fallback)
+- index.html: SEO meta, manifest.json, sitemap.xml, hreflang, preconnect
+- Verified: typecheck ✓ · build ✓ · tests 11/11 ✓ (22523ff → 1107c3d)
+
 ### August 26, 2026 — Phase 6 wrap to main — phase-6-complete (6122716)
 - Merged `dev` → `main` (`8d0e163`); tag `phase-6-complete` (`6122716`) pushed.
 - Phase 6 Pre-Launch Hardening Gate:

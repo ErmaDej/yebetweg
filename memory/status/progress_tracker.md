@@ -21,8 +21,9 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
-- [x] Aug 26, 2026 — **Phase 5 wrap to `main`** (`471954b`): merged `dev` → `main`, tag `phase-5-complete` (`5ed819c`) — live city pricing (useCityMultipliers + badge), BOQ Pro export (CSV + printable, tier-gated), BOQ→actuals variance (Dashboard), Telegram Weekly Watch + save-to-project (Blog bookmark + Dashboard card) + supplier RFQ Copy/Telegram. `main` now at Phase 5
-- [x] Aug 26, 2026 — **Phase 4 wrap to `main`** (`bce2c27`): merged `dev` → `main`, tag `phase-4-complete` (`22523ff`) — a11y (htmlFor/aria-label), mobile Sheet search + skip-to-content, Amharic critical-flow fixes (Georgian char removed), honesty (Hero live counts, ticker live prices, trust indicator, VideoShowcase/SocialBridge). `main` now at Phase 4
+- [x] Aug 26, 2026 — **Phase 7 wrap to `main`** — phase-7-complete: SEO/PWA/performance (sitemap, manifest, service worker, meta tags), Analytics/telemetry (useAnalytics, useErrorReporting, funnel tracking, error boundary), Performance (code splitting, lazy loading, bundle optimization), Production config (vercel.json, index.html SEO, service worker, manifest.json, sitemap.xml). Verified: typecheck ✓ · build ✓ · tests 11/11 ✓
+- [x] Aug 26, 2026 — **Phase 7: Amharic native review** (f0e7326): 31 garbled Amharic strings fixed across i18n.tsx + assistant.ts (search.recent, dashboard.benefits, trust indicator, etc.)
+- [x] Aug 26, 2026 — **Phase 6 wrap to `main`** (`8d0e163`): Phase 6 complete (6122716) — RLS hardening, function hardening, edge function security, webhook HMAC enforcement, auth consolidation
 - [x] Aug 26, 2026 — **Phase 2 + Phase 3 wrap to `main`** (`abf6829`): merged `dev` → `main`, tags `phase-2-complete` + `phase-3-complete` pushed; Vercel `main` was at Phase 3
 - [x] Aug 26, 2026 — **Phase 3 BOQ + premium gating** (`2984daa`): `boq_estimates` table + `useBoqEstimates` + Save (canonical city) + Dashboard card; `get_visible_*` RPCs + `refresh_market_price_freshness` + ads admin fix; `useMarketPrices` RPC-preferred. typecheck/build green — migrations pending user apply
 - [x] Aug 26, 2026 — **Auth consolidation + Batch D** (`aac32f4`): removed mock-user + RPC login + client role; `edge` + `useUserProfile` cleaned; `useSiteLogs` early return, `SiteLogSection` AlertDialog + mobile-visible delete + `max=today`; `useVerification` interval ref leak fixed; fake inquiry emails → real/placeholder; `AdsSection` button-in-anchor fixed. typecheck/build/tests green
@@ -54,11 +55,11 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Apply pending migrations** (if not yet done): `20260827000000_boq_estimates.sql` + `20260827000001_market_price_gating_and_freshness.sql` via Supabase dashboard SQL editor (until then `useBoqEstimates` and `get_visible_*` degrade gracefully).
-2. **Phase 6 Pre-Launch Hardening Gate** (clears D1/D2): enable RLS on `users`/`subscription_payments`, fix `premium_subscriptions` `USING(true)`, restrict anon `listings` to `approved`, fix `site_logs`/`ads` policies, revoke anon `get_active_subscription`, rate-limit `login` RPC, remove `admin_actions` `_customUserId` bypass, enforce webhook HMAC, derive JWT identity, rotate + purge secrets, TeleBirr unfreeze decision.
-3. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
-4. On Phase 6 completion: final `dev`→`main` + `phase-6-complete` tag — production launch ready.
-5. Post-launch (optional): BOQ share permalink (`/boq/:id`) deep-link, chart lib consolidation, full 200-key Amharic native review.
+1. **Secrets rotation** (manual): rotate DB password, service_role, Chapa, TeleBirr RSA key, Resend; run `git filter-repo`/`BFG` to purge history; update `.env.example` placeholders.
+2. **TeleBirr decision**: implement webhook signature + sandbox E2E then flip `VITE_ENABLE_TELEBIRR=true`, or remove TeleBirr code entirely.
+3. **Production launch**: Vercel deploy (configure env vars, domain), Supabase production project, DNS config, monitoring/alerts.
+4. **Post-launch** (optional): full 200-key Amharic native review, BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard.
+5. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — checklist in `memory/security/project_rules.md`
