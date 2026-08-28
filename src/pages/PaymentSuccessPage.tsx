@@ -25,7 +25,7 @@ export function PaymentSuccessPage() {
         setStatus("failed")
         setMessage(
           language === "am"
-            ? "የክፍያ መረጃ አግኝተዋል"
+            ? "የክፍያ መለያ አልተገኘም"
             : "Payment reference not found"
         )
         return
@@ -36,7 +36,7 @@ export function PaymentSuccessPage() {
         setStatus("success")
         setMessage(
           language === "am"
-            ? "ክፍያዎ በተሳካይ ተጠናቅል"
+            ? "ክፍያ በተሳካ ሁኔታ ተጠናቋል"
             : "Payment completed successfully"
         )
         return
@@ -49,7 +49,7 @@ export function PaymentSuccessPage() {
         setStatus("success")
         setMessage(
           language === "am"
-            ? "ክፍያዎ በተሳካይ ተጠናቅል"
+            ? "ክፍያ በተሳካ ሁኔታ ተጠናቋል"
             : "Payment completed successfully"
         )
       } else {
@@ -72,11 +72,11 @@ export function PaymentSuccessPage() {
           <>
             <Loader2 className="h-16 w-16 animate-spin mx-auto text-accent" />
             <h1 className="text-2xl font-bold">
-              {language === "am" ? "ክፍያ በመፈጠም" : "Processing Payment"}
+              {language === "am" ? "ክፍያ በማረጋገጥ ላይ" : "Processing Payment"}
             </h1>
             <p className="text-muted-foreground">
               {language === "am"
-                ? "ክፍያዎን እንደምንም መሰረታዊ ለማረጋገጥ እንደምንም እናጋጠመዎታለን"
+                ? "ክፍያዎን እያረጋገጥን ነው፣ እባክዎ ይጠብቁ..."
                 : "We are verifying your payment, please wait..."}
             </p>
           </>
@@ -86,7 +86,7 @@ export function PaymentSuccessPage() {
           <>
             <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
             <h1 className="text-2xl font-bold text-green-600">
-              {language === "am" ? "ክፍያ በተሳካይ ተጠናቅል" : "Payment Successful"}
+              {language === "am" ? "ክፍያ ተሳክቷል" : "Payment Successful"}
             </h1>
             <p className="text-muted-foreground">{message}</p>
             <p className="text-sm text-muted-foreground">

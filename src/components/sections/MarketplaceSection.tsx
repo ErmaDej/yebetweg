@@ -126,16 +126,20 @@ function InquiryModal({
                   <p className="text-xs text-destructive">{inquiryError}</p>
                 )}
                 <div className="space-y-2">
-                  <Label>{t("contact.name")}</Label>
+                  <Label htmlFor={`inquiry-name-${listingId}`}>{t("contact.name")}</Label>
                   <Input
+                    id={`inquiry-name-${listingId}`}
+                    aria-label={t("contact.name")}
                     placeholder={language === "en" ? "Your name" : "ስምዎ"}
                     value={inquiryData.name}
                     onChange={(e) => setInquiryData({ ...inquiryData, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("contact.phone")}</Label>
+                  <Label htmlFor={`inquiry-phone-${listingId}`}>{t("contact.phone")}</Label>
                   <Input
+                    id={`inquiry-phone-${listingId}`}
+                    aria-label={t("contact.phone")}
                     placeholder="+251..."
                     value={inquiryData.phone}
                     onChange={(e) => setInquiryData({ ...inquiryData, phone: e.target.value })}

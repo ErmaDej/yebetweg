@@ -37,7 +37,7 @@ function HomePage() {
       <Navbar />
       <FloatingSocialBar />
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <HeroSection />
 
         <VideoShowcaseSection />
@@ -88,7 +88,9 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      {children}
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
       <Footer />
     </div>
   )
@@ -98,7 +100,9 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <ProtectedRoute>{children}</ProtectedRoute>
+      <main id="main-content" tabIndex={-1}>
+        <ProtectedRoute>{children}</ProtectedRoute>
+      </main>
       <Footer />
     </div>
   )

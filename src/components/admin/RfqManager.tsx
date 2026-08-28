@@ -46,11 +46,11 @@ const statusColors: Record<string, "default" | "secondary" | "outline" | "destru
 
 const statusLabels: Record<string, { en: string; am: string }> = {
   new: { en: "New", am: "አዲስ" },
-  reviewing: { en: "Reviewing", am: "ያጠᙙመው" },
-  sent_to_supplier: { en: "Sent to supplier", am: "አላቸገ ለደረሰኛ" },
-  quoted: { en: "Quoted", am: "የቋሚ መረጡ" },
-  closed: { en: "Closed", am: "ዝግጁ" },
-  spam: { en: "Spam", am: "ስፖም" },
+  reviewing: { en: "Reviewing", am: "በግምገማ ላይ" },
+  sent_to_supplier: { en: "Sent to supplier", am: "ወደ አቅራቢ ተልኳል" },
+  quoted: { en: "Quoted", am: "ዋጋ ተሰጥቷል" },
+  closed: { en: "Closed", am: "ተዘግቷል" },
+  spam: { en: "Spam", am: "አላስፈላጊ" },
 }
 
 function statusLabel(status: string, language: string): string {
@@ -169,7 +169,7 @@ export function RfqManager() {
             className="max-w-xs"
           />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-32" aria-label={language === "en" ? "Filter by status" : "በሁኔታ አጣራ"}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -180,8 +180,8 @@ export function RfqManager() {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchRfqs} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        <Button variant="ghost" size="sm" onClick={fetchRfqs} disabled={loading} aria-label={language === "en" ? "Refresh RFQs" : "የዋጋ ጥያቄዎችን አድስ"}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
         </Button>
       </div>
 
@@ -202,7 +202,7 @@ export function RfqManager() {
            <div className={`flex gap-2 mb-2 p-2 bg-accent/5 border rounded ${isMobile ? "flex-col" : "items-center"}`}>
             <span className="text-sm">{selectedRfqs.length} {language === "en" ? "selected" : "ተመረጡ ሲሆን"}</span>
             <Select onValueChange={handleBulkRfqStatus} defaultValue="">
-              <SelectTrigger className="h-7 w-36 text-xs">
+              <SelectTrigger className="h-7 w-36 text-xs" aria-label={language === "en" ? "Bulk change RFQ status" : "የቡድን የዋጋ ጥያቄ ሁኔታ ቀይር"}>
                 <SelectValue placeholder={language === "en" ? "Apply status…" : "ሁኔታ አትይ…"} />
               </SelectTrigger>
               <SelectContent>
@@ -225,12 +225,17 @@ export function RfqManager() {
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 shrink-0">
+                      <Label htmlFor={`rfq-select-${rfq.id}`} className="sr-only">
+                        {language === "en" ? `Select RFQ from ${rfq.requester_name}` : `የዋጋ ጥያቄ ከ ${rfq.requester_name} ምረጥ`}
+                      </Label>
                       <Checkbox
+                        id={`rfq-select-${rfq.id}`}
                         checked={selectedRfqs.includes(rfq.id)}
                         onCheckedChange={(checked) => {
                           setSelectedRfqs(checked ? [...selectedRfqs, rfq.id] : selectedRfqs.filter((i) => i !== rfq.id))
                         }}
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={language === "en" ? `Select RFQ from ${rfq.requester_name}` : `የዋጋ ጥያቄ ከ ${rfq.requester_name} ምረጥ`}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -248,7 +253,7 @@ export function RfqManager() {
                         onValueChange={(v) => handleStatusChange(rfq.id, v)}
                         onOpenChange={(open) => { if (open) setSelectedRfq(rfq) }}
                       >
-                        <SelectTrigger className="h-7 w-24 text-[10px]">
+                        <SelectTrigger className="h-7 w-24 text-[10px]" aria-label={language === "en" ? `Change status for ${rfq.requester_name}` : `ሁኔታ ቀይር ለ ${rfq.requester_name}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -307,7 +312,7 @@ export function RfqManager() {
                       value={selectedRfq.status}
                       onValueChange={(v) => handleStatusChange(selectedRfq.id, v)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger aria-label={language === "en" ? "Change selected RFQ status" : "የተመረጠ የዋጋ ጥያቄ ሁኔታ ቀይር"}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

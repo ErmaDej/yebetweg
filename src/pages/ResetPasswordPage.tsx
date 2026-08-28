@@ -13,7 +13,7 @@ export function ResetPasswordPage() {
           <h1 className="text-3xl font-bold">YeBetWeg</h1>
           <p className="text-lg text-muted-foreground">
             {language === "am"
-              ? "ይህን ገጽ ለመድረስ ስለ ወደ ሙከራ ወደ ሙከራ ሙከራ ወደ መግለጫ ወደ መግለጫ ሙከራ ወደ ሙከራ ሙከራ"
+              ? "ይህን ገጽ ለመድረስ በመጀመሪያ በኢሜይልዎ ላይ የተላከውን ማረጋገጫ አገናኝ መጫን ያስፈልግዎታል።"
               : "You need to verify your email first. Please click the link in your password reset email."}
           </p>
         </div>

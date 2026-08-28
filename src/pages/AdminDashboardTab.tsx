@@ -269,12 +269,12 @@ export function AdminDashboardTab() {
             <CardDescription>
               {language === "en"
                 ? "Service-role counts for RFQs, verifications, and churn risk"
-                : "የዋጋ ጥያቄዎች፣ ማረጋገጥ እና የተለየ ጊዜ ቁጥሮች"}
+                : "የዋጋ ጥያቄዎች፣ ማረጋገጫዎች እና የመልቀቂያ ስጋት ቁጥሮች"}
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={refetchSummary} disabled={summaryLoading} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${summaryLoading ? "animate-spin" : ""}`} />
-            {language === "en" ? "Refresh" : "አድሲ"}
+            {language === "en" ? "Refresh" : "አድስ"}
           </Button>
         </CardHeader>
         <CardContent>
@@ -294,15 +294,15 @@ export function AdminDashboardTab() {
             />
             <OperationalSummaryStat
               icon={UserCheck}
-              label={language === "en" ? "Pending verifications" : "በመረጃ ያሉ"}
+              label={language === "en" ? "Pending verifications" : "ማረጋገጥ የሚጠባበቁ"}
               value={summary.pendingVerifications}
               loading={summaryLoading}
             />
             <OperationalSummaryStat
               icon={TrendingUp}
-              label={language === "en" ? "Churn risk" : "የተለየ ጊዜ"}
+              label={language === "en" ? "Churn risk" : "መልቀቂያ ስጋት"}
               value={summary.churnRisk}
-              subLabel={language === "en" ? `${summary.expiringSoon} expiring soon` : `${summary.expiringSoon} በቅርብ ያል᎒ዘጠነ`}
+              subLabel={language === "en" ? `${summary.expiringSoon} expiring soon` : `${summary.expiringSoon} በቅርብ የሚያበቁ`}
               loading={summaryLoading}
             />
           </div>

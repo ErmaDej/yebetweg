@@ -74,6 +74,12 @@ export function Navbar() {
           : "bg-transparent"
       )}
     >
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+      >
+        {language === "en" ? "Skip to content" : "ወደ ዋና ይዘት ዝለል"}
+      </a>
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-3 sm:px-4 md:px-6 lg:px-8">
         <button
           type="button"
@@ -171,13 +177,25 @@ export function Navbar() {
                 <span className="sr-only">Menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-64 sm:w-72">
+            <SheetContent side="right" className="w-64 sm:w-72 overflow-y-auto">
               <SheetTitle className="flex items-center gap-2 mb-6">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0 overflow-hidden">
                   <YeBetWegLogoMarkOnly size="sm" />
                 </div>
                 <span className="font-bold text-base">YeBetWeg</span>
               </SheetTitle>
+              <div className="mb-4">
+                <SmartSearchBar
+                  query=""
+                  onQueryChange={(q) => {
+                    if (q.trim()) {
+                      setMobileOpen(false)
+                      navigate(`/search?q=${encodeURIComponent(q)}`)
+                    }
+                  }}
+                  compact
+                />
+              </div>
               <nav className="flex flex-col gap-1 mb-6">
                 {navLinks.map((link) => (
                   <button

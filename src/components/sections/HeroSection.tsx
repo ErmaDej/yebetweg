@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/lib/i18n"
 import { useInView } from "@/hooks/useInView"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/lib/supabase"
 
 function useCountUp(end: number, duration: number, start: boolean) {
   const [count, setCount] = useState(0)
@@ -35,9 +37,26 @@ export function HeroSection() {
   const [typed, setTyped] = useState("")
   const fullText = language === "en" ? "Humanity is Built" : "ቤት ይሠራ"
 
-  const members = useCountUp(10000, 2000, isInView)
-  const professionals = useCountUp(500, 2000, isInView)
-  const listings = useCountUp(2000, 2000, isInView)
+  const { data: counts } = useQuery({
+    queryKey: ["hero-stats"],
+    queryFn: async () => {
+      const [usersRes, profRes, listingsRes] = await Promise.all([
+        supabase.from("users").select("*", { count: "exact", head: true }),
+        supabase.from("professionals").select("*", { count: "exact", head: true }),
+        supabase.from("listings").select("*", { count: "exact", head: true }),
+      ])
+      return {
+        members: usersRes.count ?? 0,
+        professionals: profRes.count ?? 0,
+        listings: listingsRes.count ?? 0,
+      }
+    },
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const members = useCountUp(counts?.members ?? 0, 2000, isInView && !!counts)
+  const professionals = useCountUp(counts?.professionals ?? 0, 2000, isInView && !!counts)
+  const listings = useCountUp(counts?.listings ?? 0, 2000, isInView && !!counts)
 
   useEffect(() => {
     if (!isInView) return
@@ -134,18 +153,21 @@ export function HeroSection() {
 
           <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto">
             {[
-              { value: members, label: t("hero.stat.members"), suffix: "+" },
-              { value: professionals, label: t("hero.stat.professionals"), suffix: "+" },
-              { value: listings, label: t("hero.stat.listings"), suffix: "+" },
+              { value: members, label: t("hero.stat.members"), suffix: counts ? "+" : "" },
+              { value: professionals, label: t("hero.stat.professionals"), suffix: counts ? "+" : "" },
+              { value: listings, label: t("hero.stat.listings"), suffix: counts ? "+" : "" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                  {stat.value.toLocaleString()}{stat.suffix}
+                  {counts ? stat.value.toLocaleString() + stat.suffix : "—"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
               </div>
             ))}
           </div>
+          <p className="mt-3 text-[10px] tracking-wide text-muted-foreground/60">
+            {language === "en" ? "Live marketplace counts" : "ቀጥታ የገበያ ቆጠራ"}
+          </p>
         </div>
       </div>
 

@@ -67,10 +67,10 @@ export function PasswordResetDialog({
             {submitted
               ? language === "en"
                 ? "Check your email for password reset instructions"
-                : "የሚስጥር ቃል ዳግም ለማስጀመር መመሪያዎን ለ ኢሜይል ይመልከቱ"
+                : "የይለፍ ቃል ዳግም ለማስጀመር መመሪያውን በኢሜይል ይመልከቱ"
               : language === "en"
               ? "Enter your email address and we'll send you a link to reset your password"
-              : "የኢሜይል አድራሻዎን ያስገቡ እና ይህ የሚስጥር ቃል ዳግም ተዋወቅ ሊንክ እንልክልዎ"}
+              : "የኢሜይል አድራሻዎን ያስገቡ፣ የይለፍ ቃልዎን ዳግም ለማስጀመር አገናኝ እንልክልዎታለን"}
           </DialogDescription>
         </DialogHeader>
 
@@ -84,13 +84,13 @@ export function PasswordResetDialog({
             <p className="text-center text-sm text-muted-foreground">
               {language === "en"
                 ? `Check your email at ${email} for instructions to reset your password.`
-                : `${email} ላይ ያለውን ኢሜይል ይመልከቱ ወደ የሚስጥር ቃል ዳግም ተዋወቅ መመሪያዎን`}
+                : `በ${email} ላይ መመሪያዎችን የያዘ ኢሜይል ልከናል። እባክዎ ኢሜይልዎን ይመልከቱ።`}
             </p>
             <Button
               onClick={handleClose}
               className="w-full"
             >
-              {language === "en" ? "Done" : "ተሳክቷል"}
+              {language === "en" ? "Done" : "ተጠናቋል"}
             </Button>
           </div>
         ) : (
@@ -132,7 +132,7 @@ export function PasswordResetDialog({
                     : "በመላክ ላይ..."
                   : language === "en"
                   ? "Send Reset Link"
-                  : "ዳግም ተዋወቅ ሊንክ ይላኩ"}
+                  : "አገናኝ ላክ"}
               </Button>
             </div>
           </form>

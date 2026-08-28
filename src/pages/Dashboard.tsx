@@ -426,21 +426,21 @@ export function Dashboard() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}>
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
+              <TabsTrigger value="profile" className="flex items-center gap-2" aria-label={t("dashboard.tab.profile")}>
+                <User className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t("dashboard.tab.profile")}</span>
               </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
+              <TabsTrigger value="settings" className="flex items-center gap-2" aria-label={t("dashboard.tab.settings")}>
+                <Settings className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t("dashboard.tab.settings")}</span>
               </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Heart className="h-4 w-4" />
+              <TabsTrigger value="activity" className="flex items-center gap-2" aria-label={t("dashboard.tab.activity")}>
+                <Heart className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t("dashboard.tab.activity")}</span>
               </TabsTrigger>
               {profile.role === "admin" && (
-                <TabsTrigger value="admin" className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
+                <TabsTrigger value="admin" className="flex items-center gap-2" aria-label={t("dashboard.tab.admin")}>
+                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                   <span className="hidden sm:inline">{t("dashboard.tab.admin")}</span>
                 </TabsTrigger>
               )}

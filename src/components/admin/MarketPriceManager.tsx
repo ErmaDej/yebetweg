@@ -243,8 +243,8 @@ export function MarketPriceManager() {
             <Plus className="h-4 w-4" />
             {language === "en" ? "Add Price" : "ዋጋ ጨምር"}
           </Button>
-          <Button variant="ghost" size="sm" onClick={fetchPrices} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button variant="ghost" size="sm" onClick={fetchPrices} disabled={loading} aria-label={language === "en" ? "Refresh prices" : "ዋጋዎችን አድስ"}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -291,11 +291,11 @@ export function MarketPriceManager() {
                   </td>
                   <td className="p-2">
                     <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(price)}>
-                        <Pencil className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(price)} aria-label={language === "en" ? `Edit ${price.material_en}` : `አርትዕ ${price.material_am}`}>
+                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(price.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(price.id)} aria-label={language === "en" ? `Delete ${price.material_en}` : `ሰርዝ ${price.material_am}`}>
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
                     </div>
                   </td>

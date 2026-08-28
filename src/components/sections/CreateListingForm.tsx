@@ -134,9 +134,9 @@ export function CreateListingForm({ open, onOpenChange }: CreateListingFormProps
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{language === "en" ? "Listing Type" : "የዝርዝር አይነት"} *</Label>
+                <Label htmlFor="listing-type-trigger">{language === "en" ? "Listing Type" : "የዝርዝር አይነት"} *</Label>
                 <Select value={listingType} onValueChange={setListingType}>
-                  <SelectTrigger>
+                  <SelectTrigger id="listing-type-trigger">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -150,9 +150,9 @@ export function CreateListingForm({ open, onOpenChange }: CreateListingFormProps
               </div>
 
               <div className="space-y-2">
-                <Label>{language === "en" ? "Category" : "ምድብ"} *</Label>
+                <Label htmlFor="listing-category-trigger">{language === "en" ? "Category" : "ምድብ"} *</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger id="listing-category-trigger">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

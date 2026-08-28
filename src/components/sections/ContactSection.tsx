@@ -96,22 +96,22 @@ export function ContactSection() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>{t("contact.name")}</Label>
-                      <Input name="name" required />
+                      <Label htmlFor="contact-name">{t("contact.name")}</Label>
+                      <Input id="contact-name" name="name" required autoComplete="name" />
                     </div>
                     <div className="space-y-1.5">
-                      <Label>{t("contact.phone")}</Label>
-                      <Input name="phone" placeholder="+251..." />
+                      <Label htmlFor="contact-phone">{t("contact.phone")}</Label>
+                      <Input id="contact-phone" name="phone" placeholder="+251..." autoComplete="tel" />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{t("contact.email")}</Label>
-                    <Input name="email" type="email" required />
+                    <Label htmlFor="contact-email">{t("contact.email")}</Label>
+                    <Input id="contact-email" name="email" type="email" required autoComplete="email" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{t("contact.subject")}</Label>
+                    <Label htmlFor="contact-subject-trigger">{t("contact.subject")}</Label>
                     <Select value={subject} onValueChange={setSubject}>
-                      <SelectTrigger>
+                      <SelectTrigger id="contact-subject-trigger">
                         <SelectValue placeholder={language === "en" ? "Select subject" : "ርዕሰ ጉዳይ ይምረጡ"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -125,8 +125,8 @@ export function ContactSection() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{t("contact.message")}</Label>
-                    <Textarea name="message" rows={4} required />
+                    <Label htmlFor="contact-message">{t("contact.message")}</Label>
+                    <Textarea id="contact-message" name="message" rows={4} required />
                   </div>
                   <Button type="submit" className="w-full gap-2">
                     <Send className="h-4 w-4" />
