@@ -22,6 +22,7 @@ import type { PremiumTier } from "@/types/payment"
 import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
 import { useBoqEstimates, useDeleteBoqEstimate } from "@/hooks/useBoqEstimates"
+import { useSiteLogs } from "@/hooks/useSiteLogs"
 
 export function Dashboard() {
   const { language, t } = useLanguage()
@@ -56,6 +57,15 @@ export function Dashboard() {
   const navigate = useNavigate()
   const { data: boqEstimates = [] } = useBoqEstimates()
   const deleteBoq = useDeleteBoqEstimate()
+  const { logs: siteLogs } = useSiteLogs(profile?.id)
+  const totalEstimated = useMemo(
+    () => boqEstimates.reduce((sum, e) => sum + (Number(e.outputs?.total) || 0), 0),
+    [boqEstimates]
+  )
+  const totalActual = useMemo(
+    () => siteLogs.reduce((sum, l) => sum + (Number(l.payments) || 0), 0),
+    [siteLogs]
+  )
 
   const handleEditClick = () => {
     if (!profile) return
@@ -416,6 +426,22 @@ export function Dashboard() {
                   </Button>
                 </div>
               ))}
+              {totalActual > 0 && totalEstimated > 0 && (
+                <div className="rounded-lg bg-muted/60 p-3 text-xs">
+                  <p className="font-medium">
+                    {language === "en" ? "Estimated vs actual" : "ግምት ከ እውነተኛ ጋር"}: {totalEstimated.toLocaleString()} ETB → {totalActual.toLocaleString()} ETB
+                  </p>
+                  <p className={totalActual > totalEstimated ? "text-amber-600" : "text-emerald-600"}>
+                    {totalActual > totalEstimated
+                      ? language === "en"
+                        ? `+${((totalActual - totalEstimated) / totalEstimated * 100).toFixed(1)}% over`
+                        : `+${((totalActual - totalEstimated) / totalEstimated * 100).toFixed(1)}% በላይ`
+                      : language === "en"
+                        ? `${((totalActual - totalEstimated) / totalEstimated * 100).toFixed(1)}% under`
+                        : `${((totalActual - totalEstimated) / totalEstimated * 100).toFixed(1)}% በታች`}
+                  </p>
+                </div>
+              )}
               <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/#boq")}>
                 <Bookmark className="h-4 w-4" />
                 {language === "en" ? "Open estimator" : "ግምት መሣሪያ ክፈት"}
