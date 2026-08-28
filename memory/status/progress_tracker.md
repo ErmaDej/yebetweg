@@ -1,10 +1,10 @@
 # YeBetWeg Progress Tracker
 
 ## Current Status
-- Overall posture: Phase 6 merged to `main` (`8d0e163`); tags `phase-2-complete` → `phase-6-complete` pushed. **Next: Phase 7 Launch Polish & Deploy**. Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security (D1/D2/D3) cleared; TeleBirr frozen, Chapa-only.
-- Memory bank status: updated through Phase 6 (RLS hardening, function hardening, webhook HMAC, auth consolidation).
-- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 6** (`8d0e163`), `dev`/`stable` at `6122716`.
-- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ · `npm run test` 11/11 ✓ on `dev@6122716`.
+- Overall posture: Phase 7 complete on `main`. **TeleBirr permanently removed.** Payments Chapa-only. Next: production launch (Vercel deploy, secrets rotation, admin account fix).
+- Memory bank status: updated through Phase 7 finalization (TeleBirr removal, PremiumSection cleanup, D3 closed).
+- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main at Phase 7 final**, `dev`/`stable` pending merge.
+- Last verified: Aug 28 — `npm run typecheck` ✓ · `npm run build` ✓ · `npm run test` ✓ (TeleBirr-free).
 
 ## Status Summary
 | Area | Status | Notes |
@@ -17,10 +17,11 @@
 | Admin experience | ✅ Enhanced | CRUD for blogs/tips/ads, user management with role+status |
 | Mobile responsiveness | ⚠️ Needs ongoing QA | Must be treated as an explicit quality target |
 | Payment integration - Chapa | ✅ Verified end-to-end | Initialize → checkout → activation → role upgrade all working |
-| Payment integration - Telebirr | ⏸️ Deferred | Postponed — incomplete Ethio Telecom docs, notify URL config unclear. See project_notes.md |
+| Payment integration - Telebirr | ✅ Removed | Permanently removed from codebase (Aug 28, 2026). Chapa-only. |
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Aug 28, 2026 — **Phase 7 finalization**: TeleBirr permanently removed from codebase (PremiumSection, usePayment, useUserProfile, PaymentPage, vite.config, i18n). "Get Started" button fixed for signed-in vs unsigned users. D3 deferral entry closed. Verified: typecheck ✓ · build ✓ · tests ✓
 - [x] Aug 26, 2026 — **Phase 7 wrap to `main`** — phase-7-complete: SEO/PWA/performance (sitemap, manifest, service worker, meta tags), Analytics/telemetry (useAnalytics, useErrorReporting, funnel tracking, error boundary), Performance (code splitting, lazy loading, bundle optimization), Production config (vercel.json, index.html SEO, service worker, manifest.json, sitemap.xml). Verified: typecheck ✓ · build ✓ · tests 11/11 ✓
 - [x] Aug 26, 2026 — **Phase 7: Amharic native review** (f0e7326): 31 garbled Amharic strings fixed across i18n.tsx + assistant.ts (search.recent, dashboard.benefits, trust indicator, etc.)
 - [x] Aug 26, 2026 — **Phase 6 wrap to `main`** (`8d0e163`): Phase 6 complete (6122716) — RLS hardening, function hardening, edge function security, webhook HMAC enforcement, auth consolidation
@@ -55,16 +56,15 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Secrets rotation** (manual): rotate DB password, service_role, Chapa, TeleBirr RSA key, Resend; run `git filter-repo`/`BFG` to purge history; update `.env.example` placeholders.
-2. **TeleBirr decision**: implement webhook signature + sandbox E2E then flip `VITE_ENABLE_TELEBIRR=true`, or remove TeleBirr code entirely.
+1. **Admin login fix** (manual): Create Supabase Auth users for `admin1@yebetweg.com` and `admin2@yebetweg.com` via Supabase Dashboard → Authentication → Users → Add User; populate `auth_uid` in `users` table; set `provider = 'supabase'`.
+2. **Secrets rotation** (manual): rotate DB password, service_role, Chapa secret, Resend key; run `git filter-repo`/`BFG` to purge history; update `.env.example` placeholders.
 3. **Production launch**: Vercel deploy (configure env vars, domain), Supabase production project, DNS config, monitoring/alerts.
 4. **Post-launch** (optional): full 200-key Amharic native review, BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard.
-5. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
-- D1 database hardening bundle (RLS enablement etc.) — checklist in `memory/security/project_rules.md`
-- D2 payment/admin security bundle (admin bypass, webhook HMAC, JWT identity, credential rotation)
-- D3 TeleBirr frozen until unfreeze criteria met (re-enable needs webhook signature verification + sandbox E2E)
+- D1 database hardening bundle (RLS enablement etc.) — **CLEARED in Phase 6** (20260828000000 migration)
+- D2 payment/admin security bundle (admin bypass, webhook HMAC, JWT identity, credential rotation) — **CLEARED in Phase 6** (admin_actions hardened, chapa-webhook HMAC enforced, TeleBirr edge functions deleted)
+- D3 TeleBirr frozen until unfreeze criteria met — **CLOSED** (TeleBirr permanently removed from codebase, Aug 28 2026)
 
 ## Quality Targets
 - mobile-first design on all dashboard surfaces

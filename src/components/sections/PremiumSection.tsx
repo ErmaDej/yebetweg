@@ -1,4 +1,4 @@
-import { Check, X, Crown, Zap, CreditCard, Smartphone, Loader2, AlertCircle } from "lucide-react"
+import { Check, X, Crown, Zap, CreditCard, Loader2, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,8 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -22,10 +20,10 @@ import {
 import { useLanguage, type TranslationKey } from "@/lib/i18n"
 import { useInView } from "@/hooks/useInView"
 import { usePayment } from "@/hooks/usePayment"
-import { validateEthiopianPhoneNumber } from "@/lib/telebirr"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { Subscription } from "@/types/payment"
+import { useAuthContext } from "@/context/AuthContext"
 
 type PremiumTier = "free" | "premium" | "pro"
 
@@ -119,31 +117,23 @@ export function PremiumSection({
   const { ref, isInView } = useInView()
   const { loading, error, initiatePayment, tierPrices } = usePayment()
   const navigate = useNavigate()
+  const { user } = useAuthContext()
   const [selectedTier, setSelectedTier] = useState<PremiumTier | null>(null)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [paymentMethod, setPaymentMethod] = useState<"chapa" | "telebirr">("chapa")
 
-  const enableTeleBirr = import.meta.env.VITE_ENABLE_TELEBIRR === "true"
+  const isSignedIn = !!user
 
-  const handleChoosePlan = (tier: PremiumTier, method: "chapa" | "telebirr") => {
-    if (method === "telebirr" && !enableTeleBirr) return
+  const handleChoosePlan = (tier: PremiumTier) => {
     setSelectedTier(tier)
-    setPaymentMethod(method)
     setPaymentDialogOpen(true)
   }
 
   const handlePayment = async () => {
     if (!selectedTier) return
 
-    if (paymentMethod === "telebirr" && !phoneNumber) {
-      return
-    }
-
     const result = await initiatePayment(
       selectedTier,
-      paymentMethod,
-      paymentMethod === "telebirr" ? phoneNumber : undefined,
+      "chapa",
     )
 
     if (!result.success) {
@@ -229,46 +219,44 @@ export function PremiumSection({
                         </li>
                       ))}
                     </ul>
-{isCurrentPlan ? (
+                    {isCurrentPlan ? (
                       <Button className="w-full mt-4" variant="outline" disabled>
                         {language === "en" ? "Active" : "ንቁ"}
                       </Button>
                     ) : isPaidPlan ? (
-                      <div className="flex flex-col gap-2 mt-4">
-                        <Button
-                          className={`w-full ${
-                            tier.highlight
-                              ? "bg-accent text-accent-foreground hover:bg-accent/90"
-                              : ""
-                          }`}
-                          variant={tier.highlight ? "default" : "outline"}
-                          disabled={isLowerPlan}
-                          onClick={() => handleChoosePlan(tier.key, "chapa")}
-                        >
-                          {isLowerPlan
-                            ? language === "en" ? "Included" : "ተካቷል"
-                            : language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
-                        </Button>
-                        {enableTeleBirr && (
-                          <Button
-                            className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                            disabled={isLowerPlan}
-                            onClick={() => handleChoosePlan(tier.key, "telebirr")}
-                          >
-                            {isLowerPlan
-                              ? language === "en" ? "Included" : "ተካቷል"
-                              : language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
                       <Button
-                        className="w-full mt-6"
-                        variant="outline"
-                        onClick={() => navigate("/#market")}
+                        className={`w-full mt-4 ${
+                          tier.highlight
+                            ? "bg-accent text-accent-foreground hover:bg-accent/90"
+                            : ""
+                        }`}
+                        variant={tier.highlight ? "default" : "outline"}
+                        disabled={isLowerPlan}
+                        onClick={() => handleChoosePlan(tier.key)}
                       >
-                        {t("premium.getStarted")}
+                        {isLowerPlan
+                          ? language === "en" ? "Included" : "ተካቷል"
+                          : language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
                       </Button>
+                    ) : (
+                      isSignedIn ? (
+                        <Button
+                          className="w-full mt-4"
+                          variant="outline"
+                          disabled
+                          title={language === "en" ? "You are already signed in. Choose a plan above to upgrade." : "እዚህ ገብተዋል። ለማድረግ እቅድ በላይ ይምረጡ።"}
+                        >
+                          {t("premium.getStarted")}
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full mt-4"
+                          variant="outline"
+                          onClick={() => navigate("/auth/callback?redirect=/premium")}
+                        >
+                          {t("premium.getStarted")}
+                        </Button>
+                      )
                     )}
                   </CardContent>
                 </Card>
@@ -337,20 +325,11 @@ export function PremiumSection({
                 <Button
                   variant="outline"
                   className="gap-2 w-full sm:w-auto"
-                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "chapa") : navigate("/dashboard")}
+                  onClick={() => activePlan === "free" ? handleChoosePlan("premium") : navigate("/dashboard")}
                 >
                   <CreditCard className="h-4 w-4" />
                   {activePlan === "free" ? (language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ") : (language === "en" ? "Manage from dashboard" : "ከዳሽቦርድ ያስተዳድሩ")}
                 </Button>
-                {enableTeleBirr && (
-                  <Button
-                    className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigate("/dashboard")}
-                  >
-                    <Smartphone className="h-4 w-4" />
-                    {activePlan === "free" ? (language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ") : (language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ")}
-                  </Button>
-                )}
               </div>
             </div>
             <div className="rounded-3xl border border-border/60 bg-muted/70 p-6 shadow-sm">
@@ -358,10 +337,9 @@ export function PremiumSection({
                 {language === "en" ? "How payment works" : "ክፍያ እንዴት እንደሚሰራ"}
               </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>• {language === "en" ? "Choose your plan and payment method." : "እቅድዎን ይምረጡ እና የክፍያ ዘዴን ይምረጡ።"}</li>
-                <li>• {language === "en" ? "Chapa is ideal for online card and bank payments." : "ቻፓ ለቀርድ እና ባንክ ክፍያዎች ተስማሚ ነው።"}</li>
-                <li>• {language === "en" ? "TeleBirr offers fast mobile money checkout." : "ቴሌቢር ፈጣን የሞባይል ገንዘብ ክፍያ ይሰጣል።"}</li>
-                <li>• {language === "en" ? "Your phone number is required to complete TeleBirr payments." : "የቴሌቢር ክፍያ ለማጠናቀቅ የስልክ ቁጥርዎ ያስፈልጋል።"}</li>
+                <li>• {language === "en" ? "Choose your plan and click 'Pay with Chapa'." : "እቅድዎን ይምረጡ እና 'በቻፓ ይክፈሉ' ይጫኑ።"}</li>
+                <li>• {language === "en" ? "You will be redirected to Chapa's secure checkout." : "ወደ ቻፓ ደህንነቱ የተጠበቀ ክፍያ ገጽ ይ.masfaል።"}</li>
+                <li>• {language === "en" ? "Pay with cards, bank transfer, or mobile money." : "በካርድ፣ ባንክ ዝውውር ወይም የሞባይል ገንዘብ ይክፈሉ።"}</li>
               </ul>
             </div>
           </div>
@@ -372,10 +350,7 @@ export function PremiumSection({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {selectedTier && paymentMethod === "chapa" 
-                ? (language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ")
-                : (language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ")
-              }
+              {language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
             </DialogTitle>
             <DialogDescription>
               {selectedTier
@@ -388,73 +363,32 @@ export function PremiumSection({
             </DialogDescription>
           </DialogHeader>
 
-          <>
-            {paymentMethod === "telebirr" ? (
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    {language === "en" ? "Phone Number" : "ስልክ ቁጥር"}
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="09XXXXXXXX or +2519XXXXXXXX"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className={phoneNumber && !validateEthiopianPhoneNumber(phoneNumber) ? "border-red-500" : ""}
-                  />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      {language === "en"
-                        ? "Enter your TeleBirr registered phone number"
-                        : "የቴሌቢር ስልክ ቁጥርዎን ያስገቡ"
-                      }
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPhoneNumber("0911223344")}
-                      className="text-[11px] text-primary hover:underline"
-                    >
-                      {language === "en" ? "Use test number" : "የሙከራ ቁጥር"}
-                    </button>
-                  </div>
-                  {phoneNumber && !validateEthiopianPhoneNumber(phoneNumber) && (
-                    <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {language === "en" ? "Invalid phone number (e.g. 0911223344 or +251911223344)" : "ዋጋ በሌለው ስልክ ቁጥር"}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="py-4">
-                <p className="text-sm text-muted-foreground">
-                  {language === "en"
-                    ? "You will be redirected to Chapa to complete your payment."
-                    : "ወደ ቻፓ ለመጨረሻ የሚተማሩበትና ክፍያዎን ይጠቃሉ።"}
-                </p>
-              </div>
-            )}
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "You will be redirected to Chapa to complete your payment securely."
+                : "ወደ ቻፓ በደህንነት ክፍያዎን ይጠቃሉ።"}
+            </p>
+          </div>
 
-            {error && (
-              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2 mb-4">
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <div>{error}</div>
-              </div>
-            )}
-          </>
+          {error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2 mb-4">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>{error}</div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setPaymentDialogOpen(false)}
               disabled={loading}
             >
               {language === "en" ? "Cancel" : "ሰርዝ"}
             </Button>
-            <Button 
-              onClick={handlePayment} 
-              disabled={loading || (paymentMethod === "telebirr" && (!phoneNumber || !validateEthiopianPhoneNumber(phoneNumber)))}
+            <Button
+              onClick={handlePayment}
+              disabled={loading}
             >
               {loading ? (
                 <>

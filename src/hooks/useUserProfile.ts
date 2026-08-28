@@ -173,7 +173,6 @@ type SubscriptionRow = {
   tier: Subscription["tier"]
   payment_method: Subscription["paymentMethod"]
   chapa_reference?: string | null
-  telebirr_reference?: string | null
   starts_at: string
   expires_at: string
   is_active: boolean
@@ -189,7 +188,6 @@ function mapSubscription(row: SubscriptionRow): Subscription {
     tier: row.tier,
     paymentMethod: row.payment_method,
     chapaReference: row.chapa_reference ?? undefined,
-    telebirrReference: row.telebirr_reference ?? undefined,
     startsAt: row.starts_at,
     expiresAt: row.expires_at,
     isActive: row.is_active,

@@ -1,7 +1,7 @@
 # YeBetWeg Development Plan
 
-**Last Updated:** August 26, 2026
-**Status:** Master reference plan. Phase 0 security work is **deferred** to the Phase 6 Pre-Launch Gate (owner-approved for dev-stage velocity). Active development starts at **Phase 1 — Correctness Blitz**. Payments run **Chapa-only**; TeleBirr is frozen.
+**Last Updated:** August 28, 2026
+**Status:** Master reference plan. Phase 7 complete. TeleBirr permanently removed; payments Chapa-only. D1/D2 cleared (Phase 6), D3 closed (TeleBirr removed). **Next: production launch** (secrets rotation, admin account fix, Vercel deploy).
 
 This plan supersedes `DEVELOPMENT_ROADMAP.md` and the older phase notes in `memory/development/development_plan.md`. Every item is audit-backed with file references so any agent can pick up work without re-discovery.
 
@@ -44,10 +44,10 @@ Compatible with CLI-driven migration pushes — it is just another migration fil
 - [ ] Rotate ALL credentials present in git history and purge them: DB superuser password in `temp_env.sh`; service-role JWT, Chapa secret, Resend key in tracked `.env.example`; TeleBirr RSA private key in `telebirr-service/index.ts` and `tests/telebirr.test.mjs`
 - [ ] On TeleBirr unfreeze: enforce signature verification in `telebirr-webhook` + sandbox E2E before exposing the UI path again
 
-### D3 — TeleBirr frozen (product decision)
-- Chapa is the only live payment path during development (previously verified end-to-end; remains canonical).
-- [ ] Feature-flag the TeleBirr option off in `PremiumSection` behind `VITE_ENABLE_TELEBIRR` (default `false`) so users never reach the frozen path.
-- TeleBirr code stays in the tree (`src/lib/telebirr.ts`, `telebirr-service`, `telebirr-webhook`, tests). No further investment until unfreeze.
+### D3 — TeleBirr permanently removed (Aug 28, 2026)
+- Chapa is the only live payment path.
+- ~~Feature-flag the TeleBirr option off in `PremiumSection` behind `VITE_ENABLE_TELEBIRR`~~ — TeleBirr code entirely removed from codebase (src, edge functions, tests, vite config).
+- All TeleBirr references cleaned from i18n, types, hooks, and components.
 
 ---
 

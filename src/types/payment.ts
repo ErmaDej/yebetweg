@@ -1,6 +1,6 @@
 export type PremiumTier = "free" | "premium" | "pro"
 
-export type PaymentMethod = "chapa" | "telebirr"
+export type PaymentMethod = "chapa"
 
 export type SubscriptionStatus = "active" | "pending" | "canceled" | "expired"
 
@@ -10,7 +10,6 @@ export interface Subscription {
   tier: PremiumTier
   paymentMethod: PaymentMethod
   chapaReference?: string
-  telebirrReference?: string
   startsAt: string
   expiresAt: string
   isActive: boolean
@@ -43,8 +42,6 @@ export interface CreateSubscriptionParams {
 export interface InitiatePaymentResult {
   success: boolean
   redirectUrl?: string
-  toPayUrl?: string
-  qrCode?: string
   reference?: string
   error?: string
 }
