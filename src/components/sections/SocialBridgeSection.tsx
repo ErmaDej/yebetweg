@@ -7,9 +7,9 @@ import { useLanguage } from "@/lib/i18n"
 import { useInView } from "@/hooks/useInView"
 
 const tiktokPosts = [
-  { title: "Rebar Quality Check", views: "12K" },
-  { title: "Cement Mixing Tips", views: "8.5K" },
-  { title: "Foundation Depth Guide", views: "15K" },
+  { title: "Rebar Quality Check" },
+  { title: "Cement Mixing Tips" },
+  { title: "Foundation Depth Guide" },
 ]
 
 function YouTubeIcon({ className }: { className?: string }) {
@@ -53,9 +53,9 @@ export function SocialBridgeSection() {
                 </div>
               </div>
               <AspectRatio ratio={16 / 9} className="rounded-lg overflow-hidden bg-muted">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/80 text-white cursor-pointer hover:bg-red-500 transition-colors">
-                    <Play className="h-8 w-8 ml-1" />
+                <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/80 text-white">
+                    <Play className="h-8 w-8 ml-1" aria-hidden="true" />
                   </div>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
@@ -89,14 +89,13 @@ export function SocialBridgeSection() {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {tiktokPosts.map((post) => (
-                    <div key={post.title} className="relative group cursor-pointer">
+                    <div key={post.title} className="relative group">
                       <AspectRatio ratio={9 / 16} className="rounded-md overflow-hidden bg-gradient-to-br from-pink-500/10 to-primary/10">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Play className="h-6 w-6 text-white/60" />
+                        <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                          <Play className="h-6 w-6 text-white/60" aria-hidden="true" />
                         </div>
                       </AspectRatio>
                       <p className="text-[10px] text-muted-foreground mt-1 truncate">{post.title}</p>
-                      <p className="text-[10px] text-muted-foreground">{post.views} views</p>
                     </div>
                   ))}
                 </div>
@@ -110,7 +109,7 @@ export function SocialBridgeSection() {
                     <MessageCircle className="h-6 w-6" />
                   </div>
                   <h3 className="font-semibold text-sm mb-1">{t("social.telegram")}</h3>
-                  <Badge variant="secondary" className="mb-3">10K+ {language === "en" ? "members" : "አባላት"}</Badge>
+                  <Badge variant="secondary" className="mb-3">{language === "en" ? "Official channel" : "ይፋዊ ቻናል"}</Badge>
                   <Button size="sm" className="w-full gap-2 bg-blue-500 text-white hover:bg-blue-600" asChild>
                     <a href="https://t.me/yebetweg" target="_blank" rel="noopener noreferrer">
                       {t("social.joinTelegram")}
@@ -122,10 +121,10 @@ export function SocialBridgeSection() {
               <Card className="overflow-hidden border-border/50">
                 <CardContent className="p-5 text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600/10 text-blue-600 mx-auto mb-3">
-                    <FacebookIcon className="h-6 w-6" />
+                    <FacebookIcon className="h-6 w-6" aria-hidden="true" />
                   </div>
                   <h3 className="font-semibold text-sm mb-1">{t("social.facebook")}</h3>
-                  <Badge variant="secondary" className="mb-3">5K+ {language === "en" ? "likes" : "መውደድ"}</Badge>
+                  <Badge variant="secondary" className="mb-3">{language === "en" ? "Community" : "ማህበረሰብ"}</Badge>
                   <Button size="sm" variant="outline" className="w-full gap-2" asChild>
                     <a href="https://facebook.com/yebetweg" target="_blank" rel="noopener noreferrer">
                       {t("social.facebook")}

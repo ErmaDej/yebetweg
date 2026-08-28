@@ -154,8 +154,8 @@ export function VideoShowcaseSection() {
         >
           <p className="text-sm text-muted-foreground">
             {isEn
-              ? "Join 10,000+ members already building smarter."
-              : "10,000+ አባላት ቀድሞውኑ ይቀላቀሉ።"}
+              ? "Join our growing community — building smarter, together."
+              : "ወደ እያደገው ማህበረሰባችን ይቀላቀሉ — አብረን በብልህነት እንገንባ።"}
           </p>
         </div>
       </div>
