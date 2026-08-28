@@ -1,10 +1,12 @@
-import { MessageCircle, ExternalLink, Play } from "lucide-react"
+import { MessageCircle, ExternalLink, Play, TrendingUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { useLanguage } from "@/lib/i18n"
 import { useInView } from "@/hooks/useInView"
+import { useMarketPrices } from "@/hooks/useMarketPrices"
+import { useMemo } from "react"
 
 const tiktokPosts = [
   { title: "Rebar Quality Check" },
@@ -31,6 +33,14 @@ function FacebookIcon({ className }: { className?: string }) {
 export function SocialBridgeSection() {
   const { t, language } = useLanguage()
   const { ref, isInView } = useInView()
+  const { data: marketPrices } = useMarketPrices()
+  const weeklyWatch = useMemo(() => {
+    if (!marketPrices || marketPrices.length === 0) return []
+    return [...marketPrices]
+      .filter((p) => p.change_percent != null)
+      .sort((a, b) => Math.abs(b.change_percent ?? 0) - Math.abs(a.change_percent ?? 0))
+      .slice(0, 3)
+  }, [marketPrices])
 
   return (
     <section id="social" ref={ref} className="py-16 sm:py-24 bg-background">
@@ -135,6 +145,43 @@ export function SocialBridgeSection() {
             </div>
           </div>
         </div>
+
+        {weeklyWatch.length > 0 && (
+          <Card className="mt-8 border-accent/20 bg-gradient-to-br from-accent/5 to-primary/5">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="h-5 w-5 text-accent" />
+                <h3 className="font-semibold">
+                  {language === "en" ? "Weekly Cement & Rebar Watch" : "ሳምንታዊ የሲሚንቶ እና የብረት ክትትል"}
+                </h3>
+                <Badge variant="outline" className="ml-auto text-[10px]">
+                  {language === "en" ? "Live from market prices" : "ከቀጥታ የገበያ ዋጋ"}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {weeklyWatch.map((p) => (
+                  <div key={p.id} className="rounded-lg border border-border/60 bg-card p-3">
+                    <p className="text-sm font-medium truncate">
+                      {language === "am" ? p.material_am || p.material_en : p.material_en}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {Number(p.price).toLocaleString()} ETB/{p.unit} · {p.city || "—"}
+                    </p>
+                    <p className={`text-xs font-semibold ${Number(p.change_percent) >= 0 ? "text-red-500" : "text-emerald-600"}`}>
+                      {Number(p.change_percent) > 0 ? "+" : ""}
+                      {p.change_percent}% · {language === "en" ? "7d" : "7ቀን"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                {language === "en"
+                  ? "Suppliers: share your prices via Telegram to appear here. Deep links bring buyers back to YeBetWeg."
+                  : "አቅራቢዎች፡ ዋጋዎን በቴሌግራም ያጋሩ፣ እዚህ ይታያል።"}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </section>
   )

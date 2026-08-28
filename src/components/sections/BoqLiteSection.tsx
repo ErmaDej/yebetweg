@@ -19,21 +19,14 @@ import { useNavigate } from "react-router-dom"
 import { RfqModal, type RfqContext } from "./RfqModal"
 import { useAuthContext } from "@/context/AuthContext"
 import { useBoqEstimates, useCreateBoqEstimate } from "@/hooks/useBoqEstimates"
+import { useCityMultipliers } from "@/hooks/useCityMultipliers"
+import { useUserProfile, useSubscription } from "@/hooks/useUserProfile"
+import { getActivePlan } from "@/lib/entitlements"
 import { toast } from "sonner"
 
 type ProjectType = "residential" | "apartment" | "commercial" | "renovation"
 type City = "addis_ababa" | "adama" | "hawassa" | "bahir_dar" | "mekelle" | "dire_dawa" | "outside_addis"
 type FinishLevel = "basic" | "standard" | "premium"
-
-const cityMultipliers: Record<City, number> = {
-  addis_ababa: 1,
-  adama: 0.92,
-  hawassa: 0.95,
-  bahir_dar: 0.94,
-  mekelle: 0.96,
-  dire_dawa: 0.93,
-  outside_addis: 0.9,
-}
 
 const projectMultipliers: Record<ProjectType, number> = {
   residential: 1,
@@ -144,6 +137,7 @@ export function BoqLiteSection() {
   const { user } = useAuthContext()
   const { data: savedEstimates } = useBoqEstimates()
   const createEstimate = useCreateBoqEstimate()
+  const { multipliers: cityMultipliers, isLive: isLiveCityPricing } = useCityMultipliers()
 
   const handleSave = async () => {
     try {
@@ -162,6 +156,58 @@ export function BoqLiteSection() {
       toast.success(language === "en" ? "Estimate saved" : "ግምት ተቀምጧል")
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save estimate")
+    }
+  }
+
+  const { profile } = useUserProfile()
+  const { subscription } = useSubscription(profile)
+  const activePlan = getActivePlan(profile, subscription)
+  const canExport = activePlan === "premium" || activePlan === "pro"
+
+  const handleExport = () => {
+    if (!canExport) {
+      navigate("/#premium")
+      return
+    }
+    const rows: string[][] = [
+      ["YeBetWeg BOQ Lite — Planning Estimate"],
+      ["Project Type", text[projectType]],
+      ["City", text[city]],
+      ["City pricing", isLiveCityPricing ? "Live" : "Estimated"],
+      ["Area (m2)", String(area)],
+      ["Floors", String(floors)],
+      ["Finish", text[finishLevel]],
+      ["Contingency %", String(contingency)],
+      [],
+      ["Item", "Amount (ETB)"],
+      ["Structure (32%)", String(Math.round(estimate.structure))],
+      ["Materials (38%)", String(Math.round(estimate.material))],
+      ["Labor (18%)", String(Math.round(estimate.labor))],
+      ["Overhead (12%)", String(Math.round(estimate.overhead))],
+      ["Total", String(Math.round(estimate.total))],
+      ["Cost per m2", String(Math.round(estimate.perM2))],
+      [],
+      ["Disclaimer", text.disclaimer],
+    ]
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `yebetweg-boq-${city}-${projectType}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(language === "en" ? "BOQ exported as CSV" : "BOQ በCSV ተላከ")
+
+    // Printable view
+    const html = `<!doctype html><title>YeBetWeg BOQ</title><style>body{font-family:system-ui;padding:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f5f5f5}</style><h1>YeBetWeg BOQ Lite</h1><p>${text[projectType]} · ${text[city]} · ${text[finishLevel]} · ${area}m² · ${floors} floors</p><table>${rows
+      .filter((r) => r.length === 2)
+      .map((r) => `<tr><th>${r[0]}</th><td>${r[1]}</td></tr>`)
+      .join("")}</table><p style="margin-top:16px;font-size:12px;color:#666">${text.disclaimer}</p><script>window.print()</script>`
+    const w = window.open("", "_blank")
+    if (w) {
+      w.document.write(html)
+      w.document.close()
     }
   }
 
@@ -184,7 +230,7 @@ export function BoqLiteSection() {
       labor: total * 0.18,
       overhead: total * 0.12,
     }
-  }, [area, city, contingency, finishLevel, floors, projectType])
+  }, [area, city, cityMultipliers, contingency, finishLevel, floors, projectType])
 
   return (
     <section id="boq" ref={ref} className="bg-muted/30 py-16 sm:py-24">
@@ -198,10 +244,34 @@ export function BoqLiteSection() {
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{text.title}</h2>
             <p className="mt-3 text-muted-foreground">{text.subtitle}</p>
           </div>
-          <Badge className="w-fit gap-2 bg-primary text-primary-foreground">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            {text.confidence}
-          </Badge>
+          <div className="flex flex-col gap-2">
+            <Badge className="w-fit gap-2 bg-primary text-primary-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {text.confidence}
+            </Badge>
+            <Badge
+              variant={isLiveCityPricing ? "default" : "outline"}
+              className="w-fit gap-1.5 text-[10px]"
+              title={
+                isLiveCityPricing
+                  ? language === "en"
+                    ? "City adjustment from live market prices"
+                    : "የከተማ ማስተካከያ ከቀጥታ የገበያ ዋጋ"
+                  : language === "en"
+                    ? "City adjustment estimated (no live data yet)"
+                    : "የከተማ ማስተካከያ ግምታዊ (ቀጥታ መረጃ የለም)"
+              }
+            >
+              <TrendingUp className="h-3 w-3" />
+              {isLiveCityPricing
+                ? language === "en"
+                  ? "Live city pricing"
+                  : "ቀጥታ የከተማ ዋጋ"
+                : language === "en"
+                  ? "Estimated city pricing"
+                  : "ግምታዊ የከተማ ዋጋ"}
+            </Badge>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
@@ -348,9 +418,13 @@ export function BoqLiteSection() {
                     {savedEstimates && savedEstimates.length > 0 ? ` (${savedEstimates.length})` : ""}
                   </span>
                 </Button>
-                <Button className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() => navigate("/dashboard")}>
+                <Button
+                  className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight"
+                  onClick={handleExport}
+                  title={!canExport ? (language === "en" ? "Premium required" : "ፕሪሚየም ያስፈልጋል") : undefined}
+                >
                   <FileText className="h-4 w-4" />
-                  <span>{text.export}</span>
+                  <span>{canExport ? (language === "en" ? "Export CSV + Print" : "CSV ላክ + አትም") : text.export}</span>
                 </Button>
                 <Button variant="outline" className="h-auto min-h-10 w-full justify-center gap-2 whitespace-normal px-3 py-2 text-center leading-tight" onClick={() =>
                   setRfqContext({

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { RefreshCw, Loader2, SearchX, Eye, MessageSquare } from "lucide-react"
+import { RefreshCw, Loader2, SearchX, Eye, MessageSquare, Copy, Share2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useLanguage } from "@/lib/i18n"
 import { callAdminAction } from "@/lib/api"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { toast } from "sonner"
 
 type RfqItem = {
   material_name: string
@@ -356,6 +357,50 @@ export function RfqManager() {
                       <MessageSquare className="h-3.5 w-3.5 mr-1" />
                       {language === "en" ? "Save Notes" : "ማስታወሻ አስቀምጥ"}
                     </Button>
+                  </div>
+
+                  <div className="pt-3 border-t space-y-2">
+                    <p className="text-xs font-medium">
+                      {language === "en" ? "Supplier loop (MVP)" : "የአቅራቢ ዑደት"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {language === "en"
+                        ? "Forward this RFQ to verified suppliers. Copy summary for email or share via Telegram."
+                        : "ይህን የዋጋ ጥያቄ ወደ ተረጋገጡ አቅራቢዎች ያስተላልፉ።"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={() => {
+                          const itemsText =
+                            selectedRfq.rfq_items && selectedRfq.rfq_items.length > 0
+                              ? selectedRfq.rfq_items
+                                  .map((it) => `${it.material_name} ${it.quantity}${it.unit} ${it.specification || ""}`.trim())
+                                  .join("; ")
+                              : selectedRfq.requester_name
+                          const summary = `RFQ ${selectedRfq.id.slice(0, 8)} — ${selectedRfq.requester_name} (${selectedRfq.city}) — ${itemsText} — Phone: ${selectedRfq.requester_phone} — YeBetWeg`
+                          navigator.clipboard.writeText(summary).then(
+                            () => toast.success(language === "en" ? "Copied RFQ summary" : "የዋጋ ጥያቄ ቅጂ ተቀድቷል"),
+                            () => toast.error("Copy failed")
+                          )
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        {language === "en" ? "Copy summary" : "ቅጂ አድርግ"}
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                        <a
+                          href={`https://t.me/share/url?url=${encodeURIComponent(`https://yebetweg.com/#rfq-${selectedRfq.id}`)}&text=${encodeURIComponent(`RFQ: ${selectedRfq.requester_name} — ${selectedRfq.city} — YeBetWeg`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          {language === "en" ? "Share via Telegram" : "በቴሌግራም አጋራ"}
+                        </a>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
