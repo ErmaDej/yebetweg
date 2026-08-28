@@ -46,11 +46,11 @@ const statusColors: Record<string, "default" | "secondary" | "outline" | "destru
 
 const statusLabels: Record<string, { en: string; am: string }> = {
   new: { en: "New", am: "አዲስ" },
-  reviewing: { en: "Reviewing", am: "ያጠᙙመው" },
-  sent_to_supplier: { en: "Sent to supplier", am: "አላቸገ ለደረሰኛ" },
-  quoted: { en: "Quoted", am: "የቋሚ መረጡ" },
-  closed: { en: "Closed", am: "ዝግጁ" },
-  spam: { en: "Spam", am: "ስፖም" },
+  reviewing: { en: "Reviewing", am: "በግምገማ ላይ" },
+  sent_to_supplier: { en: "Sent to supplier", am: "ወደ አቅራቢ ተልኳል" },
+  quoted: { en: "Quoted", am: "ዋጋ ተሰጥቷል" },
+  closed: { en: "Closed", am: "ተዘግቷል" },
+  spam: { en: "Spam", am: "አላስፈላጊ" },
 }
 
 function statusLabel(status: string, language: string): string {
