@@ -187,10 +187,14 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
 
         <div className="mt-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-muted-foreground">{language === "en" ? "Trust Score" : "የእምነት ደረጃ"}</span>
-            <span className="text-xs font-semibold">{trustScore}%</span>
+            <span className="text-xs text-muted-foreground" title={language === "en" ? "Heuristic based on verification, rating, experience and portfolio" : "በማረጋገጫ፣ ደረጃ፣ ልምድ እና ፖርትፎሊዮ ላይ የተመሠረተ ግምት"}>
+              {language === "en" ? "Trust indicator" : "የእምነት አመልካች"}
+            </span>
+            <span className="text-xs font-semibold" title={language === "en" ? "Heuristic indicator, not a certified score" : "ይህ የተገመተ አመልካች ነው"}>
+              {trustScore}%
+            </span>
           </div>
-          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden" aria-hidden="true">
             <div
               className={`h-full rounded-full transition-all duration-500 ${trustColor}`}
               style={{ width: `${trustScore}%` }}
@@ -198,10 +202,12 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-          <Clock3 className="h-3.5 w-3.5 shrink-0" />
-          <span className="line-clamp-1">{responseLabel}</span>
-        </div>
+        {professional.is_verified && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="line-clamp-1">{responseLabel}</span>
+          </div>
+        )}
 
         <div className="mt-4 flex flex-col gap-2">
           <Button
@@ -254,16 +260,20 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
                   <p className="text-xs text-destructive">{hireError}</p>
                 )}
                 <div className="space-y-1.5">
-                  <Label>{t("contact.name")}</Label>
+                  <Label htmlFor={`hire-name-${professional.id}`}>{t("contact.name")}</Label>
                   <Input
+                    id={`hire-name-${professional.id}`}
+                    aria-label={t("contact.name")}
                     placeholder={language === "en" ? "Your name" : "ስምዎ"}
                     value={hireData.name}
                     onChange={(e) => setHireData({ ...hireData, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{t("contact.phone")}</Label>
+                  <Label htmlFor={`hire-phone-${professional.id}`}>{t("contact.phone")}</Label>
                   <Input
+                    id={`hire-phone-${professional.id}`}
+                    aria-label={t("contact.phone")}
                     placeholder="+251..."
                     value={hireData.phone}
                     onChange={(e) => setHireData({ ...hireData, phone: e.target.value })}
@@ -466,26 +476,26 @@ export function ProfessionalsSection() {
                 }}
               >
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Full Name" : "ሙሉ ስም"}</Label>
-                  <Input name="name" required />
+                  <Label htmlFor="join-name">{language === "en" ? "Full Name" : "ሙሉ ስም"}</Label>
+                  <Input id="join-name" name="name" required aria-label={language === "en" ? "Full Name" : "ሙሉ ስም"} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Specialty" : "ስፔሻሊቲ"}</Label>
-                  <Input name="specialty" required />
+                  <Label htmlFor="join-specialty">{language === "en" ? "Specialty" : "ስፔሻሊቲ"}</Label>
+                  <Input id="join-specialty" name="specialty" required aria-label={language === "en" ? "Specialty" : "ስፔሻሊቲ"} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>{t("marketplace.location")}</Label>
-                    <Input name="location" required />
+                    <Label htmlFor="join-location">{t("marketplace.location")}</Label>
+                    <Input id="join-location" name="location" required aria-label={t("marketplace.location")} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{t("contact.phone")}</Label>
-                    <Input name="phone" />
+                    <Label htmlFor="join-phone">{t("contact.phone")}</Label>
+                    <Input id="join-phone" name="phone" aria-label={t("contact.phone")} />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{t("contact.email")}</Label>
-                  <Input name="email" type="email" />
+                  <Label htmlFor="join-email">{t("contact.email")}</Label>
+                  <Input id="join-email" name="email" type="email" aria-label={t("contact.email")} />
                 </div>
                 <Button type="submit" className="w-full">
                   {language === "en" ? "Submit Application" : "ማመልከቻ ያስገቡ"}

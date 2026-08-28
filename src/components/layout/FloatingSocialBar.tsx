@@ -39,12 +39,15 @@ export function FloatingSocialBar() {
               link.color
             )}
             title={link.label}
+            aria-label={link.label}
           >
-            {typeof IconComp === "function" && "displayName" in IconComp ? (
-              <IconComp className="h-5 w-5" />
-            ) : (
-              <IconComp className="h-5 w-5" />
-            )}
+            <span aria-hidden="true">
+              {typeof IconComp === "function" && "displayName" in IconComp ? (
+                <IconComp className="h-5 w-5" />
+              ) : (
+                <IconComp className="h-5 w-5" />
+              )}
+            </span>
           </a>
         )
       })}

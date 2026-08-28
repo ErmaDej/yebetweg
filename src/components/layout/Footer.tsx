@@ -128,8 +128,8 @@ export function Footer() {
                     onKeyDown={(e) => e.key === "Enter" && handleSubscribe()}
                     className="h-9 text-sm"
                   />
-                  <Button size="sm" onClick={handleSubscribe} className="h-9 shrink-0">
-                    <Send className="h-3.5 w-3.5" />
+                  <Button size="sm" onClick={handleSubscribe} className="h-9 shrink-0" aria-label={language === "en" ? "Subscribe" : "ይመዝገቡ"}>
+                    <Send className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -141,8 +141,9 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-youtube hover:bg-youtube/10 transition-all duration-200 transform hover:scale-110"
                 title="YouTube"
+                aria-label="YouTube"
               >
-                <YouTubeIcon className="h-4 w-4" />
+                <YouTubeIcon className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
                 href="https://t.me/yebetweg"
@@ -150,8 +151,9 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-telegram hover:bg-telegram/10 transition-all duration-200 transform hover:scale-110"
                 title="Telegram"
+                aria-label="Telegram"
               >
-                <TelegramIcon className="h-4 w-4" />
+                <TelegramIcon className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
                 href="https://facebook.com/yebetweg"
@@ -159,8 +161,9 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-facebook hover:bg-facebook/10 transition-all duration-200 transform hover:scale-110"
                 title="Facebook"
+                aria-label="Facebook"
               >
-                <FacebookIcon className="h-4 w-4" />
+                <FacebookIcon className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
           </div>

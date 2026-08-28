@@ -179,16 +179,18 @@ export function SiteLogSection() {
               {error && <p className="text-xs text-destructive">{error}</p>}
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Project Name" : "የፕሮጀክት ስም"}</Label>
+                  <Label htmlFor="site-log-project-name">{language === "en" ? "Project Name" : "የፕሮጀክት ስም"}</Label>
                   <Input
+                    id="site-log-project-name"
                     value={form.project_name}
                     onChange={(e) => setForm({ ...form, project_name: e.target.value })}
                     placeholder={language === "en" ? "My Project" : "ፕሮጀክቴ"}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Date" : "ቀን"}</Label>
+                  <Label htmlFor="site-log-date">{language === "en" ? "Date" : "ቀን"}</Label>
                   <Input
+                    id="site-log-date"
                     type="date"
                     value={form.date.slice(0, 10)}
                     max={todayStr}
@@ -201,8 +203,9 @@ export function SiteLogSection() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Work Completed" : "የተሰራ ስራ"}</Label>
+                  <Label htmlFor="site-log-work">{language === "en" ? "Work Completed" : "የተሰራ ስራ"}</Label>
                   <Textarea
+                    id="site-log-work"
                     value={form.work_completed}
                     onChange={(e) => setForm({ ...form, work_completed: e.target.value })}
                     placeholder={language === "en" ? "Describe the work done today..." : "ዛሬ የተሰራውን ስራ ይግለጹ..."}
@@ -211,8 +214,9 @@ export function SiteLogSection() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>{language === "en" ? "Labor Count" : "የሰራተኞች ቁጥር"}</Label>
+                    <Label htmlFor="site-log-labor">{language === "en" ? "Labor Count" : "የሰራተኞች ቁጥር"}</Label>
                     <Input
+                      id="site-log-labor"
                       type="number"
                       min={0}
                       value={form.labor_count || ""}
@@ -220,8 +224,9 @@ export function SiteLogSection() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>{language === "en" ? "Payments (ETB)" : "ክፍያ (ETB)"}</Label>
+                    <Label htmlFor="site-log-payments">{language === "en" ? "Payments (ETB)" : "ክፍያ (ETB)"}</Label>
                     <Input
+                      id="site-log-payments"
                       type="number"
                       min={0}
                       value={form.payments || ""}
@@ -230,24 +235,27 @@ export function SiteLogSection() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Materials Used" : "የተጠቀሙ ቁሳቁሶች"}</Label>
+                  <Label htmlFor="site-log-materials">{language === "en" ? "Materials Used" : "የተጠቀሙ ቁሳቁሶች"}</Label>
                   <Input
+                    id="site-log-materials"
                     value={form.materials_used}
                     onChange={(e) => setForm({ ...form, materials_used: e.target.value })}
                     placeholder={language === "en" ? "e.g. 50 bags cement, 2 tons sand" : "ለምሳሌ 50 ከረጢት ሲሚንቶ፣ 2 ቶን አሸዋ"}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Delay Reason (if any)" : "የመዘግየት ምክንያት (ካለ)"}</Label>
+                  <Label htmlFor="site-log-delay">{language === "en" ? "Delay Reason (if any)" : "የመዘግየት ምክንያት (ካለ)"}</Label>
                   <Input
+                    id="site-log-delay"
                     value={form.delay_reason}
                     onChange={(e) => setForm({ ...form, delay_reason: e.target.value })}
                     placeholder={language === "en" ? "e.g. Material shortage, rain" : "ለምሳሌ የቁሳቁስ እጥረት፣ ዝናብ"}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{language === "en" ? "Notes" : "ማስታወሻ"}</Label>
+                  <Label htmlFor="site-log-notes">{language === "en" ? "Notes" : "ማስታወሻ"}</Label>
                   <Textarea
+                    id="site-log-notes"
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                     rows={2}

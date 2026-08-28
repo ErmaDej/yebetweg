@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useTips, useTipCategories } from "@/hooks/useTips"
+import { useMarketPrices } from "@/hooks/useMarketPrices"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { useNavigate } from "react-router-dom"
@@ -160,18 +161,33 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
   const togglePremium = (value: boolean) =>
     setPremiumFilter((prev) => (prev === value ? undefined : value))
 
-  const tickerItems = [
-    { text: language === "en" ? "Derba Cement: 8,200 ETB/Qtl" : "ዲርባ ሲሚንቶ: 8,200 ብር/ቆል", change: "+3.5%" },
-    { text: language === "en" ? "Grade 60 Rebar: 14,500 ETB/Qtl" : "ግራድ 60 ራብር: 14,500 ብር/ቆል", change: "+7.3%" },
-    { text: language === "en" ? "Awash Sand: 4,500 ETB/m³" : "አዋሽ አሸዋ: 4,500 ብር/ሜ³", change: "-2.3%" },
-    { text: language === "en" ? "Mugher Cement: 7,800 ETB/Qtl" : "ሙገር ሲሚንቶ: 7,800 ብር/ቆል", change: "+5.2%" },
-    { text: language === "en" ? "Eucalyptus 4x4: 850 ETB/pc" : "ዩካሊፕተስ 4x4: 850 ብር/ቁራፊ", change: "+8.5%" },
-  ]
+  const { data: tickerPrices } = useMarketPrices()
+  const tickerItems = useMemo(() => {
+    if (tickerPrices && tickerPrices.length > 0) {
+      return tickerPrices.slice(0, 5).map((p) => {
+        const name = language === "am" ? p.material_am || p.material_en : p.material_en
+        const change = p.change_percent ?? 0
+        const sign = change > 0 ? "+" : ""
+        return {
+          text: `${name}: ${Number(p.price).toLocaleString()} ETB/${p.unit}`,
+          change: `${sign}${change}%`,
+        }
+      })
+    }
+    // Fallback sample — clearly sample data until live prices load
+    return [
+      { text: language === "en" ? "Derba Cement: 8,200 ETB/Qtl" : "ዲርባ ሲሚንቶ: 8,200 ብር/ቆል", change: "+3.5%" },
+      { text: language === "en" ? "Grade 60 Rebar: 14,500 ETB/Qtl" : "ግራድ 60 ራብር: 14,500 ብር/ቆል", change: "+7.3%" },
+      { text: language === "en" ? "Awash Sand: 4,500 ETB/m³" : "አዋሽ አሸዋ: 4,500 ብር/ሜ³", change: "-2.3%" },
+      { text: language === "en" ? "Mugher Cement: 7,800 ETB/Qtl" : "ሙገር ሲሚንቶ: 7,800 ብር/ቆል", change: "+5.2%" },
+      { text: language === "en" ? "Eucalyptus 4x4: 850 ETB/pc" : "ዩካሊፕተስ 4x4: 850 ብር/ቁራፊ", change: "+8.5%" },
+    ]
+  }, [tickerPrices, language])
 
   return (
     <section id="tips" ref={ref} className="py-16 sm:py-24 bg-muted/30">
       <div className="w-full overflow-hidden bg-primary text-primary-foreground py-2 mb-10">
-        <div className="animate-marquee whitespace-nowrap flex items-center gap-8">
+        <div className="animate-marquee whitespace-nowrap flex items-center gap-8" aria-hidden="true">
           {[...tickerItems, ...tickerItems].map((item, i) => (
             <span key={i} className="inline-flex items-center gap-2 text-sm">
               <span>{item.text}</span>
@@ -181,6 +197,15 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
             </span>
           ))}
         </div>
+        <p className="sr-only">
+          {tickerPrices && tickerPrices.length > 0
+            ? language === "en"
+              ? "Live market prices"
+              : "ቀጥታ የገበያ ዋጋዎች"
+            : language === "en"
+              ? "Sample market prices — see Market Prices section for live data"
+              : "የናሙና የገበያ ዋጋዎች — ቀጥታ መረጃ ለማየት የገበያ ዋጋ ክፍልን ይመልከቱ"}
+        </p>
       </div>
 
       <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 transition-all duration-700 ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
