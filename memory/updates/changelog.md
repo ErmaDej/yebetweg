@@ -25,6 +25,11 @@
 - PWA or native app work
 
 ## Changelog
+### August 26, 2026 — Phase 5 wrap to main (471954b) — tag phase-5-complete (5ed819c)
+- Merged `dev` → `main` (`bce2c27` → `471954b`); `main` now at Phase 5 Strategic Differentiators.
+- Phase 5: `useCityMultipliers` (live city avg basket vs Addis, clamped +-15%, Live/Estimated badge); `BoqLiteSection` BOQ Pro export tier-gated CSV + printable HTML (premium/pro else → `#premium`) + canonical city fix; `Dashboard` BOQ actuals variance (`site_logs` payments); `SocialBridge` Weekly Cement & Rebar Watch (top 3 movers) + live badge; `useProjectSaves` (localStorage) + `BlogSection` Bookmark + `Dashboard` Saved card; `RfqManager` Copy summary + Share via Telegram.
+- Verified: typecheck ✓ · build ✓
+
 ### August 26, 2026 — Phase 4 wrap to main (bce2c27) — tags phase-4-complete (22523ff)
 - Merged `dev` → `main` (`abf6829` → `bce2c27`); `main` now at Phase 4 UI/UX & Accessibility (a11y, mobile, Amharic critical, honesty). `phase-4-complete` tag pushed.
 - Phase 4A: `ContactSection`/`CreateListingForm`/Marketplace+Professionals hire/SiteLog `htmlFor`/`id` + `autoComplete`; `MarketPriceManager`/`RfqManager`/`Footer`/`FloatingSocialBar`/`Dashboard` icon-only `aria-label`s; `Navbar` `xs:` → `sm:` + `max-w-[12ch] truncate`, skip-to-content + mobile `Sheet` `SmartSearchBar`, `App` `main#main-content`
