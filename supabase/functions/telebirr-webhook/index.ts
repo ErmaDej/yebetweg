@@ -16,61 +16,123 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Missing environment variables")
+      throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables")
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // TeleBirr usually sends a body with transaction details
-    // The format can vary, but we'll try to extract common fields
-    const body = await req.json()
-    console.log("TeleBirr Webhook received:", body)
+    // Handle body in various formats (JSON, form urlencoded, raw text)
+    let payload: Record<string, any> = {}
+    const contentType = req.headers.get("content-type") || ""
 
-    // Log the raw event first
+    if (contentType.includes("application/json")) {
+      payload = await req.json().catch(() => ({}))
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      const formData = await req.formData().catch(() => null)
+      if (formData) {
+        formData.forEach((value, key) => {
+          payload[key] = value.toString()
+        })
+      }
+    } else {
+      const raw = await req.text().catch(() => "")
+      try {
+        payload = JSON.parse(raw)
+      } catch {
+        payload = { rawText: raw }
+      }
+    }
+
+    console.log("[TeleBirr Webhook] Received event:", JSON.stringify(payload))
+
+    // Unpack biz_content if stringified or nested
+    let biz: Record<string, any> = {}
+    if (payload.biz_content) {
+      if (typeof payload.biz_content === "string") {
+        try {
+          biz = JSON.parse(payload.biz_content)
+        } catch {
+          biz = {}
+        }
+      } else if (typeof payload.biz_content === "object") {
+        biz = payload.biz_content
+      }
+    }
+
+    // Extract reference from possible Telebirr notification fields
+    const reference =
+      payload.merch_order_id ||
+      payload.merchOrderId ||
+      payload.outTradeNo ||
+      payload.out_trade_no ||
+      payload.reference ||
+      biz.merch_order_id ||
+      biz.merchOrderId ||
+      biz.outTradeNo ||
+      biz.out_trade_no ||
+      biz.reference
+
+    const statusRaw = String(
+      payload.status ||
+      payload.trade_status ||
+      payload.code ||
+      payload.result ||
+      biz.status ||
+      biz.trade_status ||
+      biz.code ||
+      biz.result ||
+      ""
+    ).toUpperCase()
+
+    const isSuccess =
+      statusRaw === "SUCCESS" ||
+      statusRaw === "TRADE_SUCCESS" ||
+      statusRaw === "0" ||
+      statusRaw === "0000" ||
+      payload.code === "0" ||
+      payload.result === "SUCCESS"
+
+    // Log the event to payment_webhook_events
     const { error: logError } = await supabase
       .from("payment_webhook_events")
       .insert({
         gateway: "telebirr",
-        event_type: body.status || body.code || "payment.notification",
-        reference: body.reference || body.outTradeNo || body.transactionId || "unknown",
-        payload: body,
-        status: "received",
+        event_type: statusRaw || "payment.notification",
+        reference: reference || "unknown",
+        payload: { top: payload, biz },
+        status: isSuccess ? "processed" : "received",
       })
 
-    if (logError) console.error("Error logging webhook:", logError)
+    if (logError) {
+      console.error("[TeleBirr Webhook] Error logging event:", logError)
+    }
 
-    // Basic TeleBirr notification logic
-    // Usually includes a reference and status
-    // If we have a successful transaction, activate the subscription
-    
-    // Note: TeleBirr specific fields might need adjustment based on actual API version
-    const reference = body.reference || body.outTradeNo || body.transactionId
-    const status = body.status === "SUCCESS" || body.code === "0000" ? "success" : "failed"
-
-    if (status === "success" && reference) {
+    // If payment was successful, activate the subscription in Supabase
+    if (isSuccess && reference) {
       const { data, error: rpcError } = await supabase.rpc("activate_subscription", {
-        p_gateway: "telebirr",
         p_reference: reference,
+        p_gateway: "telebirr",
       })
 
       if (rpcError) {
-        console.error("Error activating subscription via RPC:", rpcError)
-        return new Response(JSON.stringify({ error: rpcError.message }), {
+        console.error("[TeleBirr Webhook] RPC activation error:", rpcError)
+        return new Response(JSON.stringify({ success: false, error: rpcError.message }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         })
       }
 
-      console.log("Subscription activated successfully:", data)
+      console.log("[TeleBirr Webhook] Subscription successfully activated:", data)
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, reference, status: isSuccess ? "active" : "pending" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch (error) {
-    console.error("TeleBirr Webhook error:", error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errMessage = error instanceof Error ? error.message : "Unknown webhook processing error"
+    console.error("[TeleBirr Webhook] Error:", errMessage)
+    return new Response(JSON.stringify({ error: errMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })

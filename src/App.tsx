@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom"
 import { Navbar } from "@/components/layout/Navbar"
 import { Footer } from "@/components/layout/Footer"
 import { FloatingSocialBar } from "@/components/layout/FloatingSocialBar"
@@ -23,6 +24,8 @@ import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { getActivePlan } from "@/lib/entitlements"
+import { scrollToAnchor } from "@/lib/navigation"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 function HomePage() {
   const { profile } = useUserProfile()
@@ -81,79 +84,99 @@ function HomePage() {
   )
 }
 
-export function App() {
-  const [currentPage, setCurrentPage] = useState<"home" | "dashboard" | "search" | "payment" | "auth-callback" | "reset-password">("home")
+function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
+      {children}
+      <Footer />
+    </div>
+  )
+}
+
+function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
+      <ProtectedRoute>{children}</ProtectedRoute>
+      <Footer />
+    </div>
+  )
+}
+
+// Handle hash-based anchor scrolling within the home page
+function HomePageWrapper() {
+  const location = useLocation()
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const pathname = window.location.pathname
-      const search = window.location.search
-      
-      if (pathname.includes("/auth/callback") || search.includes("token=")) {
-        setCurrentPage("auth-callback")
-      } else if (pathname.includes("/reset-password")) {
-        setCurrentPage("reset-password")
-      } else if (pathname.includes("/dashboard")) {
-        setCurrentPage("dashboard")
-      } else if (pathname.includes("/search") || search.includes("q=")) {
-        setCurrentPage("search")
-      } else if (pathname.includes("/payment/success")) {
-        setCurrentPage("payment")
-      } else {
-        setCurrentPage("home")
-      }
+    if (location.hash) {
+      scrollToAnchor(location.hash)
     }
-
-    handleHashChange()
-    window.addEventListener("popstate", handleHashChange)
-    return () => window.removeEventListener("popstate", handleHashChange)
-  }, [])
-
-  useEffect(() => {
-    if (currentPage !== "home" || !window.location.hash) return
-
-    window.setTimeout(() => {
-      document
-        .getElementById(window.location.hash.slice(1))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" })
-    }, 0)
-  }, [currentPage])
-
-  if (currentPage === "auth-callback") {
-    return <AuthCallbackPage />
-  }
-
-  if (currentPage === "reset-password") {
-    return <ResetPasswordPage />
-  }
-
-  if (currentPage === "dashboard") {
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <Navbar />
-        <ProtectedRoute>
-          <Dashboard />
-        </ProtectedRoute>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (currentPage === "search") {
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <Navbar />
-        <SearchResults />
-        <Footer />
-      </div>
-    )
-  }
-
-  if (currentPage === "payment") {
-    return <PaymentSuccessPage />
-  }
+  }, [location.hash])
 
   return <HomePage />
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ErrorBoundary>
+              <HomePageWrapper />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ErrorBoundary>
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ErrorBoundary>
+              <MainLayout>
+                <SearchResults />
+              </MainLayout>
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/payment/success"
+          element={
+            <ErrorBoundary>
+              <PaymentSuccessPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/auth/callback"
+          element={
+            <ErrorBoundary>
+              <AuthCallbackPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <ErrorBoundary>
+              <ResetPasswordPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App

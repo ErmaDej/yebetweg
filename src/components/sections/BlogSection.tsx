@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from "react"
-import { Clock, ArrowRight, BookOpen, SearchX } from "lucide-react"
+import { Clock, ArrowRight, BookOpen, SearchX, X } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Pagination,
   PaginationContent,
@@ -18,6 +25,7 @@ import { useBlogs, type Blog } from "@/hooks/useBlogs"
 import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
+import { truncateWords } from "@/lib/searchUtils"
 
 const categories = [
   { value: "all", key: "blog.filter.all" as const },
@@ -43,61 +51,137 @@ function getVisiblePages(currentPage: number, pageCount: number) {
   return Array.from({ length: Math.min(3, pageCount) }, (_, index) => start + index)
 }
 
-function BlogCard({ blog, featured, index }: { blog: any; featured?: boolean; index: number }) {
+function BlogCard({
+  blog,
+  featured,
+  index,
+  onRead,
+}: {
+  blog: Blog
+  featured?: boolean
+  index: number
+  onRead: (blog: Blog) => void
+}) {
   const { language, t } = useLanguage()
   const title = language === "am" ? blog.title_am : blog.title_en
-  const readTime = Math.ceil(blog.content.split(" ").length / 200)
+  const readTime = Math.ceil((blog.content?.split(" ").length || 0) / 200)
 
   return (
-    <Card
-      className="group flex h-full flex-col overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-      style={{ animationDelay: `${index * 100}ms` }}
+    <button
+      type="button"
+      onClick={() => onRead(blog)}
+      className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl"
+      aria-label={title}
     >
-      <div className="relative h-48 overflow-hidden">
-        {blog.image_url ? (
-          <img
-            src={blog.image_url}
-            alt={title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 animate-image-fade"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-            <BookOpen className={`h-12 w-12 text-muted-foreground/30 ${featured ? "h-20 w-20" : ""}`} />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-        <Badge className={`absolute top-3 left-3 ${categoryColors[blog.category] || "bg-muted text-muted-foreground"}`}>
-          {t(categories.find(c => c.value === blog.category)?.key || "blog.filter.all")}
-        </Badge>
-        {featured && (
-          <Badge variant="default" className="absolute top-3 right-3 bg-accent text-accent-foreground">
-            Featured
+      <Card
+        className="group flex h-full flex-col overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+        style={{ animationDelay: `${index * 100}ms` }}
+      >
+        <div className="relative h-48 overflow-hidden">
+          {blog.image_url ? (
+            <img
+              src={blog.image_url}
+              alt=""
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 animate-image-fade"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+              <BookOpen className={`h-12 w-12 text-muted-foreground/30 ${featured ? "h-20 w-20" : ""}`} />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          <Badge className={`absolute top-3 left-3 ${categoryColors[blog.category] || "bg-muted text-muted-foreground"}`}>
+            {t(categories.find(c => c.value === blog.category)?.key || "blog.filter.all")}
           </Badge>
-        )}
-      </div>
-      <CardContent className="flex-1 p-4">
-        <h3 className="font-semibold text-base text-foreground group-hover:text-accent transition-colors line-clamp-2">
-          {title}
-        </h3>
-        <p className="mt-2 text-xs leading-5 text-muted-foreground line-clamp-3">
-          {blog.content.slice(0, 150)}...
-        </p>
-      </CardContent>
-      <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between">
-        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span className="shrink-0">{readTime} {t("blog.minRead")}</span>
-          <span className="text-border">|</span>
-          <span className="truncate">{blog.author}</span>
+          {featured && (
+            <Badge variant="default" className="absolute top-3 right-3 bg-accent text-accent-foreground">
+              {language === "en" ? "Featured" : "ተመራጭ"}
+            </Badge>
+          )}
         </div>
-        <Button variant="ghost" size="sm" className="shrink-0 gap-1 text-xs group-hover:text-accent">
-          {t("blog.readMore")}
-          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-        </Button>
-      </CardFooter>
-    </Card>
+        <CardContent className="flex-1 p-4">
+          <h3 className="font-semibold text-base text-foreground group-hover:text-accent transition-colors line-clamp-2">
+            {title}
+          </h3>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground line-clamp-3">
+            {truncateWords(blog.content ?? "", 150)}
+          </p>
+        </CardContent>
+        <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between">
+          <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span className="shrink-0">{readTime} {t("blog.minRead")}</span>
+            <span className="text-border">|</span>
+            <span className="truncate">{blog.author}</span>
+          </div>
+          <span className="inline-flex items-center gap-1 shrink-0 text-xs font-medium group-hover:text-accent transition-colors">
+            {t("blog.readMore")}
+            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+          </span>
+        </CardFooter>
+      </Card>
+    </button>
+  )
+}
+
+function BlogArticleDialog({ blog, onClose }: { blog: Blog | null; onClose: () => void }) {
+  const { language, t } = useLanguage()
+  const title = blog ? (language === "am" ? blog.title_am : blog.title_en) : ""
+  const readTime = blog ? Math.ceil((blog.content?.split(" ").length || 0) / 200) : 0
+  const paragraphs = useMemo(
+    () =>
+      (blog?.content ?? "")
+        .split(/\n{1,}/)
+        .map((p) => p.trim())
+        .filter(Boolean),
+    [blog]
+  )
+
+  return (
+    <Dialog open={Boolean(blog)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {blog && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge className={categoryColors[blog.category] || "bg-muted text-muted-foreground"}>
+                  {t(categories.find(c => c.value === blog.category)?.key || "blog.filter.all")}
+                </Badge>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  {readTime} {t("blog.minRead")}
+                </span>
+              </div>
+              <DialogTitle className="text-left text-xl leading-snug">{title}</DialogTitle>
+              <DialogDescription className="text-left">
+                {blog.author} · {language === "en" ? "YeBetWeg Knowledge Hub" : "የYeBetWeg እውቀት ማዕከል"}
+              </DialogDescription>
+            </DialogHeader>
+
+            {blog.image_url && (
+              <img
+                src={blog.image_url}
+                alt=""
+                className="w-full h-56 sm:h-64 object-cover rounded-lg"
+              />
+            )}
+
+            <article className="space-y-4 text-sm leading-7 text-foreground/90">
+              {paragraphs.map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
+            </article>
+
+            <Button variant="outline" onClick={onClose} className="w-full gap-2">
+              <X className="h-4 w-4" />
+              {language === "en" ? "Close" : "ዝጋ"}
+            </Button>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -118,8 +202,26 @@ export function BlogSection() {
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
   const [page, setPage] = useState(1)
-  const { blogs, loading } = useBlogs(category, page, BLOGS_PER_PAGE)
+  const [searchInput, setSearchInput] = useState("")
+  const [serverQuery, setServerQuery] = useState("")
+  const [activeBlog, setActiveBlog] = useState<Blog | null>(null)
   const { ref, isInView } = useInView()
+
+  // Debounce the raw input before triggering server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setServerQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { data: blogsData, isLoading: loading } = useBlogs({
+    category,
+    page,
+    pageSize: BLOGS_PER_PAGE,
+    searchQuery: serverQuery,
+  })
+
+  const blogs = blogsData?.data ?? []
+  const total = blogsData?.total ?? 0
 
   // Client-side smart search for blogs
   const blogSearchFields = useMemo(() => ["title_en", "title_am", "content", "category", "author"] as (keyof Blog)[], [])
@@ -131,16 +233,27 @@ export function BlogSection() {
   })
 
   const searchableBlogs = smartSearch.items
-  const totalFiltered = smartSearch.totalCount
+  const isSearching = Boolean(serverQuery.trim())
+  // While searching, the hook returns the full match set and smartSearch owns
+  // pagination; otherwise server pages drive it via the exact table total.
+  const totalFiltered = isSearching ? smartSearch.totalCount : total
   const pageCount = Math.max(1, Math.ceil(totalFiltered / BLOGS_PER_PAGE))
-  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+  const currentPage = isSearching ? smartSearch.state.page : page
+  const visiblePages = useMemo(() => getVisiblePages(currentPage, pageCount), [currentPage, pageCount])
 
   useEffect(() => {
     setPage(1)
   }, [category])
 
+  useEffect(() => {
+    if (isSearching) smartSearch.setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverQuery])
+
   const goToPage = (nextPage: number) => {
-    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    const clamped = Math.min(Math.max(nextPage, 1), pageCount)
+    if (isSearching) smartSearch.setPage(clamped)
+    else setPage(clamped)
     document.getElementById("knowledge")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
@@ -165,8 +278,8 @@ export function BlogSection() {
         {/* Smart Search Bar */}
         <div className="mb-6 max-w-md mx-auto">
           <SmartSearchBar
-            query={smartSearch.state.query}
-            onQueryChange={smartSearch.setQuery}
+            query={searchInput}
+            onQueryChange={setSearchInput}
             totalCount={totalFiltered}
             placeholder={language === "en" ? "Search articles..." : "ጽሁፎች ይፈልጉ..."}
             compact
@@ -191,9 +304,15 @@ export function BlogSection() {
           </div>
         ) : (
           <>
-            <div key={`${category}-${page}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
+            <div key={`${category}-${serverQuery}-${currentPage}`} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
               {searchableBlogs.map((blog, i) => (
-                <BlogCard key={blog.id} blog={blog} featured={blog.is_featured && page === 1} index={i} />
+                <BlogCard
+                  key={blog.id}
+                  blog={blog}
+                  featured={blog.is_featured && currentPage === 1}
+                  index={i}
+                  onRead={setActiveBlog}
+                />
               ))}
             </div>
 
@@ -203,11 +322,11 @@ export function BlogSection() {
                   <PaginationItem>
                     <PaginationPrevious
                       href="#knowledge"
-                      aria-disabled={page === 1}
-                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page - 1)
+                        goToPage(currentPage - 1)
                       }}
                     />
                   </PaginationItem>
@@ -215,7 +334,7 @@ export function BlogSection() {
                     <PaginationItem key={pageNumber}>
                       <PaginationLink
                         href="#knowledge"
-                        isActive={pageNumber === page}
+                        isActive={pageNumber === currentPage}
                         onClick={(event) => {
                           event.preventDefault()
                           goToPage(pageNumber)
@@ -228,20 +347,22 @@ export function BlogSection() {
                   <PaginationItem>
                     <PaginationNext
                       href="#knowledge"
-                      aria-disabled={page === pageCount}
-                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === pageCount}
+                      className={currentPage === pageCount ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page + 1)
+                        goToPage(currentPage + 1)
                       }}
                     />
                   </PaginationItem>
-                </PaginationContent>
+                 </PaginationContent>
               </Pagination>
             )}
           </>
         )}
       </div>
+
+      <BlogArticleDialog blog={activeBlog} onClose={() => setActiveBlog(null)} />
     </section>
   )
 }

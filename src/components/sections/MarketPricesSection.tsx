@@ -18,7 +18,7 @@ import { useMarketPrices, type MarketPrice } from "@/hooks/useMarketPrices"
 import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import type { PremiumTier } from "@/types/payment"
 import { RfqModal } from "./RfqModal"
 
@@ -34,7 +34,7 @@ const priceCategories = [
 
 const FREE_ROWS = 5
 
-const sourceLabels = {
+const sourceLabels: Record<"en" | "am", Record<string, string>> = {
   en: {
     admin_verified: "Admin verified",
     supplier_quoted: "Supplier quoted",
@@ -74,9 +74,10 @@ function getFreshnessVariant(status?: string) {
 }
 
 export function MarketPricesSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
+  const navigate = useNavigate()
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
-  const { prices, loading: fetchLoading } = useMarketPrices(category)
+  const { data: prices, isLoading: fetchLoading } = useMarketPrices(category)
   const { ref, isInView } = useInView()
   const canReadPremium = activePlan === "premium" || activePlan === "pro"
   const trustText = sourceLabels[language]
@@ -85,7 +86,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
 
   // Client-side smart search & filter
   const smartSearch = useSmartSearch<MarketPrice>({
-    data: prices,
+    data: prices ?? [],
     initialPageSize: 50,
     defaultSortField: "price",
     searchableFields: ["material_en", "material_am", "specification", "city", "source_name"],
@@ -382,7 +383,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                   </TableBody>
                 </Table>
 
-                {!canReadPremium && prices.length > FREE_ROWS && (
+                {!canReadPremium && (prices ?? []).length > FREE_ROWS && (
                   <div className="absolute bottom-0 left-0 right-0 h-48 glassmorphism flex flex-col items-center justify-center gap-3 z-10">
                     <Lock className="h-8 w-8 text-accent" />
                     <p className="text-sm font-medium text-foreground text-center max-w-sm">
@@ -390,7 +391,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                     </p>
                     <Button
                       className="bg-accent text-accent-foreground hover:bg-accent/90"
-                      onClick={() => navigateTo("/#premium")}
+                      onClick={() => navigate("/#premium")}
                     >
                       {t("premium.choosePlan")}
                     </Button>

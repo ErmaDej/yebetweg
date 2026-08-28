@@ -9,10 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, type LucideIcon } from "lucide-react"
+import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Calculator, Bookmark, Trash2, type LucideIcon } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { AdminDashboardTab } from "./AdminDashboardTab"
 import { Progress } from "@/components/ui/progress"
@@ -21,6 +21,7 @@ import { profileStrength, roleKeyFor, planBenefits, planFromRole } from "@/lib/e
 import type { PremiumTier } from "@/types/payment"
 import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
+import { useBoqEstimates, useDeleteBoqEstimate } from "@/hooks/useBoqEstimates"
 
 export function Dashboard() {
   const { language, t } = useLanguage()
@@ -52,6 +53,9 @@ export function Dashboard() {
   } = useDashboardData(profile?.id ?? null)
 
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
+  const { data: boqEstimates = [] } = useBoqEstimates()
+  const deleteBoq = useDeleteBoqEstimate()
 
   const handleEditClick = () => {
     if (!profile) return
@@ -92,7 +96,7 @@ export function Dashboard() {
 
   const handleSignOut = async () => {
     await signOut()
-    navigateTo("/")
+    navigate("/")
   }
 
   const roleKey = useMemo(() => roleKeyFor(profile, subscription), [profile, subscription?.tier])
@@ -126,9 +130,9 @@ export function Dashboard() {
       case "pro":
         return { label: t("dashboard.cta.explorePro"), target: "/dashboard" }
       case "premium":
-        return { label: t("dashboard.cta.upgradeToPro"), target: "/#plans" }
+        return { label: t("dashboard.cta.upgradeToPro"), target: "/#premium" }
       default:
-        return { label: t("dashboard.cta.upgrade"), target: "/#plans" }
+        return { label: t("dashboard.cta.upgrade"), target: "/#premium" }
     }
   }, [roleKey, t])
 
@@ -171,10 +175,10 @@ export function Dashboard() {
 
   const actionHandlers: Record<QuickActionKey, () => void> = {
     submitRfq: () => setRfqModalOpen(true),
-    market: () => navigateTo("/#market"),
-    marketplace: () => navigateTo("/#marketplace"),
-    professionals: () => navigateTo("/#professionals"),
-    upgrade: () => navigateTo("/#plans"),
+    market: () => navigate("/#market"),
+    marketplace: () => navigate("/#marketplace"),
+    professionals: () => navigate("/#professionals"),
+    upgrade: () => navigate("/#premium"),
     adminConsole: () => setActiveTab("admin"),
     reviewContent: () => setActiveTab("admin"),
   }
@@ -249,7 +253,7 @@ export function Dashboard() {
                     : `መገለጫዎን ያጠናቅቁ: ${profileGaps.map((k) => PROFILE_FIELD_LABELS[k]?.am || k).join(", ")}`}
                 </button>
               )}
-               <Button className="mt-4 w-full gap-2" onClick={() => navigateTo(accessCta.target)}>
+                <Button className="mt-4 w-full gap-2" onClick={() => navigate(accessCta.target)}>
                  <Sparkles className="h-4 w-4" />
                  {accessCta.label}
                </Button>
@@ -367,6 +371,58 @@ export function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {boqEstimates.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-primary" />
+                {language === "en" ? "Saved BOQ Estimates" : "የተቀመጡ BOQ ግምቶች"}
+                <Badge variant="secondary">{boqEstimates.length}</Badge>
+              </CardTitle>
+              <CardDescription>
+                {language === "en"
+                  ? "Your saved planning estimates — open the estimator to create a new one, or manage saved ones here."
+                  : "የተቀመጡ የእቅድ ግምቶችዎ — አዲስ ለመፍጠር ወደ ግምት መሣሪያ ይሂዱ።"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {boqEstimates.map((est) => (
+                <div
+                  key={est.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {est.inputs.cityLabel || est.inputs.city} · {est.inputs.projectType} · {est.inputs.area}m²
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(est.created_at).toLocaleDateString(language === "am" ? "am-ET" : "en-US")} · {Math.round(est.outputs.total).toLocaleString()} ETB
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      if (window.confirm(language === "en" ? "Delete this estimate?" : "ይህን ግምት ይሰርዙ?")) {
+                        deleteBoq.mutate(est.id)
+                      }
+                    }}
+                    disabled={deleteBoq.isPending}
+                    aria-label={language === "en" ? "Delete estimate" : "ግምት ሰርዝ"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/#boq")}>
+                <Bookmark className="h-4 w-4" />
+                {language === "en" ? "Open estimator" : "ግምት መሣሪያ ክፈት"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}>
@@ -742,7 +798,7 @@ export function Dashboard() {
                       <div className="grid grid-cols-1 gap-3 pt-2">
                         {roleKey === "user" && (
                           <Button
-                            onClick={() => navigateTo("/#plans")}
+                            onClick={() => navigate("/#premium")}
                             className="gap-2"
                             variant="default"
                           >
@@ -752,7 +808,7 @@ export function Dashboard() {
                         )}
                         {roleKey === "premium" && (
                           <Button
-                            onClick={() => navigateTo("/#plans")}
+                            onClick={() => navigate("/#premium")}
                             className="gap-2"
                             variant="default"
                           >
@@ -761,7 +817,7 @@ export function Dashboard() {
                           </Button>
                         )}
                         {roleKey !== "user" && (
-                          <Button onClick={() => navigateTo("/#plans")} variant="outline" className="gap-2">
+                          <Button onClick={() => navigate("/#premium")} variant="outline" className="gap-2">
                             <ArrowRight className="h-4 w-4" />
                             {t("dashboard.subscription.manage")}
                           </Button>
@@ -794,7 +850,7 @@ export function Dashboard() {
                           ? "Upgrade to unlock premium features and exclusive content."
                           : "ፕሪሚየም ባህሪዎችን እና ብቸኛ ይዘትን ለመክፈት ዝቅ አድርግ።"}
                       </p>
-                      <Button onClick={() => navigateTo("/#plans")} className="gap-2">
+                      <Button onClick={() => navigate("/#premium")} className="gap-2">
                         <Crown className="h-4 w-4" />
                         {language === "en" ? "Choose a Plan" : "እቅድ ይምረጡ"}
                       </Button>

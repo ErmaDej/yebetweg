@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/lib/i18n"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 
 interface SearchBarProps {
   onSearch?: (query: string) => void
@@ -12,6 +12,7 @@ interface SearchBarProps {
 
 export function SearchBar({ onSearch, mobile = false }: SearchBarProps) {
   const { language } = useLanguage()
+  const navigate = useNavigate()
   const [query, setQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
 
@@ -20,7 +21,7 @@ export function SearchBar({ onSearch, mobile = false }: SearchBarProps) {
       if (onSearch) {
         onSearch(query)
       } else {
-        navigateTo(`/search?q=${encodeURIComponent(query)}`)
+        navigate(`/search?q=${encodeURIComponent(query)}`)
       }
       setQuery("")
       setIsOpen(false)

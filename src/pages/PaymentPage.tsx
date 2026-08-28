@@ -2,10 +2,11 @@ import { CreditCard, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useLanguage } from "@/lib/i18n"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 
 export default function PaymentPage() {
   const { t, language } = useLanguage()
+  const navigate = useNavigate()
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
@@ -24,7 +25,7 @@ export default function PaymentPage() {
                 : "ቻፓን ለደህና የመስመር ላይ ካርድ እና ባንክ ክፍያዎች ይጠቀሙ። ወደ ደህና የሆነ መክፈያ ገፅ ይቀይራሉ።"}
             </p>
             <div className="flex gap-3">
-              <Button onClick={() => navigateTo("/#plans")} className="gap-2">
+              <Button onClick={() => navigate("/#premium")} className="gap-2">
                 <CreditCard className="h-4 w-4" />
                 {language === "en" ? "View Plans" : "እቅዶችን ይመልከቱ"}
               </Button>
@@ -43,7 +44,7 @@ export default function PaymentPage() {
                 : "ቴሌቢር ፈጣን የሞባይል ክፍያ ይሰጣል። የቴሌቢር ስልክ ቁጥርዎን ያስገቡ።"}
             </p>
             <div className="flex gap-3">
-              <Button onClick={() => navigateTo("/#plans")} className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
+              <Button onClick={() => navigate("/#premium")} className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700">
                 <Smartphone className="h-4 w-4" />
                 {language === "en" ? "View Plans" : "እቅዶችን ይመልከቱ"}
               </Button>

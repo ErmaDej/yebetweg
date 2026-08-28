@@ -46,22 +46,7 @@ export function useUserProfile() {
         const currentSession = activeSession ?? session
 
         if (!currentSession) {
-          setProfile({
-            id: user.id,
-            auth_uid: null,
-            username: user.user_metadata?.username || user.email?.split("@")[0] || "user",
-            email: user.email || "",
-            full_name: user.user_metadata?.full_name || user.user_metadata?.username || null,
-            phone: "",
-            role: user.user_metadata?.role || "user",
-            provider: "local",
-            language_preference: "en",
-            status: "active",
-            profile_image: "",
-            metadata: {},
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
+          setProfile(null)
           return
         }
 

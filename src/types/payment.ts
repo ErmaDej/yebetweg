@@ -48,13 +48,3 @@ export interface InitiatePaymentResult {
   reference?: string
   error?: string
 }
-
-export interface PaymentHookResult {
-  loading: boolean
-  error: string | null
-  initiatePayment: (
-    tier: PremiumTier,
-    method: PaymentMethod,
-    phoneNumber?: string,
-  ) => Promise<InitiatePaymentResult>
-}

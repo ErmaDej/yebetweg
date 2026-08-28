@@ -109,20 +109,24 @@ export function AdSlot({ position }: { position: "leaderboard" | "sidebar" | "na
       <p className="text-[10px] text-muted-foreground text-center mb-1">{t("ads.label")}</p>
       <Card className="overflow-hidden border-accent/20">
         {safeImage ? (
-          <a href={safeLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3">
-            <img
-              src={safeImage}
-              alt={ad.advertiser}
-              className="w-24 h-20 object-cover shrink-0"
-              loading="lazy"
-            />
+          <div className="flex items-center gap-3">
+            <a href={safeLink} target="_blank" rel="noopener noreferrer" className="shrink-0">
+              <img
+                src={safeImage}
+                alt={ad.advertiser}
+                className="w-24 h-20 object-cover"
+                loading="lazy"
+              />
+            </a>
             <div className="flex-1 min-w-0 p-3">
               <p className="font-semibold text-sm truncate">{ad.advertiser}</p>
-              <Button size="sm" variant="outline" className="mt-2">
-                {language === "en" ? "Learn More" : "ተጨማሪ ይወቁ"}
+              <Button size="sm" variant="outline" className="mt-2" asChild>
+                <a href={safeLink} target="_blank" rel="noopener noreferrer">
+                  {language === "en" ? "Learn More" : "ተጨማሪ ይወቁ"}
+                </a>
               </Button>
             </div>
-          </a>
+          </div>
         ) : (
           <CardContent className="p-4 flex items-center gap-3 bg-gradient-to-br from-accent/5 to-primary/5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">

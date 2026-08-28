@@ -1,15 +1,30 @@
+import { useEffect, useMemo, useState } from "react"
 import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
-import { useTips, type Tip } from "@/hooks/useTips"
-import { useSmartSearch } from "@/hooks/useSmartSearch"
+import { useTips, useTipCategories } from "@/hooks/useTips"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import type { PremiumTier } from "@/types/payment"
+
+const TIPS_PER_PAGE = 9
+
+function getVisiblePages(currentPage: number, pageCount: number) {
+  const start = Math.max(1, Math.min(currentPage - 1, pageCount - 2))
+  return Array.from({ length: Math.min(3, pageCount) }, (_, index) => start + index)
+}
 
 const iconMap: Record<string, any> = {
   shield: Shield,
@@ -25,6 +40,7 @@ const iconMap: Record<string, any> = {
 }
 
 function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canReadPremium: boolean }) {
+  const navigate = useNavigate()
   const { language, t } = useLanguage()
   const title = language === "am" ? tip.title_am : tip.title_en
   const IconComponent = iconMap[tip.icon] || Shield
@@ -44,7 +60,7 @@ function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canR
           <Button
             size="sm"
             className="bg-accent text-accent-foreground hover:bg-accent/90"
-            onClick={() => navigateTo("/#premium")}
+            onClick={() => navigate("/#premium")}
           >
             {t("premium.choosePlan")}
           </Button>
@@ -89,22 +105,60 @@ function TipSkeleton() {
 
 export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier }) {
   const { t, language } = useLanguage()
-  const { tips, loading } = useTips()
   const { ref, isInView } = useInView()
   const canReadPremium = activePlan === "premium" || activePlan === "pro"
 
-  // Client-side smart search for tips
-  const smartSearch = useSmartSearch<Tip>({
-    data: tips,
-    initialPageSize: 50,
-    defaultSortField: "created_at",
-    searchableFields: ["title_en", "title_am", "content", "category"],
+  // Server-driven filter state
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [premiumFilter, setPremiumFilter] = useState<boolean | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const [searchInput, setSearchInput] = useState("")
+  const [serverQuery, setServerQuery] = useState("")
+
+  // Debounce the raw input before triggering server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setServerQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const isSearching = Boolean(serverQuery.trim())
+  const tipCategories = useTipCategories()
+
+  // While searching the hook returns the full match set (page pinned to 1);
+  // otherwise it server-paginates.
+  const { data: tipsData, isLoading: loading } = useTips({
+    category: selectedCategory,
+    page: isSearching ? 1 : page,
+    pageSize: TIPS_PER_PAGE,
+    searchQuery: serverQuery,
+    isPremium: premiumFilter,
   })
 
-  const searchableTips = smartSearch.items
+  const tips = tipsData?.data ?? []
+  const total = tipsData?.total ?? 0
 
-  // Get unique categories for filter chips
-  const tipCategories = smartSearch.getFacets("category")
+  const visibleTips = isSearching
+    ? tips.slice((page - 1) * TIPS_PER_PAGE, page * TIPS_PER_PAGE)
+    : tips
+  const totalFiltered = isSearching ? tips.length : total
+  const pageCount = Math.max(1, Math.ceil(totalFiltered / TIPS_PER_PAGE))
+  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+
+  // Reset pagination whenever any filter changes
+  useEffect(() => {
+    setPage(1)
+  }, [selectedCategory, premiumFilter, serverQuery])
+
+  const goToPage = (nextPage: number) => {
+    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    document.getElementById("tips")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
+  const toggleCategory = (cat: string) =>
+    setSelectedCategory((prev) => (prev === cat ? "all" : cat))
+
+  const togglePremium = (value: boolean) =>
+    setPremiumFilter((prev) => (prev === value ? undefined : value))
 
   const tickerItems = [
     { text: language === "en" ? "Derba Cement: 8,200 ETB/Qtl" : "ዲርባ ሲሚንቶ: 8,200 ብር/ቆል", change: "+3.5%" },
@@ -135,32 +189,32 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
           <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">{t("tips.subtitle")}</p>
         </div>
 
-        {/* Smart Search Bar with category filter chips */}
+        {/* Smart Search Bar with removable filter chips */}
         <div className="mb-6 max-w-xl mx-auto">
           <SmartSearchBar
-            query={smartSearch.state.query}
-            onQueryChange={smartSearch.setQuery}
+            query={searchInput}
+            onQueryChange={setSearchInput}
             chips={[
-              ...(smartSearch.state.filters.category
+              ...(selectedCategory !== "all"
                 ? [{
                     key: "category",
                     label: language === "en" ? "Category" : "ምድብ",
-                    value: smartSearch.state.filters.category,
-                    onRemove: () => smartSearch.setFilter("category", undefined),
+                    value: selectedCategory,
+                    onRemove: () => setSelectedCategory("all"),
                   }]
                 : []),
-              ...(smartSearch.state.filters.is_premium !== undefined
+              ...(premiumFilter !== undefined
                 ? [{
                     key: "premium",
                     label: "",
-                    value: smartSearch.state.filters.is_premium
+                    value: premiumFilter
                       ? (language === "en" ? "Premium" : "ፕሪሚየም")
                       : (language === "en" ? "Free" : "ነፃ"),
-                    onRemove: () => smartSearch.setFilter("is_premium", undefined),
+                    onRemove: () => setPremiumFilter(undefined),
                   }]
                 : []),
             ]}
-            totalCount={smartSearch.totalCount}
+            totalCount={totalFiltered}
             placeholder={language === "en" ? "Search tips..." : "ምክሮች ይፈልጉ..."}
             compact
           />
@@ -168,40 +222,27 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
 
         {/* Category & Premium filter badges */}
         <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {tipCategories.slice(0, 10).map((cat) => {
-            const isActive = smartSearch.state.filters.category === cat
-            return (
-              <Badge
-                key={cat}
-                variant={isActive ? "default" : "outline"}
-                className="cursor-pointer text-xs"
-                onClick={() => smartSearch.setFilter("category", isActive ? undefined : cat)}
-              >
-                {cat}
-              </Badge>
-            )
-          })}
+          {(tipCategories.data?.slice(0, 10) ?? []).map((cat: string) => (
+            <Badge
+              key={cat}
+              variant={selectedCategory === cat ? "default" : "outline"}
+              className="cursor-pointer text-xs"
+              onClick={() => toggleCategory(cat)}
+            >
+              {cat}
+            </Badge>
+          ))}
           <Badge
-            variant={smartSearch.state.filters.is_premium === true ? "default" : "outline"}
+            variant={premiumFilter === true ? "default" : "outline"}
             className="cursor-pointer text-xs"
-            onClick={() =>
-              smartSearch.setFilter(
-                "is_premium",
-                smartSearch.state.filters.is_premium === true ? undefined : true,
-              )
-            }
+            onClick={() => togglePremium(true)}
           >
             {language === "en" ? "Premium" : "ፕሪሚየም"} ✨
           </Badge>
           <Badge
-            variant={smartSearch.state.filters.is_premium === false ? "default" : "outline"}
+            variant={premiumFilter === false ? "default" : "outline"}
             className="cursor-pointer text-xs"
-            onClick={() =>
-              smartSearch.setFilter(
-                "is_premium",
-                smartSearch.state.filters.is_premium === false ? undefined : false,
-              )
-            }
+            onClick={() => togglePremium(false)}
           >
             {language === "en" ? "Free" : "ነፃ"}
           </Badge>
@@ -209,9 +250,9 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => <TipSkeleton key={i} />)}
+            {Array.from({ length: TIPS_PER_PAGE }).map((_, i) => <TipSkeleton key={i} />)}
           </div>
-        ) : searchableTips.length === 0 ? (
+        ) : visibleTips.length === 0 ? (
           <div className="p-12 text-center">
             <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-semibold mb-2">
@@ -220,15 +261,60 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
             <p className="text-sm text-muted-foreground">
               {language === "en"
                 ? "Try adjusting your search or filters"
-                : "እባክዎ ፍለጋዎን ወይም ማጣሪያዎን ያስተካክሉ"}
+                : "እባክዎ ፍለጋዎን ወይም ማጣሪያዎችዎን ያስተካክሉ"}
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {searchableTips.map((tip, i) => (
-              <TipCard key={tip.id} tip={tip} index={i} canReadPremium={canReadPremium} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleTips.map((tip, i) => (
+                <TipCard key={tip.id} tip={tip} index={i} canReadPremium={canReadPremium} />
+              ))}
+            </div>
+
+            {pageCount > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#tips"
+                      aria-disabled={page === 1}
+                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page - 1)
+                      }}
+                    />
+                  </PaginationItem>
+                  {visiblePages.map((pageNumber) => (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        href="#tips"
+                        isActive={pageNumber === page}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          goToPage(pageNumber)
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#tips"
+                      aria-disabled={page === pageCount}
+                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      onClick={(event) => {
+                        event.preventDefault()
+                        goToPage(page + 1)
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </div>
     </section>

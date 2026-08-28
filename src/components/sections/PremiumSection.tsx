@@ -19,12 +19,13 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { useLanguage } from "@/lib/i18n"
+import { useLanguage, type TranslationKey } from "@/lib/i18n"
 import { useInView } from "@/hooks/useInView"
 import { usePayment } from "@/hooks/usePayment"
+import { validateEthiopianPhoneNumber } from "@/lib/telebirr"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import type { Subscription } from "@/types/payment"
-import { navigateTo } from "@/lib/navigation"
 
 type PremiumTier = "free" | "premium" | "pro"
 
@@ -117,12 +118,16 @@ export function PremiumSection({
   const { t, language } = useLanguage()
   const { ref, isInView } = useInView()
   const { loading, error, initiatePayment, tierPrices } = usePayment()
+  const navigate = useNavigate()
   const [selectedTier, setSelectedTier] = useState<PremiumTier | null>(null)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
   const [paymentMethod, setPaymentMethod] = useState<"chapa" | "telebirr">("chapa")
 
+  const enableTeleBirr = import.meta.env.VITE_ENABLE_TELEBIRR === "true"
+
   const handleChoosePlan = (tier: PremiumTier, method: "chapa" | "telebirr") => {
+    if (method === "telebirr" && !enableTeleBirr) return
     setSelectedTier(tier)
     setPaymentMethod(method)
     setPaymentDialogOpen(true)
@@ -135,7 +140,6 @@ export function PremiumSection({
       return
     }
 
-    // Both Chapa and TeleBirr redirect to a hosted checkout.
     const result = await initiatePayment(
       selectedTier,
       paymentMethod,
@@ -143,7 +147,6 @@ export function PremiumSection({
     )
 
     if (!result.success) {
-      // Error is surfaced via the `error` alert below.
       return
     }
 
@@ -154,7 +157,7 @@ export function PremiumSection({
 
   return (
     <>
-      <section id="premium" ref={ref} className="py-16 sm:py-24 bg-muted/30">
+      <section id="premium" ref={ref} className="py-16 sm:py-24 bg-muted/30 scroll-mt-20">
         <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 transition-all duration-700 ${isInView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <div className="text-center mb-10">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">{t("premium.title")}</h2>
@@ -168,104 +171,107 @@ export function PremiumSection({
               const isPaidPlan = tier.price > 0
 
               return (
-              <Card
-                key={tier.key}
-                className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
-                  isCurrentPlan
-                    ? "border-primary shadow-md"
-                    : tier.highlight
-                    ? "border-accent shadow-md scale-[1.02]"
-                    : "border-border/50"
-                }`}
-              >
-                {tier.highlight && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-accent" />
-                )}
-                <CardHeader className="text-center pb-2">
-                  <div className="flex justify-center mb-2">
-                    {tier.highlight ? (
-                      <Crown className="h-8 w-8 text-accent" />
-                    ) : tier.key === "pro" ? (
-                      <Zap className="h-8 w-8 text-primary" />
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold">
-                        F
-                      </div>
-                    )}
-                  </div>
-                  <CardTitle className="text-xl">
-                    {tier.key === "free" ? t("premium.free") : tier.key === "premium" ? "Premium" : t("premium.pro")}
-                  </CardTitle>
-                  <div className="mt-2">
-                    <span className="text-3xl font-bold">{tierPrices[tier.key].toLocaleString()}</span>
-                    <span className="text-sm text-muted-foreground"> {t("common.etb")}{t("premium.month")}</span>
-                  </div>
+                <Card
+                  key={tier.key}
+                  className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
+                    isCurrentPlan
+                      ? "border-primary shadow-md"
+                      : tier.highlight
+                      ? "border-accent shadow-md scale-[1.02]"
+                      : "border-border/50"
+                  }`}
+                >
                   {tier.highlight && (
-                    <Badge className="mt-2 bg-accent text-accent-foreground">Popular</Badge>
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-accent" />
                   )}
-                  {isCurrentPlan && (
-                    <Badge variant="outline" className="mt-2 border-primary text-primary">
-                      {language === "en" ? "Current plan" : "የአሁኑ እቅድ"}
-                    </Badge>
-                  )}
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <ul className="space-y-2">
-                    {Object.entries(tier.features).map(([key, value]) => (
-                      <li key={key} className="flex items-center gap-2 text-sm">
-                        {value === true ? (
-                          <Check className="h-4 w-4 text-green-500 shrink-0" />
-                        ) : value === false ? (
-                          <X className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-                        ) : (
-                          <span className="h-4 w-4 flex items-center justify-center text-xs text-muted-foreground shrink-0">~</span>
-                        )}
-                        <span className={value === false ? "text-muted-foreground/60" : "text-foreground"}>
-                          {t(featureKeys.find(fk => fk.endsWith(key)) as any)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  {isCurrentPlan ? (
-                    <Button className="w-full mt-4" variant="outline" disabled>
-                      {language === "en" ? "Active" : "ንቁ"}
-                    </Button>
-                  ) : isPaidPlan ? (
-                    <div className="flex flex-col gap-2 mt-4">
-                      <Button
-                        className={`w-full ${
-                          tier.highlight
-                            ? "bg-accent text-accent-foreground hover:bg-accent/90"
-                            : ""
-                        }`}
-                        variant={tier.highlight ? "default" : "outline"}
-                        disabled={isLowerPlan}
-                        onClick={() => handleChoosePlan(tier.key, "chapa")}
-                      >
-                        {isLowerPlan
-                          ? language === "en" ? "Included" : "ተካቷል"
-                          : language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
-                      </Button>
-                      <Button
-                        className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                        disabled={isLowerPlan}
-                        onClick={() => handleChoosePlan(tier.key, "telebirr")}
-                      >
-                        {isLowerPlan
-                          ? language === "en" ? "Included" : "ተካቷል"
-                          : language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
-                      </Button>
+                  <CardHeader className="text-center pb-2">
+                    <div className="flex justify-center mb-2">
+                      {tier.highlight ? (
+                        <Crown className="h-8 w-8 text-accent" />
+                      ) : tier.key === "pro" ? (
+                        <Zap className="h-8 w-8 text-primary" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold">
+                          F
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <Button
-                      className="w-full mt-6"
-                      variant="outline"
-                    >
-                      {t("premium.getStarted")}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-xl">
+                      {tier.key === "free" ? t("premium.free") : tier.key === "premium" ? "Premium" : t("premium.pro")}
+                    </CardTitle>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold">{tierPrices[tier.key].toLocaleString()}</span>
+                      <span className="text-sm text-muted-foreground"> {t("common.etb")}{t("premium.month")}</span>
+                    </div>
+                    {tier.highlight && (
+                      <Badge className="mt-2 bg-accent text-accent-foreground">Popular</Badge>
+                    )}
+                    {isCurrentPlan && (
+                      <Badge variant="outline" className="mt-2 border-primary text-primary">
+                        {language === "en" ? "Current plan" : "የአሁኑ እቅድ"}
+                      </Badge>
+                    )}
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <ul className="space-y-2">
+                      {Object.entries(tier.features).map(([key, value]) => (
+                        <li key={key} className="flex items-center gap-2 text-sm">
+                          {value === true ? (
+                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                          ) : value === false ? (
+                            <X className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                          ) : (
+                            <span className="h-4 w-4 flex items-center justify-center text-xs text-muted-foreground shrink-0">~</span>
+                          )}
+                          <span className={value === false ? "text-muted-foreground/60" : "text-foreground"}>
+                            {t(featureKeys.find((fk) => fk.endsWith(key)) as TranslationKey)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+{isCurrentPlan ? (
+                      <Button className="w-full mt-4" variant="outline" disabled>
+                        {language === "en" ? "Active" : "ንቁ"}
+                      </Button>
+                    ) : isPaidPlan ? (
+                      <div className="flex flex-col gap-2 mt-4">
+                        <Button
+                          className={`w-full ${
+                            tier.highlight
+                              ? "bg-accent text-accent-foreground hover:bg-accent/90"
+                              : ""
+                          }`}
+                          variant={tier.highlight ? "default" : "outline"}
+                          disabled={isLowerPlan}
+                          onClick={() => handleChoosePlan(tier.key, "chapa")}
+                        >
+                          {isLowerPlan
+                            ? language === "en" ? "Included" : "ተካቷል"
+                            : language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ"}
+                        </Button>
+                        {enableTeleBirr && (
+                          <Button
+                            className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                            disabled={isLowerPlan}
+                            onClick={() => handleChoosePlan(tier.key, "telebirr")}
+                          >
+                            {isLowerPlan
+                              ? language === "en" ? "Included" : "ተካቷል"
+                              : language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ"}
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full mt-6"
+                        variant="outline"
+                        onClick={() => navigate("/#market")}
+                      >
+                        {t("premium.getStarted")}
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
               )
             })}
           </div>
@@ -278,31 +284,31 @@ export function PremiumSection({
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{language === "en" ? "Feature" : "ባህሪ"}</TableHead>
-                    <TableHead className="text-center">{t("premium.free")}</TableHead>
-                    <TableHead className="text-center bg-accent/5">Premium</TableHead>
-                    <TableHead className="text-center">{t("premium.pro")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {featureKeys.map((fk) => {
-                    const featureId = fk.split(".").pop() as string
-                    return (
-                      <TableRow key={fk}>
-                        <TableCell className="text-sm">{t(fk)}</TableCell>
-                        {tiers.map((tier) => (
-                          <TableCell key={tier.key} className="text-center">
-                            <FeatureCell value={tier.features[featureId as keyof typeof tier.features]} />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{language === "en" ? "Feature" : "ባህሪ"}</TableHead>
+                      <TableHead className="text-center">{t("premium.free")}</TableHead>
+                      <TableHead className="text-center bg-accent/5">Premium</TableHead>
+                      <TableHead className="text-center">{t("premium.pro")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {featureKeys.map((fk) => {
+                      const featureId = fk.split(".").pop() as string
+                      return (
+                        <TableRow key={fk}>
+                          <TableCell className="text-sm">{t(fk)}</TableCell>
+                          {tiers.map((tier) => (
+                            <TableCell key={tier.key} className="text-center">
+                              <FeatureCell value={tier.features[featureId as keyof typeof tier.features]} />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -331,18 +337,20 @@ export function PremiumSection({
                 <Button
                   variant="outline"
                   className="gap-2 w-full sm:w-auto"
-                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "chapa") : navigateTo("/dashboard")}
+                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "chapa") : navigate("/dashboard")}
                 >
                   <CreditCard className="h-4 w-4" />
-                  {activePlan === "free" ? language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ" : language === "en" ? "Manage from dashboard" : "ከዳሽቦርድ ያስተዳድሩ"}
+                  {activePlan === "free" ? (language === "en" ? "Pay with Chapa" : "በቻፓ ይክፈሉ") : (language === "en" ? "Manage from dashboard" : "ከዳሽቦርድ ያስተዳድሩ")}
                 </Button>
-                <Button
-                  className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
-                  onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigateTo("/dashboard")}
-                >
-                  <Smartphone className="h-4 w-4" />
-                  {activePlan === "free" ? language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ" : language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ"}
-                </Button>
+                {enableTeleBirr && (
+                  <Button
+                    className="gap-2 w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700"
+                    onClick={() => activePlan === "free" ? handleChoosePlan("premium", "telebirr") : navigate("/dashboard")}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    {activePlan === "free" ? (language === "en" ? "Pay with TeleBirr" : "በቴሌቢር ይክፈሉ") : (language === "en" ? "View subscription" : "ምዝገባ ይመልከቱ")}
+                  </Button>
+                )}
               </div>
             </div>
             <div className="rounded-3xl border border-border/60 bg-muted/70 p-6 shadow-sm">
@@ -370,60 +378,71 @@ export function PremiumSection({
               }
             </DialogTitle>
             <DialogDescription>
-              {selectedTier && (
-                language === "en"
-                  ? `Complete your payment of ETB ${tierPrices[selectedTier] || 0} for ${selectedTier} membership`
-                  : `ለ${selectedTier} አባልነት የETB ${tierPrices[selectedTier] || 0} ክፍያ ያጠናቀቁ`
-              )}
+              {selectedTier
+                ? (language === "en"
+                    ? `Complete your payment of ETB ${tierPrices[selectedTier] || 0} for ${selectedTier} membership`
+                    : `ለ${selectedTier} አባልነት የETB ${tierPrices[selectedTier] || 0} ክፍያ ያጠናቀቁ`)
+                : (language === "en"
+                    ? "Complete your membership payment"
+                    : "የአባልነት ክፍያዎን ያጠናቁ")}
             </DialogDescription>
           </DialogHeader>
 
-            <>
-              {paymentMethod === "telebirr" ? (
-                <div className="space-y-4 py-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="phone">
-                     {language === "en" ? "Phone Number" : "ስልክ ቁጥር"}
-                   </Label>
-                   <Input
-                     id="phone"
-                     type="tel"
-                     placeholder="+2519XXXXXXXX"
-                     value={phoneNumber}
-                     onChange={(e) => setPhoneNumber(e.target.value)}
-                     className={phoneNumber && !/^(\+251|0)?9\d{8}$/.test(phoneNumber) ? "border-red-500" : ""}
-                   />
-                   <p className="text-xs text-muted-foreground">
-                     {language === "en"
-                       ? "Enter your TeleBirr registered phone number"
-                       : "የቴሌቢር ስልክ ቁጥርዎን ያስገቡ"
-                     }
-                   </p>
-                   {phoneNumber && !/^(\+251|0)?9\d{8}$/.test(phoneNumber) && (
-                     <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
-                       <AlertCircle className="h-3 w-3" />
-                       {language === "en" ? "Invalid phone number" : "ዋጋ በሌለው ስልክ ቁጥር"}
-                     </p>
-                   )}
-                 </div>
-               </div>
-             ) : (
-               <div className="py-4">
-                 <p className="text-sm text-muted-foreground">
-                   {language === "en"
-                     ? "You will be redirected to Chapa to complete your payment."
-                     : "ወደ ቻፓ ለመጨረሻ የሚተማሩበትና ክፍያዎን ይጠቃሉ።"}
-                 </p>
-               </div>
-             )}
+          <>
+            {paymentMethod === "telebirr" ? (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">
+                    {language === "en" ? "Phone Number" : "ስልክ ቁጥር"}
+                  </Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="09XXXXXXXX or +2519XXXXXXXX"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className={phoneNumber && !validateEthiopianPhoneNumber(phoneNumber) ? "border-red-500" : ""}
+                  />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {language === "en"
+                        ? "Enter your TeleBirr registered phone number"
+                        : "የቴሌቢር ስልክ ቁጥርዎን ያስገቡ"
+                      }
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPhoneNumber("0911223344")}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      {language === "en" ? "Use test number" : "የሙከራ ቁጥር"}
+                    </button>
+                  </div>
+                  {phoneNumber && !validateEthiopianPhoneNumber(phoneNumber) && (
+                    <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {language === "en" ? "Invalid phone number (e.g. 0911223344 or +251911223344)" : "ዋጋ በሌለው ስልክ ቁጥር"}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground">
+                  {language === "en"
+                    ? "You will be redirected to Chapa to complete your payment."
+                    : "ወደ ቻፓ ለመጨረሻ የሚተማሩበትና ክፍያዎን ይጠቃሉ።"}
+                </p>
+              </div>
+            )}
 
-             {error && (
-               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2 mb-4">
-                 <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                 <div>{error}</div>
-               </div>
-             )}
-           </>
+            {error && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md flex items-start gap-2 mb-4">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>{error}</div>
+              </div>
+            )}
+          </>
 
           <div className="flex justify-end gap-3">
             <Button 
@@ -435,18 +454,18 @@ export function PremiumSection({
             </Button>
             <Button 
               onClick={handlePayment} 
-              disabled={loading || (paymentMethod === "telebirr" && (!phoneNumber || !/^(\+251|0)?9\d{8}$/.test(phoneNumber)))}
+              disabled={loading || (paymentMethod === "telebirr" && (!phoneNumber || !validateEthiopianPhoneNumber(phoneNumber)))}
             >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {language === "en" ? "Processing..." : "በማስንቃት..."}
-                  </>
-                ) : (
-                  language === "en" ? "Confirm Payment" : "ክፍያ ያረጋግጁ"
-                )}
-              </Button>
-            </div>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {language === "en" ? "Processing..." : "በማስንቃት..."}
+                </>
+              ) : (
+                language === "en" ? "Confirm Payment" : "ክፍያ ያረጋግጁ"
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
+import { sanitizeSearchTerm, orIlike } from "@/lib/searchUtils"
 
 export type Blog = {
   id: string
@@ -14,37 +15,60 @@ export type Blog = {
   created_at: string
 }
 
-export function useBlogs(category?: string, page = 1, pageSize = 6) {
-  const [blogs, setBlogs] = useState<Blog[]>([])
-  const [loading, setLoading] = useState(true)
-  const [total, setTotal] = useState(0)
+const SEARCH_FETCH_CAP = 200
 
-  useEffect(() => {
-    async function fetchBlogs() {
-      setLoading(true)
+function fetchBlogs({
+  category,
+  page = 1,
+  pageSize = 6,
+  searchQuery,
+}: {
+  category?: string
+  page?: number
+  pageSize?: number
+  searchQuery?: string
+}) {
+  return async () => {
+    const term = sanitizeSearchTerm(searchQuery ?? "")
+
+    let query = supabase
+      .from("blogs")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+
+    if (category && category !== "all") {
+      query = query.eq("category", category)
+    }
+
+    if (term) {
+      query = query.or(orIlike(["title_en", "title_am"], term))
+      query = query.range(0, SEARCH_FETCH_CAP - 1)
+    } else {
       const from = (page - 1) * pageSize
       const to = from + pageSize - 1
-      let query = supabase
-        .from("blogs")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .range(from, to)
-
-      if (category && category !== "all") {
-        query = query.eq("category", category)
-      }
-      const { data, error, count } = await query
-      if (!error && data) {
-        setBlogs(data as Blog[])
-        setTotal(count ?? 0)
-      } else {
-        setBlogs([])
-        setTotal(0)
-      }
-      setLoading(false)
+      query = query.range(from, to)
     }
-    fetchBlogs()
-  }, [category, page, pageSize])
 
-  return { blogs, loading, total }
+    const { data, error, count } = await query
+    if (error) throw error
+    return { data: data as Blog[], total: count ?? 0 }
+  }
+}
+
+export function useBlogs({
+  category,
+  page = 1,
+  pageSize = 6,
+  searchQuery,
+}: {
+  category?: string
+  page?: number
+  pageSize?: number
+  searchQuery?: string
+}) {
+  return useQuery({
+    queryKey: ["blogs", category, page, pageSize, searchQuery],
+    queryFn: fetchBlogs({ category, page, pageSize, searchQuery }),
+    placeholderData: (prev) => prev,
+  })
 }

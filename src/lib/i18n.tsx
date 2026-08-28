@@ -1,6 +1,6 @@
 import * as React from "react"
 
-type Language = "am" | "en"
+export type Language = "am" | "en"
 
 export type TranslationKey =
   | "nav.knowledge"

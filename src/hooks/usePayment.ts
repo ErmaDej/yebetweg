@@ -168,6 +168,7 @@ export function usePayment() {
             returnUrl,
             subject: `YeBetWeg ${tier} Subscription`,
             description: `Payment for ${tier} membership (ETB ${amount})`,
+            phoneNumber: formattedPhone,
           })
 
           if (!result.success) {

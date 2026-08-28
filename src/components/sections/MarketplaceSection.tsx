@@ -20,10 +20,12 @@ import { useLanguage } from "@/lib/i18n"
 import { useListings, type Listing } from "@/hooks/useListings"
 import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
+import { FilterPanel, useActiveFilterCount } from "@/components/search/FilterPanel"
 import { useInView } from "@/hooks/useInView"
+import { useAuthContext } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
 import { sanitizeText } from "@/lib/validation"
-import { navigateTo } from "@/lib/navigation"
+import { useNavigate } from "react-router-dom"
 import { CreateListingForm } from "./CreateListingForm"
 import { RfqModal, type RfqContext } from "./RfqModal"
 import type { PremiumTier } from "@/types/payment"
@@ -57,6 +59,7 @@ function InquiryModal({
   listingTitle: string;
 }) {
   const { language, t } = useLanguage()
+  const { user } = useAuthContext()
   const [inquirySent, setInquirySent] = useState(false)
   const [inquiryError, setInquiryError] = useState("")
   const [inquiryData, setInquiryData] = useState({ name: "", phone: "" })
@@ -66,9 +69,12 @@ function InquiryModal({
       return
     }
 
+    const inquiryEmail =
+      user?.email || `${inquiryData.phone.replace(/\D/g, "")}@phone.yebetweg.local`
+
     const { error } = await supabase.from("inquiries").insert({
       name: sanitizeText(inquiryData.name, 100),
-      email: "marketplace@yebetweg.com",
+      email: inquiryEmail,
       phone: inquiryData.phone,
       subject: `Inquiry for ${listingTitle}`,
       message: `Inquiry from ${inquiryData.name} - Phone: ${inquiryData.phone}`,
@@ -151,6 +157,7 @@ function ListingCard({ listing, index, canContact, onRequestQuote }: {
   canContact: boolean
   onRequestQuote: (ctx: RfqContext) => void
 }) {
+  const navigate = useNavigate()
   const { language, t } = useLanguage()
   const title = language === "am" ? listing.title_am : listing.title_en
   const [contactOpen, setContactOpen] = useState(false)
@@ -241,7 +248,7 @@ function ListingCard({ listing, index, canContact, onRequestQuote }: {
               size="sm"
               variant="outline"
               className="gap-2"
-              onClick={() => navigateTo("/#premium")}
+              onClick={() => navigate("/#premium")}
             >
               <Lock className="h-3.5 w-3.5" />
               {language === "en" ? "Unlock contact" : "ግንኙነት ይክፈቱ"}
@@ -277,10 +284,27 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
   const { t, language } = useLanguage()
   const [tab, setTab] = useState("all")
   const [page, setPage] = useState(1)
-  const { listings, loading,  } = useListings(tab, page, LISTINGS_PER_PAGE)
+  const [searchInput, setSearchInput] = useState("")
+  const [serverQuery, setServerQuery] = useState("")
   const { ref, isInView } = useInView()
   const [listDialogOpen, setListDialogOpen] = useState(false)
   const [rfqContext, setRfqContext] = useState<RfqContext | null>(null)
+
+  // Debounce the raw input before triggering server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setServerQuery(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { data: listingsData, isLoading: loading } = useListings({
+    listingType: tab,
+    page,
+    pageSize: LISTINGS_PER_PAGE,
+    searchQuery: serverQuery,
+  })
+
+  const listings = listingsData?.data ?? []
+  const total = listingsData?.total ?? 0
 
   // Client-side smart search for listings
   const smartSearch = useSmartSearch<Listing>({
@@ -291,9 +315,13 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
   })
 
   const searchableListings = smartSearch.items
-  const totalFiltered = smartSearch.totalCount
+  const isSearching = Boolean(serverQuery.trim())
+  // While searching, the hook returns the full match set and smartSearch owns
+  // pagination; otherwise server pages drive it via the exact table total.
+  const totalFiltered = isSearching ? smartSearch.totalCount : total
   const pageCount = Math.max(1, Math.ceil(totalFiltered / LISTINGS_PER_PAGE))
-  const visiblePages = useMemo(() => getVisiblePages(page, pageCount), [page, pageCount])
+  const currentPage = isSearching ? smartSearch.state.page : page
+  const visiblePages = useMemo(() => getVisiblePages(currentPage, pageCount), [currentPage, pageCount])
   const canContact = activePlan === "premium" || activePlan === "pro"
   const [filtersOpen, setFiltersOpen] = useState(false)
 
@@ -301,8 +329,15 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
     setPage(1)
   }, [tab])
 
+  useEffect(() => {
+    if (isSearching) smartSearch.setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverQuery])
+
   const goToPage = (nextPage: number) => {
-    setPage(Math.min(Math.max(nextPage, 1), pageCount))
+    const clamped = Math.min(Math.max(nextPage, 1), pageCount)
+    if (isSearching) smartSearch.setPage(clamped)
+    else setPage(clamped)
     document.getElementById("marketplace")?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
@@ -319,18 +354,45 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
         onRemove: () => smartSearch.setFilter("location", undefined),
       })
     }
-    if (vals.price_range) {
-      const r = vals.price_range as { min?: number; max?: number }
+    if (vals.price && typeof vals.price === "object") {
+      const r = vals.price as { min?: number; max?: number }
       chips.push({
-        key: "price_range",
+        key: "price",
         label: language === "en" ? "Price" : "ዋጋ",
         value: `${r.min?.toLocaleString() || "0"} - ${r.max?.toLocaleString() || "∞"} ETB`,
-        onRemove: () => smartSearch.setFilter("price_range", undefined),
+        onRemove: () => smartSearch.setFilter("price", undefined),
       })
     }
 
     return chips
   }, [smartSearch.state.filters, smartSearch.setFilter, language])
+
+  // Filter panel definitions — location options derive from loaded rows
+  const listingFilters = useMemo(
+    () => [
+      {
+        key: "location",
+        label: language === "en" ? "Location" : "ቦታ",
+        type: "select" as const,
+        placeholder: language === "en" ? "All locations" : "ሁሉም ቦታዎች",
+        options: Array.from(
+          new Set(listings.map((l: Listing) => l.location).filter(Boolean)))
+          .sort()
+          .slice(0, 40)
+          .map((v) => ({ value: v as string, label: v as string })),
+      },
+      {
+        key: "price",
+        label: language === "en" ? "Price (ETB)" : "ዋጋ (ብር)",
+        type: "range" as const,
+        rangeMin: 0,
+        rangeMax: 3000000,
+        rangeStep: 50000,
+      },
+    ],
+    [language, listings]
+  )
+  const activeFilterCount = useActiveFilterCount(smartSearch.state.filters)
 
   return (
     <section id="marketplace" ref={ref} className="py-16 sm:py-24 bg-muted/30">
@@ -370,8 +432,8 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
         {/* Smart Search Bar */}
         <div className="mb-6">
           <SmartSearchBar
-            query={smartSearch.state.query}
-            onQueryChange={smartSearch.setQuery}
+            query={searchInput}
+            onQueryChange={setSearchInput}
             chips={activeFilterChips}
             onToggleFilters={() => setFiltersOpen(!filtersOpen)}
             filtersOpen={filtersOpen}
@@ -380,6 +442,21 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
             compact
           />
         </div>
+
+        {/* Filter Panel */}
+        {filtersOpen && (
+          <div className="mb-6">
+            <FilterPanel
+              filters={listingFilters}
+              values={smartSearch.state.filters}
+              onFilterChange={smartSearch.setFilter}
+              onClear={() => smartSearch.clearFilters(true)}
+              open={filtersOpen}
+              activeCount={activeFilterCount}
+              title={language === "en" ? "Filter listings" : "ዝርዝሮች ማጣሪያ"}
+            />
+          </div>
+        )}
 
         {loading || smartSearch.loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -417,11 +494,11 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
                   <PaginationItem>
                     <PaginationPrevious
                       href="#marketplace"
-                      aria-disabled={page === 1}
-                      className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === 1}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page - 1)
+                        goToPage(currentPage - 1)
                       }}
                     />
                   </PaginationItem>
@@ -429,7 +506,7 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
                     <PaginationItem key={pageNumber}>
                       <PaginationLink
                         href="#marketplace"
-                        isActive={pageNumber === page}
+                        isActive={pageNumber === currentPage}
                         onClick={(event) => {
                           event.preventDefault()
                           goToPage(pageNumber)
@@ -442,11 +519,11 @@ export function MarketplaceSection({ activePlan = "free" }: { activePlan?: Premi
                   <PaginationItem>
                     <PaginationNext
                       href="#marketplace"
-                      aria-disabled={page === pageCount}
-                      className={page === pageCount ? "pointer-events-none opacity-50" : ""}
+                      aria-disabled={currentPage === pageCount}
+                      className={currentPage === pageCount ? "pointer-events-none opacity-50" : ""}
                       onClick={(event) => {
                         event.preventDefault()
-                        goToPage(page + 1)
+                        goToPage(currentPage + 1)
                       }}
                     />
                   </PaginationItem>
