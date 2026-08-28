@@ -1,10 +1,10 @@
 # YeBetWeg Progress Tracker
 
 ## Current Status
-- Overall posture: Phase 5 merged to `main` (`471954b`); tags `phase-2-complete` → `phase-5-complete` pushed. **Next: Phase 6 Pre-Launch Hardening Gate** (clears D1/D2). Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security deferred to Phase 6 gate; TeleBirr frozen, Chapa-only.
-- Memory bank status: updated through Phase 5 (live city pricing, BOQ export, actuals, Telegram watch, save-to-project, supplier loop) + wrap.
-- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 5** (`471954b`), `dev`/`stable` at `5ed819c`.
-- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ on `dev@5ed819c`.
+- Overall posture: Phase 6 merged to `main` (`8d0e163`); tags `phase-2-complete` → `phase-6-complete` pushed. **Next: Phase 7 Launch Polish & Deploy**. Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security (D1/D2/D3) cleared; TeleBirr frozen, Chapa-only.
+- Memory bank status: updated through Phase 6 (RLS hardening, function hardening, webhook HMAC, auth consolidation).
+- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 6** (`8d0e163`), `dev`/`stable` at `6122716`.
+- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ · `npm run test` 11/11 ✓ on `dev@6122716`.
 
 ## Status Summary
 | Area | Status | Notes |

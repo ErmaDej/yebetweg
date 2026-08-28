@@ -25,6 +25,17 @@
 - PWA or native app work
 
 ## Changelog
+### August 26, 2026 — Phase 6 wrap to main — phase-6-complete (6122716)
+- Merged `dev` → `main` (`8d0e163`); tag `phase-6-complete` (`6122716`) pushed.
+- Phase 6 Pre-Launch Hardening Gate:
+  - RLS hardening (20260828000000): `subscription_payments`/`users` RLS enabled, `premium_subscriptions` anon `USING(true)` removed, listings approved-only, `site_logs` `auth_uid` join, `ads` admin fix, `get_active_subscription` revoked from anon, `login_attempts` rate-limit table.
+  - Function hardening (20260828000001): dropped insecure `create_listing`/`submit_inquiry` overloads, secure `is_admin()` + hardened `admin_check_custom_user`.
+  - `admin_actions`: removed `_customUserId` fallback (JWT-only admin auth).
+  - `chapa-webhook`: enforce HMAC 401 on mismatch (was warn+proceed).
+  - `telebirr-webhook`: optional HMAC (`TELEBIRR_WEBHOOK_SECRET`) with 401 on mismatch.
+  - Verified: typecheck ✓ · build ✓ · psql applied + history recorded.
+  - Secrets rotation + git history purge pending (manual); TeleBirr frozen (`VITE_ENABLE_TELEBIRR=false`).
+
 ### August 26, 2026 — Phase 5 wrap to main (471954b) — tag phase-5-complete (5ed819c)
 - Merged `dev` → `main` (`bce2c27` → `471954b`); `main` now at Phase 5 Strategic Differentiators.
 - Phase 5: `useCityMultipliers` (live city avg basket vs Addis, clamped +-15%, Live/Estimated badge); `BoqLiteSection` BOQ Pro export tier-gated CSV + printable HTML (premium/pro else → `#premium`) + canonical city fix; `Dashboard` BOQ actuals variance (`site_logs` payments); `SocialBridge` Weekly Cement & Rebar Watch (top 3 movers) + live badge; `useProjectSaves` (localStorage) + `BlogSection` Bookmark + `Dashboard` Saved card; `RfqManager` Copy summary + Share via Telegram.
