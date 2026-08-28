@@ -1,10 +1,10 @@
 # YeBetWeg Progress Tracker
 
 ## Current Status
-- Overall posture: Phase 4 merged to `main` (`bce2c27`); tags `phase-2-complete` (`27abdfb`) + `phase-3-complete` (`4833ad2`) + `phase-4-complete` (`22523ff`) pushed. **Next: Phase 5 Strategic Differentiators**. Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security deferred to Phase 6 gate; TeleBirr frozen, Chapa-only.
-- Memory bank status: updated through Phase 4A/C/D (a11y, mobile, Amharic critical, honesty) + wrap.
-- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 4** (`bce2c27`), `dev`/`stable` at `22523ff`.
-- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ on `dev@22523ff`.
+- Overall posture: Phase 5 merged to `main` (`471954b`); tags `phase-2-complete` → `phase-5-complete` pushed. **Next: Phase 6 Pre-Launch Hardening Gate** (clears D1/D2). Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security deferred to Phase 6 gate; TeleBirr frozen, Chapa-only.
+- Memory bank status: updated through Phase 5 (live city pricing, BOQ export, actuals, Telegram watch, save-to-project, supplier loop) + wrap.
+- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 5** (`471954b`), `dev`/`stable` at `5ed819c`.
+- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ on `dev@5ed819c`.
 
 ## Status Summary
 | Area | Status | Notes |
@@ -21,6 +21,7 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Aug 26, 2026 — **Phase 5 wrap to `main`** (`471954b`): merged `dev` → `main`, tag `phase-5-complete` (`5ed819c`) — live city pricing (useCityMultipliers + badge), BOQ Pro export (CSV + printable, tier-gated), BOQ→actuals variance (Dashboard), Telegram Weekly Watch + save-to-project (Blog bookmark + Dashboard card) + supplier RFQ Copy/Telegram. `main` now at Phase 5
 - [x] Aug 26, 2026 — **Phase 4 wrap to `main`** (`bce2c27`): merged `dev` → `main`, tag `phase-4-complete` (`22523ff`) — a11y (htmlFor/aria-label), mobile Sheet search + skip-to-content, Amharic critical-flow fixes (Georgian char removed), honesty (Hero live counts, ticker live prices, trust indicator, VideoShowcase/SocialBridge). `main` now at Phase 4
 - [x] Aug 26, 2026 — **Phase 2 + Phase 3 wrap to `main`** (`abf6829`): merged `dev` → `main`, tags `phase-2-complete` + `phase-3-complete` pushed; Vercel `main` was at Phase 3
 - [x] Aug 26, 2026 — **Phase 3 BOQ + premium gating** (`2984daa`): `boq_estimates` table + `useBoqEstimates` + Save (canonical city) + Dashboard card; `get_visible_*` RPCs + `refresh_market_price_freshness` + ads admin fix; `useMarketPrices` RPC-preferred. typecheck/build green — migrations pending user apply
@@ -54,10 +55,10 @@
 
 ## Active Next Actions
 1. **Apply pending migrations** (if not yet done): `20260827000000_boq_estimates.sql` + `20260827000001_market_price_gating_and_freshness.sql` via Supabase dashboard SQL editor (until then `useBoqEstimates` and `get_visible_*` degrade gracefully).
-2. **Phase 5 — Strategic Differentiators** (per `Ref/EnhancementNotes-1/2.md`): multi-city BOQ pricing (replace flat `cityMultipliers` with `market_prices` city-adjusted rates), BOQ Pro export (CSV/XLSX + printable PDF via edge function), BOQ→actuals tracking (job-costing lite), Telegram bridge growth loop (`/submitprice` funnel), supplier RFQ response loop, save-to-project on content.
-3. **Phase 3 polish (optional):** BOQ share permalink (`/boq/:id`) + Dashboard deep-link can be folded into Phase 5.
-4. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
-5. On Phase 5 completion: PR `dev`→`main`, tag `phase-5-complete`, then **Phase 6 Pre-Launch Hardening Gate** (clears D1/D2 — RLS, webhook HMAC, credential rotation).
+2. **Phase 6 Pre-Launch Hardening Gate** (clears D1/D2): enable RLS on `users`/`subscription_payments`, fix `premium_subscriptions` `USING(true)`, restrict anon `listings` to `approved`, fix `site_logs`/`ads` policies, revoke anon `get_active_subscription`, rate-limit `login` RPC, remove `admin_actions` `_customUserId` bypass, enforce webhook HMAC, derive JWT identity, rotate + purge secrets, TeleBirr unfreeze decision.
+3. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
+4. On Phase 6 completion: final `dev`→`main` + `phase-6-complete` tag — production launch ready.
+5. Post-launch (optional): BOQ share permalink (`/boq/:id`) deep-link, chart lib consolidation, full 200-key Amharic native review.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — checklist in `memory/security/project_rules.md`

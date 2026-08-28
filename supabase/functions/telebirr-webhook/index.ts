@@ -11,6 +11,38 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders })
   }
 
+  // Optional HMAC verification — enforce if TELEBIRR_WEBHOOK_SECRET is set
+  const webhookSecret = Deno.env.get("TELEBIRR_WEBHOOK_SECRET") || ""
+  if (webhookSecret) {
+    const signature = req.headers.get("x-telebirr-signature") || req.headers.get("x-signature") || ""
+    if (!signature) {
+      return new Response(JSON.stringify({ error: "Missing TeleBirr signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+    // Expect raw body HMAC-SHA256 hex
+    const rawForSign = await req.clone().text()
+    const encoder = new TextEncoder()
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(webhookSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    )
+    const expected = Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(rawForSign))))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+    if (signature !== expected) {
+      console.error("[TeleBirr Webhook] Signature mismatch")
+      return new Response(JSON.stringify({ error: "Invalid TeleBirr signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
