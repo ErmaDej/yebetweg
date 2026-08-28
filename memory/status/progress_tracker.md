@@ -1,10 +1,10 @@
 # YeBetWeg Progress Tracker
 
 ## Current Status
-- Overall posture: Phase 2 + Phase 3 merged to `main` (`abf6829`); tags `phase-2-complete` (`27abdfb`) + `phase-3-complete` (`4833ad2`) pushed. Active: **Phase 4 UI/UX & Accessibility**. Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security deferred to Phase 6 gate; TeleBirr frozen, Chapa-only.
-- Memory bank status: updated through auth + Batch D + Phase 3 BOQ/gating.
-- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 3** (`abf6829`), `dev`/`stable` at `4833ad2`.
-- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ · `npm run test` 11/11 ✓ on `dev@4833ad2`.
+- Overall posture: Phase 4 merged to `main` (`bce2c27`); tags `phase-2-complete` (`27abdfb`) + `phase-3-complete` (`4833ad2`) + `phase-4-complete` (`22523ff`) pushed. **Next: Phase 5 Strategic Differentiators**. Master plan: root `DEVELOPMENT_PLAN.md`. Phase 0 security deferred to Phase 6 gate; TeleBirr frozen, Chapa-only.
+- Memory bank status: updated through Phase 4A/C/D (a11y, mobile, Amharic critical, honesty) + wrap.
+- Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main now at Phase 4** (`bce2c27`), `dev`/`stable` at `22523ff`.
+- Last verified: Aug 26 — `npm run typecheck` ✓ · `npm run build` ✓ on `dev@22523ff`.
 
 ## Status Summary
 | Area | Status | Notes |
@@ -21,7 +21,8 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
-- [x] Aug 26, 2026 — **Phase 2 + Phase 3 wrap to `main`** (`abf6829`): merged `dev` → `main`, tags `phase-2-complete` + `phase-3-complete` pushed; Vercel `main` now at Phase 3 BOQ + gating
+- [x] Aug 26, 2026 — **Phase 4 wrap to `main`** (`bce2c27`): merged `dev` → `main`, tag `phase-4-complete` (`22523ff`) — a11y (htmlFor/aria-label), mobile Sheet search + skip-to-content, Amharic critical-flow fixes (Georgian char removed), honesty (Hero live counts, ticker live prices, trust indicator, VideoShowcase/SocialBridge). `main` now at Phase 4
+- [x] Aug 26, 2026 — **Phase 2 + Phase 3 wrap to `main`** (`abf6829`): merged `dev` → `main`, tags `phase-2-complete` + `phase-3-complete` pushed; Vercel `main` was at Phase 3
 - [x] Aug 26, 2026 — **Phase 3 BOQ + premium gating** (`2984daa`): `boq_estimates` table + `useBoqEstimates` + Save (canonical city) + Dashboard card; `get_visible_*` RPCs + `refresh_market_price_freshness` + ads admin fix; `useMarketPrices` RPC-preferred. typecheck/build green — migrations pending user apply
 - [x] Aug 26, 2026 — **Auth consolidation + Batch D** (`aac32f4`): removed mock-user + RPC login + client role; `edge` + `useUserProfile` cleaned; `useSiteLogs` early return, `SiteLogSection` AlertDialog + mobile-visible delete + `max=today`; `useVerification` interval ref leak fixed; fake inquiry emails → real/placeholder; `AdsSection` button-in-anchor fixed. typecheck/build/tests green
 - [x] Aug 26, 2026 — **Phase 2 batch: centralized edge API + error boundaries + dead-weight cleanup**: `edge.ts` single entry-point (timeout/abort, EdgeError), `api/chapa/telebirr` refactored, `<Toaster>` + per-route `ErrorBoundary`, `crypto-js` removed, `Language` deduped, `PaymentHookResult` removed, package renamed, favicon/og:image fixed. typecheck/build/tests green (`b960ab9`)
@@ -52,11 +53,11 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Apply pending migrations** (same manual step as blogs fix): `20260826000000_fix_blogs_authenticated_read_policy.sql` (done) + `20260827000000_boq_estimates.sql` + `20260827000001_market_price_gating_and_freshness.sql` via Supabase dashboard SQL editor (until then `useBoqEstimates` and `get_visible_*` degrade gracefully).
-2. **Phase 4 ACTIVE — UI/UX & Accessibility:** Amharic copy pass (many `am` strings are garbled MT; `i18n.tsx` 200 keys), per-form `Label htmlFor` + `aria-label` on icon-only buttons, mobile search in Sheet (currently missing below `md`), fabricated-stats honesty pass (`Hero` counters 10k/500/2k, ticker fake prices, `Professionals` trustScore, `SocialBridge` fake views).
-3. **Phase 3 polish (optional):** BOQ share permalink (`/boq/:id`) + Dashboard deep-link; `AdminDashboardTab` content delete confirms (Batch D done for SiteLog, add for blogs/tips/ads).
+1. **Apply pending migrations** (if not yet done): `20260827000000_boq_estimates.sql` + `20260827000001_market_price_gating_and_freshness.sql` via Supabase dashboard SQL editor (until then `useBoqEstimates` and `get_visible_*` degrade gracefully).
+2. **Phase 5 — Strategic Differentiators** (per `Ref/EnhancementNotes-1/2.md`): multi-city BOQ pricing (replace flat `cityMultipliers` with `market_prices` city-adjusted rates), BOQ Pro export (CSV/XLSX + printable PDF via edge function), BOQ→actuals tracking (job-costing lite), Telegram bridge growth loop (`/submitprice` funnel), supplier RFQ response loop, save-to-project on content.
+3. **Phase 3 polish (optional):** BOQ share permalink (`/boq/:id`) + Dashboard deep-link can be folded into Phase 5.
 4. At every milestone: green checks → push `dev` + refresh `stable` + update memory bank.
-5. On Phase 4 completion: PR `dev`→`main`, tag `phase-4-complete`.
+5. On Phase 5 completion: PR `dev`→`main`, tag `phase-5-complete`, then **Phase 6 Pre-Launch Hardening Gate** (clears D1/D2 — RLS, webhook HMAC, credential rotation).
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — checklist in `memory/security/project_rules.md`

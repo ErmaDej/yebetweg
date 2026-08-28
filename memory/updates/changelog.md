@@ -25,6 +25,13 @@
 - PWA or native app work
 
 ## Changelog
+### August 26, 2026 — Phase 4 wrap to main (bce2c27) — tags phase-4-complete (22523ff)
+- Merged `dev` → `main` (`abf6829` → `bce2c27`); `main` now at Phase 4 UI/UX & Accessibility (a11y, mobile, Amharic critical, honesty). `phase-4-complete` tag pushed.
+- Phase 4A: `ContactSection`/`CreateListingForm`/Marketplace+Professionals hire/SiteLog `htmlFor`/`id` + `autoComplete`; `MarketPriceManager`/`RfqManager`/`Footer`/`FloatingSocialBar`/`Dashboard` icon-only `aria-label`s; `Navbar` `xs:` → `sm:` + `max-w-[12ch] truncate`, skip-to-content + mobile `Sheet` `SmartSearchBar`, `App` `main#main-content`
+- Phase 4C: `PaymentSuccessPage` (4), `PasswordResetDialog` (3), `ResetPasswordPage` gibberish, `RfqManager` 5 statuses (Georgian char `᎒` removed), `AdminDashboardTab` 4 strings — critical-flow Amharic fixes (full 200-key native review still recommended)
+- Phase 4D: `HeroSection` live counts via TanStack Query (was 10000/500/2000) + footnote, `TipsSection` ticker `aria-hidden` + live `market_prices`, `Professionals` trust → indicator + `is_verified` guard, `VideoShowcase` 10k+ → growing community, `SocialBridge` fake views/likes removed
+- Verified: typecheck ✓ · build ✓
+
 ### August 26, 2026 — Phase 3: BOQ persistence + premium gating + freshness (pending migration apply)
 - `20260827000000_boq_estimates.sql`: `boq_estimates` (user_id FK users, inputs/outputs jsonb, RLS via `users.auth_uid`, indexes, `updated_at` trigger)
 - `useBoqEstimates` (TanStack Query, graceful 42P01) + `BoqLiteSection` Save (canonical `city` key, `cityLabel` separate), toast + count badge, Dashboard Saved BOQ Estimates card (delete with confirm)
