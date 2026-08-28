@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Clock, ArrowRight, BookOpen, SearchX, X } from "lucide-react"
+import { Bookmark, Clock, ArrowRight, BookOpen, SearchX, X } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,8 @@ import { useSmartSearch } from "@/hooks/useSmartSearch"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { truncateWords } from "@/lib/searchUtils"
+import { useProjectSaves } from "@/hooks/useProjectSaves"
+import { toast } from "sonner"
 
 const categories = [
   { value: "all", key: "blog.filter.all" as const },
@@ -63,13 +65,36 @@ function BlogCard({
   onRead: (blog: Blog) => void
 }) {
   const { language, t } = useLanguage()
+  const { isSaved, toggle } = useProjectSaves()
   const title = language === "am" ? blog.title_am : blog.title_en
   const readTime = Math.ceil((blog.content?.split(" ").length || 0) / 200)
+  const saved = isSaved(blog.id, "blog")
+
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggle({ id: blog.id, type: "blog", title, subtitle: blog.category, image: blog.image_url })
+    toast.success(
+      saved
+        ? language === "en"
+          ? "Removed from saved"
+          : "ከተቀመጡ ተወግዷል"
+        : language === "en"
+          ? "Saved to your project"
+          : "ወደ ፕሮጀክትዎ ተቀምጧል"
+    )
+  }
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onRead(blog)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onRead(blog)
+        }
+      }}
       className="block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl"
       aria-label={title}
     >
@@ -109,20 +134,48 @@ function BlogCard({
             {truncateWords(blog.content ?? "", 150)}
           </p>
         </CardContent>
-        <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between">
+        <CardFooter className="px-4 pb-4 pt-0 flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span className="shrink-0">{readTime} {t("blog.minRead")}</span>
             <span className="text-border">|</span>
             <span className="truncate">{blog.author}</span>
           </div>
-          <span className="inline-flex items-center gap-1 shrink-0 text-xs font-medium group-hover:text-accent transition-colors">
-            {t("blog.readMore")}
-            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleSave}
+              aria-label={
+                saved
+                  ? language === "en"
+                    ? "Remove from saved"
+                    : "ከተቀመጡ አስወግድ"
+                  : language === "en"
+                    ? "Save to project"
+                    : "ወደ ፕሮጀክት አስቀምጥ"
+              }
+              title={
+                saved
+                  ? language === "en"
+                    ? "Remove from saved"
+                    : "ከተቀመጡ አስወግድ"
+                  : language === "en"
+                    ? "Save to project"
+                    : "ወደ ፕሮጀክት አስቀምጥ"
+              }
+            >
+              <Bookmark className={`h-4 w-4 ${saved ? "fill-accent text-accent" : ""}`} />
+            </Button>
+            <span className="inline-flex items-center gap-1 text-xs font-medium group-hover:text-accent transition-colors">
+              {t("blog.readMore")}
+              <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+            </span>
+          </div>
         </CardFooter>
       </Card>
-    </button>
+    </div>
   )
 }
 
