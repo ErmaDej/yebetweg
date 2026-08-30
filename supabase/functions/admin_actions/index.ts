@@ -184,7 +184,7 @@ serve(async (req) => {
           await supabase.from("blogs").update(updates).eq("id", blogId)
           return jsonResponse({ success: true, action, message: "Blog updated" })
         }
-        if (!blogId && !payload?.delete) {
+        if (!blogId && payload && !payload.delete) {
           const { data: created, error: createError } = await supabase
             .from("blogs")
             .insert({
@@ -233,7 +233,7 @@ serve(async (req) => {
           await supabase.from("tips").update(updates).eq("id", tipId)
           return jsonResponse({ success: true, action, message: "Tip updated" })
         }
-        if (!tipId && !payload?.delete) {
+        if (!tipId && payload && !payload.delete) {
           const { data: created, error: createError } = await supabase
             .from("tips")
             .insert({
@@ -281,7 +281,7 @@ serve(async (req) => {
           await supabase.from("ads").update(updates).eq("id", adId)
           return jsonResponse({ success: true, action, message: "Ad updated" })
         }
-        if (!adId && !payload?.delete) {
+        if (!adId && payload && !payload.delete) {
           const { data: created, error: createError } = await supabase
             .from("ads")
             .insert({
