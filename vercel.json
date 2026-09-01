@@ -2,12 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "regions": ["iad1"],
-  "functions": {
-    "src/api/**/*.ts": {
-      "runtime": "edge",
-      "maxDuration": 30
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",

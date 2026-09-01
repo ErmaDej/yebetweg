@@ -69,9 +69,10 @@ function HomePage() {
             <div className="lg:col-span-2">
               <SocialBridgeSection />
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4">
               <AdSlot position="sidebar" />
               <AdvertiseWithUs />
+              <AdSlot position="native_card" />
             </div>
           </div>
         </div>
