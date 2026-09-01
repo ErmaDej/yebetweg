@@ -4,7 +4,7 @@
 - Overall posture: Phase 7 complete on `main`. **TeleBirr permanently removed.** Payments Chapa-only. Next: production launch (Vercel deploy, secrets rotation, admin account fix).
 - Memory bank status: updated through Phase 7 finalization (TeleBirr removal, PremiumSection cleanup, D3 closed).
 - Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main at Phase 7 final**, `dev`/`stable` pending merge.
-- Last verified: Aug 28 — `npm run typecheck` ✓ · `npm run build` ✓ · `npm run test` ✓ (TeleBirr-free).
+- Last verified: Sep 1 — `npm run build` ✓ (ads+vercel+accessibility+SafeImage fix)
 
 ## Status Summary
 | Area | Status | Notes |
@@ -21,6 +21,7 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Sep 1, 2026 — **Ads + vercel + accessibility fixes**: vercel.json structure fixed (removed invalid rewrites, added cache headers, ignored test/supabase-temp files); sw.js: guard against 206 Partial Content (caches.put crash); SheetContent aria-describedby fix; SafeImage component with broken-image fallback; AdsSection: sample ad fallback seeded (Unsplash images), expanded image URL allowlist; BlogSection: uses SafeImage for graceful loading.
 - [x] Aug 30, 2026 — **Fix admin_actions edge function + repair migrations**: Fixed null-payload crash in `manage_blogs/tips/ads` (guard with `payload &&` check); pushed missing columns migration for `market_prices` (city, specification, source_type, vat_included, confidence_score, freshness_status, etc.) and `blogs/tips` (content_en/am, excerpt_en/am, status, tags); verified manage_blogs/tips/ads all return data (8/20/6 rows). typecheck ✓ · build ✓
 - [x] Aug 28, 2026 — **Phase 7 finalization**: TeleBirr permanently removed from codebase (PremiumSection, usePayment, useUserProfile, PaymentPage, vite.config, i18n). "Get Started" button fixed for signed-in vs unsigned users. D3 deferral entry closed. Verified: typecheck ✓ · build ✓ · tests ✓
 - [x] Aug 26, 2026 — **Phase 7 wrap to `main`** — phase-7-complete: SEO/PWA/performance (sitemap, manifest, service worker, meta tags), Analytics/telemetry (useAnalytics, useErrorReporting, funnel tracking, error boundary), Performance (code splitting, lazy loading, bundle optimization), Production config (vercel.json, index.html SEO, service worker, manifest.json, sitemap.xml). Verified: typecheck ✓ · build ✓ · tests 11/11 ✓
