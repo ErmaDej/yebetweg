@@ -37,19 +37,39 @@
         }
       ]
     },
-    "rewrites": [
-      {
-        "source": "/sitemap.xml",
-        "destination": "/sitemap.xml"
-      },
-      {
-        "source": "/manifest.json",
-        "destination": "/manifest.json"
-      },
-      {
-        "source": "/sw.js",
-        "destination": "/sw.js"
-      }
-    ]
-  }
+    {
+      "source": "/images/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/videos/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ],
+  "ignore": [
+    "src/**/*.test.*",
+    "src/**/*.spec.*",
+    "tests/**/*",
+    "supabase/.temp/**/*",
+    "supabase/functions/**/node_modules/**/*",
+    "**/*.md",
+    "**/CLAUDE.md",
+    "**/DEVELOPMENT_PLAN.md"
+  ]
 }

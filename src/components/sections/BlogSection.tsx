@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Image } from "@/components/ui/image"
 import {
   Dialog,
   DialogContent,
@@ -104,12 +105,11 @@ function BlogCard({
       >
         <div className="relative h-48 overflow-hidden">
           {blog.image_url ? (
-            <img
+            <Image
               src={blog.image_url}
               alt=""
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 animate-image-fade"
+              className="w-full h-48 sm:h-64 object-cover transition-transform duration-500 group-hover:scale-105 animate-image-fade"
               loading="lazy"
-              decoding="async"
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">

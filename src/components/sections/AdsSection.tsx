@@ -2,9 +2,10 @@ import { useState, useEffect } from "react"
 import { Megaphone } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Image } from "@/components/ui/image"
 import { useLanguage } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
-import { isImageUrlValid, getFallbackUrl } from "@/lib/url-validator"
+import { isImageUrlValid } from "@/lib/url-validator"
 
 interface Ad {
   id: string
@@ -15,8 +16,40 @@ interface Ad {
   is_active: boolean
 }
 
+const SAMPLE_ADS: Ad[] = [
+  {
+    id: "sample-leaderboard-1",
+    advertiser: "ConstructPro Ethiopia",
+    image_url: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80",
+    link: "https://t.me/yebetweg",
+    position: "leaderboard",
+    is_active: true,
+  },
+  {
+    id: "sample-sidebar-1",
+    advertiser: "Addis Build Materials",
+    image_url: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&q=80",
+    link: "https://t.me/yebetweg",
+    position: "sidebar",
+    is_active: true,
+  },
+  {
+    id: "sample-native-1",
+    advertiser: "Ethio Cement Co.",
+    image_url: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=400&q=80",
+    link: "https://t.me/yebetweg",
+    position: "native_card",
+    is_active: true,
+  },
+]
+
+/** Returns sample ads for the given position when the DB has none */
+function getSampleAds(position: string): Ad[] {
+  return SAMPLE_ADS.filter((a) => a.position === position)
+}
+
 export function AdSlot({ position }: { position: "leaderboard" | "sidebar" | "native_card" }) {
-  const { t, language } = useLanguage()
+  const { language } = useLanguage()
   const [ad, setAd] = useState<Ad | null>(null)
 
   useEffect(() => {
@@ -28,25 +61,26 @@ export function AdSlot({ position }: { position: "leaderboard" | "sidebar" | "na
       .maybeSingle()
       .then(({ data }) => {
         if (data) setAd(data as Ad)
+        else setAd(getSampleAds(position)[0] || null)
       })
   }, [position])
 
   if (!ad) return null
 
-  const safeLink = getFallbackUrl(ad.link)
+  const safeLink = ad.link.startsWith("https://") ? ad.link : "#"
   const safeImage = isImageUrlValid(ad.image_url) ? ad.image_url : null
 
   if (position === "leaderboard") {
     return (
       <div className="w-full my-6">
-        <p className="text-[10px] text-muted-foreground text-center mb-1">{t("ads.label")}</p>
-        <Card className="overflow-hidden border-accent/20">
+        <p className="text-[10px] text-muted-foreground text-center mb-1">Ad</p>
+        <Card className="overflow-hidden border-accent/20 shadow-sm">
           {safeImage ? (
             <a href={safeLink} target="_blank" rel="noopener noreferrer">
-              <img
+              <Image
                 src={safeImage}
                 alt={ad.advertiser}
-                className="w-full h-20 sm:h-24 object-cover"
+                className="w-full h-24 sm:h-28 object-cover"
                 loading="lazy"
               />
             </a>
@@ -75,11 +109,11 @@ export function AdSlot({ position }: { position: "leaderboard" | "sidebar" | "na
   if (position === "sidebar") {
     return (
       <div className="w-full">
-        <p className="text-[10px] text-muted-foreground text-center mb-1">{t("ads.label")}</p>
-        <Card className="overflow-hidden border-accent/20">
+        <p className="text-[10px] text-muted-foreground text-center mb-1">Ad</p>
+        <Card className="overflow-hidden border-accent/20 shadow-sm">
           {safeImage ? (
             <a href={safeLink} target="_blank" rel="noopener noreferrer">
-              <img
+              <Image
                 src={safeImage}
                 alt={ad.advertiser}
                 className="w-full h-48 object-cover"
@@ -106,15 +140,15 @@ export function AdSlot({ position }: { position: "leaderboard" | "sidebar" | "na
 
   return (
     <div className="w-full">
-      <p className="text-[10px] text-muted-foreground text-center mb-1">{t("ads.label")}</p>
-      <Card className="overflow-hidden border-accent/20">
+      <p className="text-[10px] text-muted-foreground text-center mb-1">Ad</p>
+      <Card className="overflow-hidden border-accent/20 shadow-sm">
         {safeImage ? (
           <div className="flex items-center gap-3">
             <a href={safeLink} target="_blank" rel="noopener noreferrer" className="shrink-0">
-              <img
+              <Image
                 src={safeImage}
                 alt={ad.advertiser}
-                className="w-24 h-20 object-cover"
+                className="w-28 h-20 object-cover"
                 loading="lazy"
               />
             </a>

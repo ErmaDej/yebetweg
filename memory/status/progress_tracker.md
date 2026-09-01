@@ -21,6 +21,7 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Aug 30, 2026 — **Fix admin_actions edge function + repair migrations**: Fixed null-payload crash in `manage_blogs/tips/ads` (guard with `payload &&` check); pushed missing columns migration for `market_prices` (city, specification, source_type, vat_included, confidence_score, freshness_status, etc.) and `blogs/tips` (content_en/am, excerpt_en/am, status, tags); verified manage_blogs/tips/ads all return data (8/20/6 rows). typecheck ✓ · build ✓
 - [x] Aug 28, 2026 — **Phase 7 finalization**: TeleBirr permanently removed from codebase (PremiumSection, usePayment, useUserProfile, PaymentPage, vite.config, i18n). "Get Started" button fixed for signed-in vs unsigned users. D3 deferral entry closed. Verified: typecheck ✓ · build ✓ · tests ✓
 - [x] Aug 26, 2026 — **Phase 7 wrap to `main`** — phase-7-complete: SEO/PWA/performance (sitemap, manifest, service worker, meta tags), Analytics/telemetry (useAnalytics, useErrorReporting, funnel tracking, error boundary), Performance (code splitting, lazy loading, bundle optimization), Production config (vercel.json, index.html SEO, service worker, manifest.json, sitemap.xml). Verified: typecheck ✓ · build ✓ · tests 11/11 ✓
 - [x] Aug 26, 2026 — **Phase 7: Amharic native review** (f0e7326): 31 garbled Amharic strings fixed across i18n.tsx + assistant.ts (search.recent, dashboard.benefits, trust indicator, etc.)
@@ -56,10 +57,9 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Admin login fix** (manual): Create Supabase Auth users for `admin1@yebetweg.com` and `admin2@yebetweg.com` via Supabase Dashboard → Authentication → Users → Add User; populate `auth_uid` in `users` table; set `provider = 'supabase'`.
-2. **Secrets rotation** (manual): rotate DB password, service_role, Chapa secret, Resend key; run `git filter-repo`/`BFG` to purge history; update `.env.example` placeholders.
-3. **Production launch**: Vercel deploy (configure env vars, domain), Supabase production project, DNS config, monitoring/alerts.
-4. **Post-launch** (optional): full 200-key Amharic native review, BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard.
+1. **Secrets rotation** (manual): rotate DB password, service_role, Chapa secret, Resend key; run `git filter-repo`/`BFG` to purge history; update `.env.example` placeholders.
+2. **Production launch**: Vercel deploy (configure env vars, domain), Supabase production project, DNS config, monitoring/alerts.
+3. **Post-launch** (optional): full 200-key Amharic native review, BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — **CLEARED in Phase 6** (20260828000000 migration)

@@ -12,6 +12,16 @@ const ALLOWED_DOMAINS = [
   'facebook.com',
   'tiktok.com',
   'images.unsplash.com',
+  'unsplash.com',
+  'cdn.unsplash.com',
+  'pexels.com',
+  'images.pexels.com',
+  'pixabay.com',
+  'i.pinimg.com',
+  'cloudinary.com',
+  'res.cloudinary.com',
+  'imgix.net',
+  'images.unsplash.com',
 ];
 
 /**
@@ -64,12 +74,15 @@ export function isExternalUrlAllowed(url: string | null | undefined): boolean {
 export function isImageUrlValid(url: string | null | undefined): boolean {
   if (!url || typeof url !== 'string') return false;
 
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(trimmed);
     // Only allow HTTPS for images
     if (parsed.protocol !== 'https:') return false;
     // Image URLs should not contain scripts or suspicious patterns
-    if (url.includes('javascript:') || url.includes('data:')) return false;
+    if (trimmed.includes('javascript:') || trimmed.includes('data:')) return false;
     return true;
   } catch {
     return false;
@@ -91,7 +104,17 @@ export function getFallbackUrl(
  */
 export function getFallbackImageUrl(
   url: string | null | undefined,
-  fallback: string = '/images/placeholder.png',
+  fallback: string = '/images/placeholder.svg',
 ): string {
   return isImageUrlValid(url) ? url! : fallback;
+}
+
+/**
+ * Wraps an image URL so it can be safely loaded.
+ * Returns the original URL if valid, otherwise null so the caller can
+ * render a graceful placeholder instead of a broken image.
+ */
+export function safeImageUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== 'string') return null;
+  return isImageUrlValid(url) ? url.trim() : null;
 }

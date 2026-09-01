@@ -5,7 +5,23 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/Logo2x.png',
   '/Logo3x.png',
+  '/Logo1x.jpg',
+  '/vite.svg',
 ];
+
+/**
+ * Returns true when a fetch Response is a complete, cacheable body.
+ * A 206 Partial Content response (range request) is intentionally excluded —
+ * `caches.put` throws on partial bodies, which previously crashed the SW.
+ */
+function isCacheableResponse(response) {
+  if (!response || !response.ok) return false;
+  // 206 Partial Content cannot be cached as-is
+  if (response.status === 206) return false;
+  // HEAD responses have no body
+  if (response.status === 204) return false;
+  return true;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -42,7 +58,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response.ok) {
+          if (isCacheableResponse(response)) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
@@ -56,7 +72,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
         return fetch(event.request).then((response) => {
-          if (response.ok) {
+          if (isCacheableResponse(response)) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
