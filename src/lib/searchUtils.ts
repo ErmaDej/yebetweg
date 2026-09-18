@@ -15,11 +15,14 @@ export function orIlike(columns: string[], term: string): string {
   return columns.map((c) => `${c}.ilike."%${term}%"`).join(",")
 }
 
-// Truncates on a word boundary (and never mid-code-unit) for excerpts.
+// Truncates on a word boundary (and never mid-code-unit or mid-surrogate-pair,
+// which would corrupt emoji/Amharic glyphs) for excerpts.
 export function truncateWords(text: string, maxChars: number): string {
   const clean = text.trim()
   if (clean.length <= maxChars) return clean
-  const cut = clean.slice(0, maxChars)
-  const lastSpace = cut.lastIndexOf(" ")
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
+  const cut = Array.from(clean.slice(0, maxChars + 1))
+  // Drop a trailing partial code point caused by the +1 window.
+  const safe = cut.slice(0, Array.from(clean.slice(0, maxChars)).length).join("")
+  const lastSpace = safe.lastIndexOf(" ")
+  return `${(lastSpace > 0 ? safe.slice(0, lastSpace) : safe).trimEnd()}…`
 }

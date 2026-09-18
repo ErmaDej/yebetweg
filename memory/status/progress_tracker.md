@@ -1,10 +1,10 @@
 # YeBetWeg Progress Tracker
 
 ## Current Status
-- Overall posture: Phase 7 complete on `main`. **TeleBirr permanently removed.** Payments Chapa-only. Next: production launch (Vercel deploy, secrets rotation, admin account fix).
-- Memory bank status: updated through Phase 7 finalization (TeleBirr removal, PremiumSection cleanup, D3 closed).
+- Overall posture: Phase 7 complete on `main`. **TeleBirr permanently removed.** Payments Chapa-only. Production-readiness pass executed Sep 18, 2026 (see milestone below). Remaining launch blockers are owner actions: secrets rotation, admin-login script run, Vercel production deploy.
+- Memory bank status: **tracked in git as of Sep 18, 2026** (was gitignored; 7 files recovered). Updated through the Sep 18 production-readiness pass.
 - Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main at Phase 7 final**, `dev`/`stable` pending merge.
-- Last verified: Sep 1 — `npm run build` ✓ (ads+vercel+accessibility+SafeImage fix)
+- Last verified: Sep 18 — typecheck ✓ · build ✓ · **tests 75/75 ✓ (restored suite, Vitest)**
 
 ## Status Summary
 | Area | Status | Notes |
@@ -21,6 +21,7 @@
 | Backend deployment | ✅ Complete | All 5 edge functions deployed and verified responding |
 
 ## Recent Milestones
+- [x] Sep 18, 2026 — **Production-readiness pass (B1–B3)**: (B1) untracked secret-bearing files `.env.production`/`.env.preview`/`temp_env.sh` from git, rewrote `.env.example` placeholders-only (TeleBirr block dropped), hardened `.gitignore`. Consolidated 6 one-off admin-login SQL scripts into canonical `scripts/fix-admin-login.sql` (v4, idempotent) + `scripts/diagnose-admin-auth.sql`; corrected the wrong root cause in `memory/notes/admin-login-fix-v2.md` (it was NOT the instance_id placeholder — v1 never inserted the public.users profile and built identities wrongly). (B2) root-caused the vanished test suite: commit `060a05f` (Phase 7 TeleBirr removal) deleted the whole `tests/` dir (its only file was telebirr.test.mjs — the "tests 11/11" in older entries refers to that suite; it passed then but the dir went with the deletion). Installed Vitest + Testing Library, rebuilt the suite: **75 tests / 8 files** (searchUtils, entitlements, validation, url-validator, i18n EN/AM parity, assistant, SearchBar + ProtectedRoute DOM). Tests caught 2 real source bugs, both fixed: `truncateWords` sliced mid-surrogate-pair (emoji/Amharic glyph corruption) and `translations` was unexported. (B3) memory bank now tracked in git; 12 superseded root docs archived to `docs/archive/`. typecheck ✓ · build ✓ · tests 75/75 ✓
 - [x] Sep 1, 2026 — **Ads + vercel + accessibility fixes**: vercel.json structure fixed (removed invalid rewrites, added cache headers, ignored test/supabase-temp files); sw.js: guard against 206 Partial Content (caches.put crash); SheetContent aria-describedby fix; SafeImage component with broken-image fallback; AdsSection: sample ad fallback seeded (Unsplash images), expanded image URL allowlist; BlogSection: uses SafeImage for graceful loading.
 - [x] Aug 30, 2026 — **Fix admin_actions edge function + repair migrations**: Fixed null-payload crash in `manage_blogs/tips/ads` (guard with `payload &&` check); pushed missing columns migration for `market_prices` (city, specification, source_type, vat_included, confidence_score, freshness_status, etc.) and `blogs/tips` (content_en/am, excerpt_en/am, status, tags); verified manage_blogs/tips/ads all return data (8/20/6 rows). typecheck ✓ · build ✓
 - [x] Aug 28, 2026 — **Phase 7 finalization**: TeleBirr permanently removed from codebase (PremiumSection, usePayment, useUserProfile, PaymentPage, vite.config, i18n). "Get Started" button fixed for signed-in vs unsigned users. D3 deferral entry closed. Verified: typecheck ✓ · build ✓ · tests ✓
@@ -58,9 +59,10 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
-1. **Secrets rotation** (manual): rotate DB password, service_role, Chapa secret, Resend key; run `git filter-repo`/`BFG` to purge history; update `.env.example` placeholders.
-2. **Production launch**: Vercel deploy (configure env vars, domain), Supabase production project, DNS config, monitoring/alerts.
-3. **Post-launch** (optional): full 200-key Amharic native review, BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard.
+1. **Secrets rotation** (owner, manual): rotate DB password, service_role, Chapa secret, Resend key (files now untracked; history purge deferred by owner decision).
+2. **Admin login** (owner, manual): run `scripts/fix-admin-login.sql` in the Supabase SQL Editor, then verify both admin accounts log in via the app UI. If it fails, run `scripts/diagnose-admin-auth.sql` first.
+3. **Production launch**: Vercel deploy (configure env vars from `.env.example`, domain), DNS config, monitoring/alerts.
+4. **Post-launch** (optional): BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard, expand test coverage to hooks/pages.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — **CLEARED in Phase 6** (20260828000000 migration)

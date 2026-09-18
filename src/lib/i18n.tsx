@@ -206,7 +206,8 @@ export type TranslationKey =
     | "dashboard.assistant.quick.pro"
     | "dashboard.assistant.fallback"
 
-const translations: Record<Language, Record<TranslationKey, string>> = {
+// Exported so tests can enforce EN/AM key parity (tests/i18n-parity.test.ts).
+export const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
     "nav.knowledge": "Knowledge Hub",
     "nav.tips": "Tips",

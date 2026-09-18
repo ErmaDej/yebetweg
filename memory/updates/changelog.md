@@ -25,6 +25,14 @@
 - PWA or native app work
 
 ## Changelog
+### September 18, 2026 — Production-readiness pass (repo hygiene, test suite rebuilt, memory bank tracked)
+- **Secrets hygiene:** untracked `.env.production`, `.env.preview`, `temp_env.sh` from git (files kept locally); rewrote `.env.example` placeholders-only (TeleBirr block dropped); hardened `.gitignore`. Credential rotation in the Supabase/Chapa/Resend dashboards remains an owner action.
+- **Test suite rebuilt:** root-caused the vanished suite — commit `060a05f` (Phase 7 TeleBirr removal) deleted the entire `tests/` dir whose only file was `telebirr.test.mjs` (the old "tests 11/11" claims). Installed Vitest + Testing Library; new suite: **75 tests / 8 files** covering searchUtils (injection-safe filters), entitlements (incl. lapsed-sub regression), validation, url-validator, i18n EN/AM key parity, assistant engine, and SearchBar/ProtectedRoute DOM integration. `npm test` now fails loudly on 0 tests.
+- **Two real source bugs caught by the tests and fixed:** `truncateWords` sliced mid-surrogate-pair (corrupts emoji/Amharic glyphs in excerpts); `translations` table was not exported (blocked parity testing).
+- **Admin-login scripts consolidated:** 6 one-off scripts → canonical idempotent `scripts/fix-admin-login.sql` (v4) + `scripts/diagnose-admin-auth.sql`; wrong root cause in `memory/notes/admin-login-fix-v2.md` corrected (v1's real defects: no `public.users` profile insert + malformed identities row — not the instance_id placeholder). Owner must still run the script in the Supabase SQL Editor.
+- **Memory bank tracked in git** (was gitignored — 7 files existed only on one machine). 12 superseded root docs archived to `docs/archive/` with an index README; root now has 9 focused documents.
+- Verified: typecheck ✓ · build ✓ · tests 75/75 ✓
+
 ### August 28, 2026 — Phase 7 finalization (TeleBirr removal + PremiumSection cleanup)
 - TeleBirr completely removed from codebase: `src/lib/telebirr.ts` (already deleted), edge functions `telebirr-service/` + `telebirr-webhook/` (already deleted), `tests/telebirr.test.mjs` (deleted)
 - `PremiumSection.tsx` rewritten Chapa-only: removed all TeleBirr UI/logic, fixed "Get Started" button (disabled for signed-in users, sign-up redirect for unsigned users)

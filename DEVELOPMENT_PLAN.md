@@ -159,7 +159,8 @@ Per `Ref/Additional YBW-project dev concepts/EnhancementNotes-1/2.md` (Addis Cos
 ```bash
 npm run typecheck        # tsc --noEmit
 npm run build            # tsc -b && vite build
-npm run test             # node --test tests/**/*.test.mjs
+npm run test             # vitest run — 75 tests; fails loudly on 0 tests
+npm run test:coverage    # vitest run --coverage
 git push origin dev && git push origin stable   # at every verified milestone
 ```
 
