@@ -114,7 +114,7 @@ npm run build
 
 # Your .env is already updated with:
 VITE_SUPABASE_URL=https://jxyavtdmcloxnhuavokc.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4eWF2dGRtY2xveG5odWF2b2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTg5MzEsImV4cCI6MjA5MzgzNDkzMX0.mqhTUF1bmZbd3lI6M8XFi_kOunlhIoAN3an5hpJPRto
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
 ```
 
 ## 📸 Image Asset Updates
@@ -155,8 +155,8 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 |-----|-------|
 | **Project ID** | `jxyavtdmcloxnhuavokc` |
 | **API URL** | `https://jxyavtdmcloxnhuavokc.supabase.co` |
-| **Anon Key** | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4eWF2dGRtY2xveG5odWF2b2tjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTg5MzEsImV4cCI6MjA5MzgzNDkzMX0.mqhTUF1bmZbd3lI6M8XFi_kOunlhIoAN3an5hpJPRto` |
-| **Service Role** | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4eWF2dGRtY2xveG5odWF2b2tjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODI1ODkzMSwiZXhwIjoyMDkzODM0OTMxfQ.t2FitrquQlFXdJk6vZwsdbzDKcv_gY9CeZwWjU-adLk` |
+| **Anon Key** | `<your-anon-key>` (Supabase Dashboard → Settings → API) |
+| **Service Role** | `<your-service-role-key>` — SECRET: never commit, never ship to the client |
 
 ## 📦 Database Schema Overview
 

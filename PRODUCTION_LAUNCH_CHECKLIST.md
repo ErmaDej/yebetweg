@@ -7,7 +7,7 @@ Owner-facing gate before public launch. Code-side hardening is done (Phases 6–
 Real credentials existed in git history. Files are untracked now, but **every secret below must still be rotated** because history retains them:
 
 - [ ] Supabase DB password (was in `temp_env.sh`): Project Settings → Database → reset password → update `SUPABASE_DB_URL` wherever the migration runner uses it
-- [ ] `service_role` JWT: was tracked in `.env.example`. Reset: Project Settings → API → rotate JWT secret (note: this invalidates all current anon/service JWTs — update every environment)
+- [ ] `service_role` JWT: was tracked in `.env.example` AND hardcoded in `scripts/test-supabase-connection.js` (still in the repo — replace with env-based credential lookup). Reset: Project Settings → API → rotate JWT secret (note: this invalidates all current anon/service JWTs — update every environment)
 - [ ] Chapa secret key + webhook secret (Chapa dashboard → API keys); set `CHAPA_SECRET_KEY` / `CHAPA_WEBHOOK_SECRET` in the Supabase edge-function secrets (`supabase secrets set ...`)
 - [ ] Resend API key (Resend dashboard → API keys)
 - [ ] Admin account passwords after running the fix script (below)
@@ -22,9 +22,14 @@ Real credentials existed in git history. Files are untracked now, but **every se
 
 ## 3. Security probe (owner — verify against the live project)
 
+Automated: `npm run probe:rls` (read-only, anon key from `.env`; exits non-zero on any failure). Pass rules: free-class table probes (market_prices, tips, listings) must SUCCEED with clean empty/expected results — a denial (42501) on those is a FAIL, not a pass, because denial-by-error masks broken policy wiring (caught live 2026-09-19). Set `PROBE_PAID_EMAIL` + `PROBE_PAID_PASSWORD` (env or `.env`) for an entitled test account to also assert premium rows are GRANTED to paid sessions. Complement with `npm run audit:rls` — static replay of all migrations flagging any policy that calls a function one of its roles cannot EXECUTE (the exact 42501 bug class caught live 2026-09-19). The manual SQL below is the deeper pass:
+
 Run these in the SQL Editor / with the anon key; **all must return the safe answer**:
 
 ```sql
+-- baseline: anon MUST read free rows (expect > 0; an error here = broken policy wiring)
+select count(*) from market_prices where access_level = 'free';
+select count(*) from tips where is_premium = false;
 -- anon must NOT read users (RLS on): expect 0 rows
 select count(*) from users;                      -- as anon: expect permission denied / 0 rows
 -- anon must NOT read payment history: expect denied
@@ -32,7 +37,9 @@ select count(*) from subscription_payments;
 -- anon must NOT see pending listings: expect 0
 select count(*) from listings where status = 'pending';
 -- anon must NOT read premium-gated prices: expect 0 premium rows
-select count(*) from market_prices where access_level <> 'free';
+select count(*) from market_prices where access_level is distinct from 'free';
+-- anon must NOT read premium-gated tips: expect 0 premium rows
+select count(*) from tips where is_premium is not distinct from true;
 -- get_active_subscription must not be executable by anon: expect permission denied
 select * from get_active_subscription('00000000-0000-0000-0000-000000000000');
 ```
@@ -43,7 +50,7 @@ Also verify in the app with a free account: premium tips/prices rows must never 
 
 - [ ] Vercel project env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_CHAPA_PUBLIC_KEY`, `VITE_APP_BASEURL=https://yebetweg.com` (secrets stay server-side in Supabase edge-function secrets — never add `VITE_`-less secrets to Vercel)
 - [ ] Edge functions deployed with updated secrets: `supabase functions deploy chapa-service chapa-webhook admin_actions`
-- [ ] Migrations applied to the production DB (`supabase db push`) — 28 migrations
+- [ ] Migrations applied to the production DB (`supabase db push`) — 31 migrations. Latest two: `20260918000000_market_prices_tips_entitlement_rls.sql` closes the anon read hole on market_prices + tips; `20260919000000_fix_entitlement_policy_function_privilege.sql` role-splits those policies so anon's free-row predicate doesn't call a helper anon can't execute (42501 regression caught live by `npm run probe:rls`)
 - [ ] Domain + DNS; sitemap regenerated (`npm run build` runs it) and submitted to Google Search Console
 - [ ] Chapa switched from sandbox (`CHAPUBK_TEST_`) to live keys + a real webhook registration pointing at the deployed `chapa-webhook` URL
 - [ ] Smoke test end-to-end: sign up → verify email → estimate BOQ → submit RFQ → pay via Chapa sandbox → role upgrade reflected → admin dashboard operational summary shows the events
@@ -51,5 +58,6 @@ Also verify in the app with a free account: premium tips/prices rows must never 
 ## 5. Known accepted risks (documented, not blockers)
 
 - `login_attempts` RLS grants anon full access (rate-limit table; by design in the Phase 6 migration)
+- Service_role key was scrubbed from `scripts/test-supabase-connection.js` + `scripts/run-migrations-client.js` (now env-based) — but the JWT REMAINS in git history until the (deferred) purge; rotation (action item 1) stays the real fix
 - Git history retains pre-rotation secrets until the (deferred) history purge
 - Telemetry/analytics are minimal; add error reporting budget post-launch

@@ -15,7 +15,8 @@ export type Tip = {
 
 const SEARCH_FETCH_CAP = 200
 
-function fetchTips({
+// Exported for tests (tests/use-tips.test.ts) — the hook's data path.
+export function fetchTips({
   category,
   page = 1,
   pageSize = 6,

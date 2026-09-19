@@ -34,7 +34,8 @@ async function fetchViaRpc(category?: string): Promise<MarketPrice[] | null> {
   }
 }
 
-function fetchMarketPrices({ category }: { category?: string }) {
+// Exported for tests (tests/use-market-prices.test.ts) — the hook's data path.
+export function fetchMarketPrices({ category }: { category?: string }) {
   return async () => {
     // Prefer server-side premium-gated RPC (Phase 3). Falls back to direct select when migration pending.
     const rpcRows = await fetchViaRpc(category)

@@ -51,7 +51,7 @@ Compatible with CLI-driven migration pushes — it is just another migration fil
 
 ---
 
-## PHASE 1 — Correctness Blitz 🔴 (ACTIVE)
+## PHASE 1 — Correctness Blitz ✅ (COMPLETE — verified Aug 26, see memory/status/progress_tracker.md)
 
 **Goal:** nothing user-facing is visibly broken. No new features.
 
@@ -99,7 +99,7 @@ Compatible with CLI-driven migration pushes — it is just another migration fil
 
 **Goal:** the strategic wedge becomes trustworthy. (Anything requiring RLS changes waits for D1.)
 
-- [ ] Server-side premium gating for `market_prices`: premium rows are currently served to anon and merely blurred client-side (trivially bypassable; index-based `FREE_ROWS=5` shifts with sorting). Filter by `access_level` per caller entitlement; blur becomes progressive enhancement only. *(If blocked by D1, implement via SECURITY DEFINER RPC in the meantime — allowed since it needs no RLS change.)*
+- [x] Server-side premium gating for `market_prices` AND `tips`: DONE Sep 18–19 (`20260918000000` + `20260919000000` role-split entitlement RLS policies + aligned `get_visible_*` RPCs); probe-verified live (`npm run probe:rls` exit 0). Blur is progressive enhancement only.
 - [ ] Verify deployed RPC quotas match claims: `create_listing` 3-active-listing cap, `submit_rfq` monthly cap (business_rules.md claims fixed — confirm against production DB).
 - [ ] BOQ data layer: persist estimates (`boq_estimates` table: inputs JSONB, outputs, **canonical city key** — RfqModal currently sends the localized Amharic label), save/load/list in Dashboard, shareable permalink.
 - [ ] Price freshness automation: cron edge function flags `freshness_status='expired'`; admin stale-price badge.
@@ -159,7 +159,9 @@ Per `Ref/Additional YBW-project dev concepts/EnhancementNotes-1/2.md` (Addis Cos
 ```bash
 npm run typecheck        # tsc --noEmit
 npm run build            # tsc -b && vite build
-npm run test             # vitest run — 75 tests; fails loudly on 0 tests
+npm run test             # vitest run — 82 tests; fails loudly on 0 tests
+npm run probe:rls        # live RLS/entitlement probes (anon + optional paid-session)
+npm run audit:rls        # static policy/function-privilege audit across migrations
 npm run test:coverage    # vitest run --coverage
 git push origin dev && git push origin stable   # at every verified milestone
 ```

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Offline — YeBetWeg | ከመስመር ውጭ — የቤት-ወግ</title>
+    <style>
+      :root {
+        --bg: #f7f6f3;
+        --card: #ffffff;
+        --text: #1a1a1a;
+        --muted: #6b7280;
+        --accent: #ea580c;
+        --border: #e5e7eb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #101014;
+          --card: #1a1a20;
+          --text: #f3f4f6;
+          --muted: #9ca3af;
+          --border: #2a2a32;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Noto Sans Ethiopic", system-ui, -apple-system, "Segoe UI", sans-serif;
+        text-align: center;
+      }
+      .card {
+        max-width: 480px;
+        width: 100%;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 40px 24px;
+      }
+      .icon {
+        font-size: 44px;
+        line-height: 1;
+        margin-bottom: 16px;
+      }
+      h1 { font-size: 22px; margin: 0 0 8px; }
+      .sub { color: var(--muted); font-size: 15px; margin: 0 0 4px; }
+      .lang-switch { margin: 20px 0 24px; }
+      .lang-switch button {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        padding: 8px 18px;
+      }
+      .lang-switch button.active { border-color: var(--accent); color: var(--accent); }
+      .actions { display: flex; flex-direction: column; gap: 10px; }
+      .actions button {
+        background: var(--accent);
+        border: none;
+        border-radius: 10px;
+        color: #fff;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        padding: 12px;
+      }
+      .actions button.secondary {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-weight: 400;
+      }
+      .hint { color: var(--muted); font-size: 13px; margin-top: 18px; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon">🏗️</div>
+
+      <div id="lang-en">
+        <h1>You're offline</h1>
+        <p class="sub">Construction knowledge, market prices and your dashboard are unavailable right now.</p>
+        <p class="sub">Pages you visited before will still load while offline.</p>
+        <div class="lang-switch">
+          <button class="active" id="btn-en" type="button">English</button>
+          <button id="btn-am" type="button">አማርኛ</button>
+        </div>
+        <div class="actions">
+          <button id="retry" type="button">Try again</button>
+          <button id="home" type="button" class="secondary">Go to homepage</button>
+        </div>
+        <p class="hint">Tip: reopening a previously visited page often works offline.</p>
+      </div>
+
+      <div id="lang-am" hidden>
+        <h1>ከመስመር ውጭ ነዎት</h1>
+        <p class="sub">የግንባታ እውቀት፣ የገበያ ዋጋዎች እና ዳሽቦርድዎ አሁን አይገኙም።</p>
+        <p class="sub">ቀድሞ የጎበኙዋቸው ገጾች ከመስመር ውጭ ሊከፍቱ ይችላሉ።</p>
+        <div class="lang-switch">
+          <button id="btn-en2" type="button">English</button>
+          <button class="active" id="btn-am2" type="button">አማርኛ</button>
+        </div>
+        <div class="actions">
+          <button id="retry-am" type="button">እንደገና ይሞክሩ</button>
+          <button id="home-am" type="button" class="secondary">ወደ መጀመሪያው ገጽ ይሂዱ</button>
+        </div>
+        <p class="hint">ፍንጭ፦ የተጎበኙ ገጾችን እንደገና መክፈት ከመስመር ውጭ ይሰራል።</p>
+      </div>
+    </div>
+
+    <script>
+      const show = (id, visible) => {
+        document.getElementById(id).hidden = !visible
+      }
+      const setLang = (lang) => {
+        const isEn = lang === 'en'
+        show('lang-en', isEn)
+        show('lang-am', !isEn)
+        document.documentElement.lang = isEn ? 'en' : 'am'
+        for (const [id, active] of [['btn-en', isEn], ['btn-en2', isEn], ['btn-am', !isEn], ['btn-am2', !isEn]]) {
+          document.getElementById(id)?.classList.toggle('active', active)
+        }
+      }
+
+      const params = new URLSearchParams(location.search)
+      setLang(params.get('lang') === 'am' ? 'am' : 'en')
+
+      document.getElementById('btn-en').onclick = () => setLang('en')
+      document.getElementById('btn-am').onclick = () => setLang('am')
+      document.getElementById('btn-en2').onclick = () => setLang('en')
+      document.getElementById('btn-am2').onclick = () => setLang('am')
+
+      const retry = () => location.replace('/')
+      document.getElementById('retry').onclick = retry
+      document.getElementById('retry-am').onclick = retry
+      document.getElementById('home').onclick = retry
+      document.getElementById('home-am').onclick = retry
+    </script>
+  </body>
+</html>
