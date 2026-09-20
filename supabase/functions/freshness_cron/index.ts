@@ -1,22 +1,23 @@
 // ============================================================================
 // freshness_cron — Scheduled edge function (Supabase pg_cron / cron scheduler)
 // ============================================================================
-// Runs daily: flags stale market prices as expired, then emails admins a
-// digest of stale prices. Dedupes via the freshness_alerts table (one alert
-// row per run; email only re-sent when there are newly expired rows or the
-// last alert is older than 24h).
+// Runs daily: flags stale market prices as expired, then alerts admins via
+// all three channels — in-app notifications (bell), email (Resend), and
+// Telegram (TELEGRAM_CHAT_ID: your admin group or channel). Dedupes via the
+// freshness_alerts table (email only re-sent when there are newly expired
+// rows or the last alert is older than 24h).
 //
 // Deployment:
 //   supabase functions deploy freshness_cron --no-verify-jwt
-//   supabase secrets set ALERT_EMAIL="ops@yebetweg.com"   # optional fallback
 // Scheduling (Dashboard → Database → Cron, or SQL editor):
 //   select cron.schedule(
-//     'freshness-cron', '0 4 * * *',
+//     'yebetweg-freshness-digest', '0 6 * * 1',
 //     $$
 //     select net.http_post(
 //       url := 'https://<project-ref>.supabase.co/functions/v1/freshness_cron',
 //       headers := jsonb_build_object(
-//         'Authorization', 'Bearer ' || vault_get('service_role_key')
+//         'Content-Type', 'application/json',
+//         'x-cron-key', '<CRON_SECRET>'
 //       ),
 //       body := '{}'::jsonb
 //     );
@@ -37,6 +38,11 @@ interface StaleRow {
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ALERT_EMAIL = Deno.env.get("ALERT_EMAIL") ?? ""; // optional fallback recipient
+const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? ""; // required in prod — guards the trigger
+const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
+const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID") ?? ""; // admin group/channel
+const APP_URL = (Deno.env.get("APP_URL") ?? "").replace(/\/+$/, ""); // deep links in digests
+const DASHBOARD_URL = `${APP_URL}/dashboard`;
 
 function json(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -65,15 +71,57 @@ function buildDigestHtml(rows: StaleRow[]): string {
     rows.length > 25
       ? `<p style="color:#666">…and ${rows.length - 25} more.</p>`
       : "";
+  const cta = APP_URL
+    ? `<p><a href="${esc(DASHBOARD_URL)}" style="display:inline-block;background:#1d4ed8;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Open the admin dashboard</a></p>`
+    : "";
   return `<h2>YeBetWeg stale price report</h2>
 <p>${rows.length} market price row(s) are older than 7 days and now flagged <b>expired</b>.</p>
 <table border="1" cellpadding="6" style="border-collapse:collapse;font-family:system-ui;font-size:13px">
 <tr style="background:#f5f5f5"><th>Material</th><th>City</th><th>Last price</th><th>Stale</th></tr>${list}</table>
 ${more}
+${cta}
 <p style="margin-top:16px;font-size:12px;color:#666">Update these in the admin Market Prices panel. Suppliers can also refresh them via the Telegram bot (/submitprice).</p>`;
 }
 
-Deno.serve(async () => {
+function buildTelegramDigest(rows: StaleRow[]): string {
+  const lines = rows
+    .slice(0, 8)
+    .map((r) => `• ${r.material_en} — ${r.city ?? "—"} · ${r.days_stale}d stale`);
+  const more =
+    rows.length > 8 ? `\n…and ${rows.length - 8} more.` : "";
+  return [
+    `⏰ <b>YeBetWeg freshness report</b>`,
+    `${rows.length} price${rows.length === 1 ? "" : "s"} need${rows.length === 1 ? "s" : ""} refresh:`,
+    ``,
+    ...lines,
+    more,
+    ``,
+    `Update them in the admin panel${APP_URL ? ` → ${DASHBOARD_URL}` : ""}. Suppliers can help via /submitprice.`,
+  ].join("\n");
+}
+
+async function sendTelegram(text: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text, parse_mode: "HTML" }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+Deno.serve(async (req) => {
+  // Guard: when CRON_SECRET is set, only callers presenting x-cron-key get in.
+  // --no-verify-jwt means the platform JWT check is off, so this is the only
+  // thing stopping strangers from firing your alerts. 204 for wrong key (no
+  // body — don't confirm the guard's shape to probes).
+  if (CRON_SECRET && req.headers.get("x-cron-key") !== CRON_SECRET) {
+    return new Response(null, { status: 204 });
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) {
@@ -121,6 +169,7 @@ Deno.serve(async () => {
 
     let notifiedCount = 0;
     let inAppCount = 0;
+    let telegramSent = false;
 
     if (shouldEmail) {
       // 4) Resolve admin recipients (users.role='admin'), fallback to ALERT_EMAIL
@@ -136,8 +185,8 @@ Deno.serve(async () => {
       }
 
       // 4b) In-app notifications for every admin — the reliable channel even
-      // when Resend is unconfigured or fails. Bell badge lights up instantly
-      // via Supabase Realtime.
+      // when Resend/Telegram are unconfigured or fail. Bell badge lights up
+      // instantly via Supabase Realtime.
       const adminIds = (admins ?? []).map((a) => a.id).filter(Boolean);
       if (adminIds.length > 0) {
         const summary = rows
@@ -156,6 +205,11 @@ Deno.serve(async () => {
         );
         if (!notifErr) inAppCount = adminIds.length;
         else console.error("in-app notification insert failed:", notifErr);
+      }
+
+      // 4c) Telegram push to the admin chat/channel (fire-and-forget channel)
+      if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+        telegramSent = await sendTelegram(buildTelegramDigest(rows));
       }
 
       if (recipients.size > 0 && RESEND_API_KEY) {
@@ -199,6 +253,7 @@ Deno.serve(async () => {
       total_stale: rows.length,
       notified_count: notifiedCount,
       in_app_notified: inAppCount,
+      telegram_sent: telegramSent,
       email_skipped_because: shouldEmail ? undefined : reason,
     });
   } catch (e) {

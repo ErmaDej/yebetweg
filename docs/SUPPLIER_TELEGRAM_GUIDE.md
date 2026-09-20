@@ -15,29 +15,33 @@ Open the YeBetWeg bot on Telegram and send:
 /start
 ```
 
-You'll get the help card in English and አማርኛ.
+You'll get the help card with the command reference.
 
-ቦቱን ይክፈቱ እና `/start` ይላኩ — የእገዛ ካርድ በእንግሊዝኛና በአማርኛ ይደርስዎታል።
+ቦቱን ይክፈቱ እና `/start` ይላኩ — የእገዛ ካርድ ይደርስዎታል።
 
 ## 2. Submit a price / ዋጋ ያቅርቡ
 
-Send one line: **material, price, optional city and unit.**
+Send one line in this order:
+
+**/submitprice  material  price  [unit]  [city]  [category]**
+
+Everything before the first number is the material name; after the price come the unit, the city, and the category — in that order. Quote names that contain spaces.
 
 ```
 /submitprice Derba Cement 8200
 ```
 
 ```
-/submitprice Addis | Cement | 1150 /quintal
+/submitprice Derba Cement 8200 Qtl "Addis Ababa" cement
 ```
 
 ```
-/submitprice Hawassa, Rebar 12mm, 14300, qtl
+/submitprice "Rebar 12mm" 14300 Qtl Hawassa steel
 ```
 
-**All of these work** — the bot understands pipes, commas, `1,150`-style numbers, and common units (`quintal`, `qtl`, `ኪሎ`, `m3`, `pc`).
+**Tips:** `1,150`-style numbers work; omit the unit and it defaults to `Qtl`; omit the city and it defaults to Addis Ababa; categories are `cement`, `steel`, `finishing`, `electrical`, `plumbing`.
 
-**ሁሉም ቅርጸቶች ይሰራሉ** — ቦቱ ስም የተለያዩ አቀማመጦችን፣ በነጥብ የተከፋፈሉ ቁጥሮችን እና ልምዳዊ ልኬቶችን ይረዳል።
+**ምክሮች** — ዋጋውን የሚከተለው ነገር መጀመሪያ የቁሳቁሱ ስም ነው፤ ከዚያ በቅደም ተከተል ልኬት፣ ከተማ እና ምድብ ይግባሉ። ልኬት ካላስገቡ `Qtl`፣ ከተማ ካላስገቡ አዲስ አበባ ይወሰዳል።
 
 ### What happens next / ቀጥሎ ምን ይኖራል
 
@@ -71,7 +75,7 @@ These keep the market feed trustworthy for everyone — and keep your submission
 |---|---|
 | **Real prices only** | Quote what a buyer would actually pay today. No aspirational or bait prices. ዛሬ በእውነት የሚከፈል ዋጋ ብቻ ይላኩ። |
 | **Your own price** | Submit prices from your shop/site or a direct observation — not rumors. ከሱቅዎ ወይም ከቀጥታ ግኝት — ወሬ አይደለም። |
-| **No spam** | Up to 5 submissions per hour per person; duplicates for the same material+city are updates, not new rows. በሰዓት 5 ማቅረቢያ ብቻ፤ ተመሳሳይ ዋጋ እንደገና አይጨመርም። |
+| **No spam** | Up to 10 submissions per hour per person; resubmitting the same material+city updates your earlier price instead of duplicating it. በሰዓት 10 ማቅረቢያ ብቻ፤ ተመሳሳይ ቁሳቁስ+ከተማ ያለብዛት ይዘምናል። |
 | **Accurate names** | Use recognizable material names ("Derba Cement", "Grade 60 Rebar 12mm"). Odd names slow verification. የተለመዱ ስሞችን ይጠቀሙ። |
 | **Admin moderation** | Admins verify or reject every submission. Repeated false pricing removes your submissions and can bar the account. አስተዳዳሪዎች እያንዳንዱን ይመረምራሉ፤ ብዙ የሐሰት ዋጋ መላክ እገዳ ያመጣል። |
 
@@ -90,10 +94,10 @@ No. Same material + same city = an update. That's the correct flow.
 አይደለም። ተመሳሳይ ቁሳቁስ + ተመሳሳይ ከተማ = ዝማኔ።
 
 **Q: Can I submit for another city?**
-Yes — include the city: `/submitprice Adama | Cement | 8000`.
+Yes — put the city after the unit: `/submitprice Cement 8000 Qtl Adama cement`.
 
 **ሠ? ለሌላ ከተማ ማቅረብ እችላለሁ?**
-አዎ — ከተማውን ያካትቱ፦ `/submitprice Adama | Cement | 8000`።
+አዎ — ከተማውን ከልኬቱ በኋላ ያስገቡ፦ `/submitprice Cement 8000 Qtl Adama cement`።
 
 **Q: Who sees my shop name?**
 Buyers see it as the price source once verified — that's the visibility benefit of contributing.
@@ -102,10 +106,10 @@ Buyers see it as the price source once verified — that's the visibility benefi
 ከተረጋገጠ በኋላ ገዢዎች እንደ ምንጭ ያያሉ — ይህ የመሳተፍ ጥቅሙ ነው።
 
 **Q: Units?**
-The bot normalizes to the market standard (quintal for cement/rebar, m³ for aggregate/sand). Include yours and it converts; omit it and it uses the default.
+Include the unit you sell in (`Qtl`, `m3`, `pc`, `bag`) right after the price; if you omit it, the bot records `Qtl`. Submit in the unit your buyers actually use.
 
 **ሠ? ልኬቶች?**
-ቦቱ ወደ መደበኛው ልኬት ያዘምናል (ሲሚንቶ/ብረት ቀንዳላ፣ ጮማ/አሸዋ m³)።
+ልኬትዎን ከዋጋው በኋላ ያስገቡ (`Qtl`፣ `m3`፣ `pc`፣ `bag`)፤ ካላስገቡ `Qtl` ይመዘገባል።
 
 ---
 
