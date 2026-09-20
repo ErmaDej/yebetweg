@@ -16,6 +16,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { supabase } from "@/lib/supabase"
 import { useAdminOperationalSummary } from "@/hooks/useAdminOperationalSummary"
 import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
+import { TelegramPriceQueue } from "@/components/admin/TelegramPriceQueue"
 import { RfqManager } from "@/components/admin/RfqManager"
 
 type AdminMetricKey =
@@ -564,6 +565,10 @@ export function AdminDashboardTab() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ExpandableSection title={language === "en" ? "Telegram Price Verification" : "የቴሌግራም ዋጋ ማረጋገጫ"} defaultOpen={false}>
+        <TelegramPriceQueue />
+      </ExpandableSection>
 
       <ExpandableSection title={language === "en" ? "Market Price Management" : "የገበያ ዋጋ አስተዳደር"} defaultOpen={false}>
         <MarketPriceManager />

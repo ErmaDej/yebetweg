@@ -60,19 +60,32 @@ export function NotificationBell({ isAdmin = false }: { isAdmin?: boolean }) {
       <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
         <div className="flex items-center justify-between px-2 py-1">
           <DropdownMenuLabel className="p-0">{t("notif.title")}</DropdownMenuLabel>
-          {unreadCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => {
+              setOpen(false)
+              navigate("/notifications")
+            }}
+          >
+            {t("notif.viewAll")}
+          </Button>
+        </div>
+        {unreadCount > 0 && (
+          <div className="px-2 pb-1">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 gap-1 px-2 text-xs"
+              className="h-7 w-full justify-center gap-1 px-2 text-xs"
               disabled={isMarkingRead}
               onClick={() => markAllRead()}
             >
               <CheckCheck className="h-3.5 w-3.5" />
               {t("notif.markAllRead")}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
         <DropdownMenuSeparator />
         <div className="max-h-80 overflow-y-auto">
           {isLoading ? (

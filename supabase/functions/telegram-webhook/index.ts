@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
                 title: `Community price: ${parsed.material} — ${Number(parsed.price).toLocaleString()} ETB`,
                 body: `${senderName} via Telegram · ${parsed.city ?? "Addis Ababa"}${parsed.unit ? ` / ${parsed.unit}` : ""} · awaiting verification`,
                 link: "/dashboard",
-                meta: { source: "telegram", replaced },
+                meta: { source: "telegram", replaced, price_id: row?.id ?? null },
               })),
             );
           }

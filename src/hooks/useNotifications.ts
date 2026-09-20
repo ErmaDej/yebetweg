@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useId, useMemo, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { useAuthContext } from "@/context/AuthContext"
@@ -49,6 +49,11 @@ export function useNotifications(isAdmin = false) {
   const queryClient = useQueryClient()
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const enabled = Boolean(user)
+  // Unique channel per hook instance: multiple consumers (navbar bell +
+  // notifications page) each get their own subscription — reusing one name
+  // makes the second postgres_changes registration land after the first
+  // subscribe(), which throws.
+  const channelName = `notifications-${useId()}`
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [...QUERY_KEY, { isAdmin }],
@@ -62,7 +67,7 @@ export function useNotifications(isAdmin = false) {
   useEffect(() => {
     if (!enabled) return
     const channel = supabase
-      .channel("notifications-bell")
+      .channel(channelName)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications" },
@@ -76,7 +81,7 @@ export function useNotifications(isAdmin = false) {
       void supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [enabled, queryClient])
+  }, [enabled, queryClient, channelName])
 
   const markRead = useMutation({
     mutationFn: async (ids: string[]) => {

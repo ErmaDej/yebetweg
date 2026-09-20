@@ -5,7 +5,7 @@
 - Memory bank status: **tracked in git as of Sep 18, 2026** (was gitignored; 7 files recovered). Updated through the Sep 18 production-readiness pass.
 - Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main at Phase 7 final**, `dev`/`stable` pending merge.
 - Last verified: Sep 20 — typecheck ✓ · build ✓ · **tests 82/82 ✓ (Vitest)** · probe:rls exit 0 · audit:rls exit 0 · audit:i18n exit 0 · in-app notifications + image repair + i18n/error-triad sweep complete
-- Pending owner apply (3 migrations + functions): `20260919010000_freshness_automation.sql`, `20260920000000_notifications_in_app.sql`, `20260920010000_replace_dead_unsplash_images.sql`, then deploy `freshness_cron` + `telegram-webhook` per `docs/EDGE_FUNCTIONS_RUNBOOK.md`
+- Pending owner apply: migrations `20260919010000`/`2026092000…`/`2026092001…` were applied Sep 20 ✓ (`/notifications` table live, probe exit 0). Remaining: deploy `freshness_cron` + `telegram-webhook` functions + secrets + Telegram webhook registration + weekly cron trigger per `docs/EDGE_FUNCTIONS_RUNBOOK.md`
 
 ## Status Summary
 | Area | Status | Notes |
