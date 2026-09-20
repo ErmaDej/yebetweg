@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1e3a5f"/>
+      <stop offset="0.5" stop-color="#274b77"/>
+      <stop offset="1" stop-color="#0f2340"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="300" fill="url(#bg)"/>
+  <g opacity="0.1" stroke="#ffffff" stroke-width="1.5" fill="none">
+    <path d="M0 240 L900 240"/>
+    <path d="M60 240 L60 160 L180 160 L180 240"/>
+    <path d="M240 240 L240 120 L380 120 L380 240"/>
+    <path d="M440 240 L440 170 L560 170 L560 240"/>
+    <path d="M620 240 L620 100 L760 100 L760 240"/>
+    <path d="M820 240 L820 150 L900 150"/>
+  </g>
+  <text x="60" y="88" font-family="system-ui, sans-serif" font-size="30" font-weight="800" fill="#ffffff">YeBetWeg</text>
+  <text x="62" y="120" font-family="system-ui, sans-serif" font-size="17" fill="#f5a623">Ethiopia's Construction Platform</text>
+  <text x="62" y="200" font-family="system-ui, sans-serif" font-size="15" fill="#c9d6e3">Sponsored</text>
+</svg>

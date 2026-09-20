@@ -127,7 +127,7 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
 
   // While searching the hook returns the full match set (page pinned to 1);
   // otherwise it server-paginates.
-  const { data: tipsData, isLoading: loading } = useTips({
+  const { data: tipsData, isLoading: loading, error: loadError } = useTips({
     category: selectedCategory,
     page: isSearching ? 1 : page,
     pageSize: TIPS_PER_PAGE,
@@ -174,14 +174,10 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
         }
       })
     }
-    // Fallback sample — clearly sample data until live prices load
-    return [
-      { text: language === "en" ? "Derba Cement: 8,200 ETB/Qtl" : "ዲርባ ሲሚንቶ: 8,200 ብር/ቆል", change: "+3.5%" },
-      { text: language === "en" ? "Grade 60 Rebar: 14,500 ETB/Qtl" : "ግራድ 60 ራብር: 14,500 ብር/ቆል", change: "+7.3%" },
-      { text: language === "en" ? "Awash Sand: 4,500 ETB/m³" : "አዋሽ አሸዋ: 4,500 ብር/ሜ³", change: "-2.3%" },
-      { text: language === "en" ? "Mugher Cement: 7,800 ETB/Qtl" : "ሙገር ሲሚንቶ: 7,800 ብር/ቆል", change: "+5.2%" },
-      { text: language === "en" ? "Eucalyptus 4x4: 850 ETB/pc" : "ዩካሊፕተስ 4x4: 850 ብር/ቁራፊ", change: "+8.5%" },
-    ]
+    // Fallback while live prices load — explicit placeholder, no fabricated prices
+    const loadingText = language === "en" ? "Loading live market prices…" : "ቀጥታ የገበያ ዋጋዎች በመጫን ላይ…"
+    const viewText = language === "en" ? "View Market Prices" : "የገበያ ዋጋ ይመልከቱ"
+    return [{ text: loadingText, change: viewText }]
   }, [tickerPrices, language])
 
   return (
@@ -191,7 +187,15 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
           {[...tickerItems, ...tickerItems].map((item, i) => (
             <span key={i} className="inline-flex items-center gap-2 text-sm">
               <span>{item.text}</span>
-              <span className={item.change.startsWith("+") ? "text-red-300" : "text-green-300"}>
+              <span
+                className={
+                  /^[-+]/.test(item.change)
+                    ? item.change.startsWith("+")
+                      ? "text-red-300"
+                      : "text-green-300"
+                    : "text-primary-foreground/70"
+                }
+              >
                 {item.change}
               </span>
             </span>
@@ -276,6 +280,24 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: TIPS_PER_PAGE }).map((_, i) => <TipSkeleton key={i} />)}
+          </div>
+        ) : loadError ? (
+          <div className="p-12 text-center">
+            <HardHat className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {language === "en" ? "Couldn't load tips" : "ምክሮችን መጫን አልተቻለም"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Check your connection and try again."
+                : "ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።"}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 text-sm font-medium text-primary hover:underline"
+            >
+              {language === "en" ? "Retry" : "እንደገና ሞክር"}
+            </button>
           </div>
         ) : visibleTips.length === 0 ? (
           <div className="p-12 text-center">

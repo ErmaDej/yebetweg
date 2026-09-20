@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3f2d5f"/>
+      <stop offset="1" stop-color="#221740"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+  <g opacity="0.12" stroke="#ffffff" stroke-width="1.5" fill="none">
+    <circle cx="200" cy="160" r="55"/>
+    <path d="M110 340 C110 260 290 260 290 340"/>
+    <path d="M40 360 L360 360"/>
+  </g>
+  <g transform="translate(200 175)" fill="none" stroke="#f5a623" stroke-width="9" stroke-linecap="round">
+    <circle cx="0" cy="-28" r="26"/>
+    <path d="M-44 52 C-44 10 44 10 44 52"/>
+  </g>
+  <text x="200" y="300" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Verified Professional</text>
+  <text x="200" y="326" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#c5b8e0">YeBetWeg</text>
+</svg>

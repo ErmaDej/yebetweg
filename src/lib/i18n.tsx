@@ -205,6 +205,13 @@ export type TranslationKey =
     | "dashboard.assistant.quick.boq"
     | "dashboard.assistant.quick.pro"
     | "dashboard.assistant.fallback"
+  | "notif.title"
+  | "notif.empty"
+  | "notif.markAllRead"
+  | "notif.markRead"
+  | "notif.viewAll"
+  | "notif.loading"
+  | "notif.error"
 
 // Exported so tests can enforce EN/AM key parity (tests/i18n-parity.test.ts).
 export const translations: Record<Language, Record<TranslationKey, string>> = {
@@ -409,6 +416,13 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
       "dashboard.assistant.quick.boq": "BOQ estimate",
       "dashboard.assistant.quick.pro": "Find a pro",
       "dashboard.assistant.fallback": "I can help with RFQs, profile, market prices, BOQ, and professionals.",
+      "notif.title": "Notifications",
+      "notif.empty": "You're all caught up.",
+      "notif.markAllRead": "Mark all read",
+      "notif.markRead": "Mark read",
+      "notif.viewAll": "Go to dashboard",
+      "notif.loading": "Loading…",
+      "notif.error": "Couldn't load notifications.",
     },
    am: {
     "nav.knowledge": "ዕውቀት",
@@ -611,6 +625,13 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
       "dashboard.assistant.quick.boq": "BOQ ወልታዊ",
       "dashboard.assistant.quick.pro": "ባለሙያ ይፈልጉ",
       "dashboard.assistant.fallback": "ለዋጋ ጥያቄዎች፣ የግምገማ ጥንኩር፣ የገበያ ዋጋ፣ BOQ እና ባለሙያዎች ጥያቄ ልክ ነው የማይደርሱት።",
+      "notif.title": "ማሳወቂያዎች",
+      "notif.empty": "ሁሉም ነገር ተመልክቷል።",
+      "notif.markAllRead": "ሁሉንም አንብብ",
+      "notif.markRead": "አንብብ",
+      "notif.viewAll": "ወደ ዳሽቦርድ ሂድ",
+      "notif.loading": "በመጫን ላይ…",
+      "notif.error": "ማሳወቂያዎችን መጫን አልተቻለም።",
     },
   }
 

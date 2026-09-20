@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ModeToggle } from "@/components/mode-toggle"
+import { NotificationBell } from "@/components/layout/NotificationBell"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useLanguage } from "@/lib/i18n"
 import { useAuthContext } from "@/context/AuthContext"
@@ -132,6 +133,7 @@ export function Navbar() {
             </span>
           </Button>
           <ModeToggle />
+          {user && <NotificationBell />}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -223,6 +225,9 @@ export function Navbar() {
                 </Button>
                 {user ? (
                   <>
+                    <div className="px-3">
+                      <NotificationBell />
+                    </div>
                     <Button className="w-full justify-start" onClick={goToDashboard}>
                       <LayoutDashboard className="h-4 w-4 mr-2" />
                       {language === "en" ? "Dashboard" : "ዳሽቦርድ"}

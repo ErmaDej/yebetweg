@@ -266,7 +266,7 @@ export function BlogSection() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const { data: blogsData, isLoading: loading } = useBlogs({
+  const { data: blogsData, isLoading: loading, error: blogsError } = useBlogs({
     category,
     page,
     pageSize: BLOGS_PER_PAGE,
@@ -342,6 +342,24 @@ export function BlogSection() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: BLOGS_PER_PAGE }).map((_, i) => <BlogSkeleton key={i} />)}
+          </div>
+        ) : blogsError ? (
+          <div className="p-12 text-center">
+            <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">
+              {language === "en" ? "Couldn't load articles" : "ጽሁፎችን መጫን አልተቻለም"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {language === "en"
+                ? "Check your connection and try again."
+                : "ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።"}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 text-sm font-medium text-primary hover:underline"
+            >
+              {language === "en" ? "Retry" : "እንደገና ሞክር"}
+            </button>
           </div>
         ) : searchableBlogs.length === 0 ? (
           <div className="p-12 text-center">

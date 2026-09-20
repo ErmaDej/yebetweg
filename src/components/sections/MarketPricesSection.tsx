@@ -77,7 +77,7 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
   const navigate = useNavigate()
   const { t, language } = useLanguage()
   const [category, setCategory] = useState("all")
-  const { data: prices, isLoading: fetchLoading } = useMarketPrices(category)
+  const { data: prices, isLoading: fetchLoading, error: pricesError } = useMarketPrices(category)
   const { ref, isInView } = useInView()
   const canReadPremium = activePlan === "premium" || activePlan === "pro"
   const trustText = sourceLabels[language]
@@ -288,6 +288,24 @@ export function MarketPricesSection({ activePlan = "free" }: { activePlan?: Prem
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} className="h-10 w-full" />
                 ))}
+              </div>
+            ) : pricesError ? (
+              <div className="p-12 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {language === "en" ? "Couldn't load prices" : "ዋጋዎችን መጫን አልተቻለም"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {language === "en"
+                    ? "Check your connection and try again."
+                    : "ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።"}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 text-sm font-medium text-primary hover:underline"
+                >
+                  {language === "en" ? "Retry" : "እንደገና ሞክር"}
+                </button>
               </div>
             ) : searchablePrices.length === 0 ? (
               <div className="p-12 text-center">

@@ -4,7 +4,8 @@
 - Overall posture: Phase 7 complete on `main`. **TeleBirr permanently removed.** Payments Chapa-only. Production-readiness pass executed Sep 18, 2026 (see milestone below). Remaining launch blockers are owner actions: secrets rotation, admin-login script run, Vercel production deploy.
 - Memory bank status: **tracked in git as of Sep 18, 2026** (was gitignored; 7 files recovered). Updated through the Sep 18 production-readiness pass.
 - Branch workflow: `feature/*` → `dev` → `stable` → `main` on phase wrap — **main at Phase 7 final**, `dev`/`stable` pending merge.
-- Last verified: Sep 19 — typecheck ✓ · build ✓ · **tests 82/82 ✓ (Vitest)** · probe:rls exit 0 · audit:rls exit 0
+- Last verified: Sep 20 — typecheck ✓ · build ✓ · **tests 82/82 ✓ (Vitest)** · probe:rls exit 0 · audit:rls exit 0 · audit:i18n exit 0 · in-app notifications + image repair + i18n/error-triad sweep complete
+- Pending owner apply (3 migrations + functions): `20260919010000_freshness_automation.sql`, `20260920000000_notifications_in_app.sql`, `20260920010000_replace_dead_unsplash_images.sql`, then deploy `freshness_cron` + `telegram-webhook` per `docs/EDGE_FUNCTIONS_RUNBOOK.md`
 
 ## Status Summary
 | Area | Status | Notes |
@@ -60,10 +61,11 @@
 - [x] Supabase env vars set for Chapa credentials
 
 ## Active Next Actions
+0. **Owner apply step** (Sep 19): run `20260919010000_freshness_automation.sql` (32nd migration), deploy `freshness_cron` + `telegram-webhook` edge functions with their secrets, set the Telegram webhook + weekly Mon-06:00-UTC trigger. Verify: `supabase functions logs freshness_cron` after manual trigger; send `/submitprice Addis | Cement | 1150` to the bot and confirm a `market_prices` row with `source_type='telegram'` appears (pending review).
 1. **Secrets rotation** (owner, manual): rotate DB password, service_role, Chapa secret, Resend key. URGENT since Sep 19: the service_role JWT is confirmed hardcoded in TWO tracked scripts (`test-supabase-connection.js`, `run-migrations-client.js` — scrubbed from the working tree that day, but it remains in git history); treat it as compromised until rotated. History purge still deferred by owner decision.
 2. **Admin login** (owner, manual): run `scripts/fix-admin-login.sql` in the Supabase SQL Editor, then verify both admin accounts log in via the app UI. If it fails, run `scripts/diagnose-admin-auth.sql` first.
 3. **Production launch**: Vercel deploy (configure env vars from `.env.example`, domain), DNS config, monitoring/alerts.
-4. **Post-launch** (optional): BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard, expand test coverage to hooks/pages.
+4. **Post-launch** (optional): BOQ share permalink (`/boq/:id`), chart lib consolidation, analytics dashboard, expand test coverage to hooks/pages. Phase 5 progress: freshness cron automation ✓, Telegram /submitprice funnel ✓, multi-city BOQ from market_prices ✓ (all Sep 19) — remaining Phase 5 items: Pro export, BOQ→actuals depth, save-to-project polish.
 
 ### Deferred (DO NOT lose track — launch blockers, Phase 6 gate)
 - D1 database hardening bundle (RLS enablement etc.) — **CLEARED in Phase 6** (20260828000000 migration)

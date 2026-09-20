@@ -69,13 +69,27 @@ export function isExternalUrlAllowed(url: string | null | undefined): boolean {
 
 /**
  * Validates image URLs (more permissive than external links)
- * Images can be loaded from any HTTPS source but should be validated separately
+ * Accepts absolute HTTPS URLs and same-origin relative paths (e.g. bundled
+ * local assets like /images/blog-construction.svg). Relative paths carry no
+ * cross-origin risk; anything else (http, data:, javascript:, protocol-relative)
+ * is rejected.
  */
 export function isImageUrlValid(url: string | null | undefined): boolean {
   if (!url || typeof url !== 'string') return false;
 
   const trimmed = url.trim();
   if (!trimmed) return false;
+
+  // Same-origin relative asset paths (must start with a single '/')
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    if (
+      trimmed.toLowerCase().includes('javascript:') ||
+      trimmed.toLowerCase().includes('data:')
+    ) {
+      return false;
+    }
+    return true;
+  }
 
   try {
     const parsed = new URL(trimmed);

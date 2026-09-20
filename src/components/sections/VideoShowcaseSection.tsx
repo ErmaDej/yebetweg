@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useInView } from "@/hooks/useInView"
 import { useLanguage } from "@/lib/i18n"
 import { Badge } from "@/components/ui/badge"
@@ -17,12 +17,32 @@ interface VideoCardProps {
 
 function VideoCard({ src, label, caption, large = false, delay = 0, isVisible }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [autoplayAllowed, setAutoplayAllowed] = useState(false)
 
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
     video.playbackRate = VIDEO_PLAYBACK_RATE
   }, [])
+
+  // Respect prefers-reduced-motion (opt into playback instead of autoplaying)
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const update = () => setAutoplayAllowed(!media.matches)
+    update()
+    media.addEventListener("change", update)
+    return () => media.removeEventListener("change", update)
+  }, [])
+
+  const togglePlay = () => {
+    const video = videoRef.current
+    if (!video) return
+    if (video.paused) {
+      video.play().catch(() => {})
+    } else {
+      video.pause()
+    }
+  }
 
   return (
     <div
@@ -55,11 +75,15 @@ function VideoCard({ src, label, caption, large = false, delay = 0, isVisible }:
         <video
           ref={videoRef}
           src={src}
-          autoPlay
+          autoPlay={autoplayAllowed}
           muted
           loop
           playsInline
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+          preload="none"
+          poster="/Logo2x.png"
+          aria-label={`${label} preview video`}
+          onClick={togglePlay}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02] cursor-pointer"
         />
       </div>
 

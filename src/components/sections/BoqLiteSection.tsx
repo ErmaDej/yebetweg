@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useInView } from "@/hooks/useInView"
-import { useLanguage } from "@/lib/i18n"
+import { useLanguage, type Language } from "@/lib/i18n"
 import { useNavigate } from "react-router-dom"
 import { RfqModal, type RfqContext } from "./RfqModal"
 import { useAuthContext } from "@/context/AuthContext"
@@ -41,8 +41,7 @@ const finishCosts: Record<FinishLevel, number> = {
   premium: 38000,
 }
 
-const labels = {
-  en: {
+const labelsEn = {
     title: "BOQ Lite Estimator",
     subtitle: "Estimate a project budget in minutes, then move toward supplier quotes and professional review.",
     projectType: "Project type",
@@ -77,10 +76,27 @@ const labels = {
     basic: "Basic",
     standard: "Standard",
     premium: "Premium",
+    materialsLive: "live",
+    materialsEst: "est.",
+    otherMaterials: "Other materials",
+    materials: {
+      cement: "Cement (quintal)",
+      derba: "Derba cement (quintal)",
+      mugher: "Mugher cement (quintal)",
+      rebar: "Rebar (quintal)",
+      "deformed bar": "Deformed bar (quintal)",
+      sand: "Sand (m3)",
+      aggregate: "Aggregate (m3)",
+      "concrete hollow": "Concrete HCB (pc)",
+      hcb: "HCB (pc)",
+      paint: "Paint (lt)",
+      eucalyptus: "Eucalyptus (pc)",
+    } as Record<string, string>,
     sqm: "m2",
-  },
-  am: {
-    title: "ቀላል BOQ ግምት",
+}
+
+const labelsAm: typeof labelsEn = {
+  title: "ቀላል BOQ ግምት",
     subtitle: "የፕሮጀክት በጀትዎን በፍጥነት ይገምቱ፣ ከዚያ ወደ የአቅራቢ ዋጋ ጥያቄ እና የባለሙያ ግምገማ ይቀጥሉ።",
     projectType: "የፕሮጀክት አይነት",
     city: "ከተማ",
@@ -114,8 +130,28 @@ const labels = {
     basic: "መሰረታዊ",
     standard: "መደበኛ",
     premium: "ፕሪሚየም",
+    materialsLive: "ቀጥታ",
+    materialsEst: "ግምት",
+    otherMaterials: "ሌሎች ቁሳቁሶች",
+    materials: {
+      cement: "ሲሚንቶ (ቀንዳላ)",
+      derba: "ደርባ ሲሚንቶ (ቀንዳላ)",
+      mugher: "ሙገር ሲሚንቶ (ቀንዳላ)",
+      rebar: "ብረት (ቀንዳላ)",
+      "deformed bar": "ዲፎርምድ ባር (ቀንዳላ)",
+      sand: "አሸዋ (m3)",
+      aggregate: "ጮማ (m3)",
+      "concrete hollow": "ኮንክሪት HCB (ቁ)",
+      hcb: "HCB (ቁ)",
+      paint: "ቀለም (ሊትር)",
+      eucalyptus: "ዝግማ (ቁ)",
+    } as Record<string, string>,
     sqm: "m2",
-  },
+}
+
+const labels: Record<Language, typeof labelsEn> = {
+  en: labelsEn,
+  am: labelsAm,
 }
 
 function formatEtb(value: number) {
@@ -137,7 +173,12 @@ export function BoqLiteSection() {
   const { user } = useAuthContext()
   const { data: savedEstimates } = useBoqEstimates()
   const createEstimate = useCreateBoqEstimate()
-  const { multipliers: cityMultipliers, isLive: isLiveCityPricing } = useCityMultipliers()
+  const {
+    multipliers: cityMultipliers,
+    isLive: isLiveCityPricing,
+    cityMaterialPrices,
+    addisMaterialPrices,
+  } = useCityMultipliers()
 
   const handleSave = async () => {
     try {
@@ -182,6 +223,13 @@ export function BoqLiteSection() {
       ["Item", "Amount (ETB)"],
       ["Structure (32%)", String(Math.round(estimate.structure))],
       ["Materials (38%)", String(Math.round(estimate.material))],
+      ...estimate.materialBreakdown.map((m) => [
+        `  Material: ${text.materials[m.key] ?? m.key}${m.live ? " (live)" : " (est.)"}`,
+        String(Math.round(m.amount)),
+      ]),
+      ...(estimate.otherMaterials > 0
+        ? [["  Material: other (est.)", String(Math.round(estimate.otherMaterials))]]
+        : []),
       ["Labor (18%)", String(Math.round(estimate.labor))],
       ["Overhead (12%)", String(Math.round(estimate.overhead))],
       ["Total", String(Math.round(estimate.total))],
@@ -222,6 +270,31 @@ export function BoqLiteSection() {
       floorMultiplier
     const total = subtotal * (1 + contingency / 100)
 
+    // Per-material indicative breakdown: the materials budget (38%) spread
+    // over tracked market materials, priced from the selected city's live
+    // prices where available (falling back to Addis ratios for missing ones).
+    const materialBudget = total * 0.38
+    const addisPrices = addisMaterialPrices
+    const cityPrices = cityMaterialPrices[city] ?? {}
+    const tracked = Object.keys(addisPrices)
+    const trackedTotalWeight = tracked.length
+    let coveredSum = 0
+    const materialBreakdown: Array<{ key: string; amount: number; live: boolean }> = []
+    if (trackedTotalWeight > 0) {
+      const perItemBudget = materialBudget / trackedTotalWeight
+      for (const key of tracked) {
+        const cityPrice = cityPrices[key]
+        const addisPrice = addisPrices[key]
+        const live = cityPrice != null && addisPrice > 0 && cityPrice !== addisPrice
+        const ratio = cityPrice != null && addisPrice > 0 ? cityPrice / addisPrice : cityMultipliers[city]
+        const amount = perItemBudget * ratio
+        coveredSum += amount
+        materialBreakdown.push({ key, amount, live })
+      }
+      materialBreakdown.sort((a, b) => b.amount - a.amount)
+    }
+    const otherMaterials = Math.max(materialBudget - coveredSum, 0)
+
     return {
       total,
       perM2: total / safeArea,
@@ -229,8 +302,10 @@ export function BoqLiteSection() {
       material: total * 0.38,
       labor: total * 0.18,
       overhead: total * 0.12,
+      materialBreakdown,
+      otherMaterials,
     }
-  }, [area, city, cityMultipliers, contingency, finishLevel, floors, projectType])
+  }, [area, city, cityMultipliers, cityMaterialPrices, addisMaterialPrices, contingency, finishLevel, floors, projectType])
 
   return (
     <section id="boq" ref={ref} className="bg-muted/30 py-16 sm:py-24">
@@ -399,6 +474,31 @@ export function BoqLiteSection() {
                   </div>
                 ))}
               </div>
+
+              {estimate.materialBreakdown.length > 0 && (
+                <div className="rounded-lg border border-border/60 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">{text.material}</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {estimate.materialBreakdown.map((m) => (
+                      <li key={m.key} className="flex items-baseline justify-between gap-3 text-xs">
+                        <span className="min-w-0 truncate text-muted-foreground">
+                          {text.materials[m.key] ?? m.key}
+                          <span className="ms-1.5 text-[10px] text-muted-foreground/70">
+                            ({m.live ? text.materialsLive : text.materialsEst})
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-medium tabular-nums">{formatEtb(m.amount)}</span>
+                      </li>
+                    ))}
+                    {estimate.otherMaterials > 0 && (
+                      <li className="flex items-baseline justify-between gap-3 text-xs">
+                        <span className="text-muted-foreground">{text.otherMaterials}</span>
+                        <span className="shrink-0 font-medium tabular-nums">{formatEtb(estimate.otherMaterials)}</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Button

@@ -29,7 +29,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-leaderboard-2",
     advertiser: "Ethiopian Construction Materials",
-    image_url: "https://images.unsplash.com/photo-1581092162562-40038cf6a398?w=900&q=80",
+    image_url: "/images/ad-banner.svg",
     link: "https://t.me/yebetweg",
     position: "leaderboard",
     is_active: true,
@@ -45,7 +45,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-sidebar-1",
     advertiser: "Addis Build Materials",
-    image_url: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=500&q=80",
+    image_url: "/images/ad-banner.svg",
     link: "https://t.me/yebetweg",
     position: "sidebar",
     is_active: true,

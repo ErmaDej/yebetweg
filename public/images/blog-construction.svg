@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e3a5f"/>
+      <stop offset="1" stop-color="#0f2340"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#bg)"/>
+  <g opacity="0.12" stroke="#ffffff" stroke-width="1.5" fill="none">
+    <path d="M0 420 L800 420"/>
+    <path d="M0 350 L800 350"/>
+    <path d="M100 500 L100 280 L260 280 L260 500"/>
+    <path d="M260 280 L420 200 L420 500"/>
+    <path d="M560 500 L560 240 L720 240 L720 500"/>
+    <path d="M420 200 L560 240"/>
+  </g>
+  <g transform="translate(400 210)" fill="none" stroke="#f5a623" stroke-width="10" stroke-linecap="round">
+    <path d="M-70 60 L0 -60 L70 60" />
+    <path d="M-40 10 L40 10" />
+  </g>
+  <text x="400" y="330" text-anchor="middle" font-family="system-ui, sans-serif" font-size="26" font-weight="700" fill="#ffffff">YeBetWeg</text>
+  <text x="400" y="362" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#9fb3c8">Construction Knowledge</text>
+</svg>

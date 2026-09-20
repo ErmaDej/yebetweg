@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Star, MapPin, Phone, Plus, ShieldCheck, BriefcaseBusiness, Clock3, Images, Send, SearchX } from "lucide-react"
+import { Star, MapPin, Phone, Plus, ShieldCheck, BriefcaseBusiness, Images, Send, SearchX } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -73,7 +73,10 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
   )
   const trustLevel = trustScore >= 80 ? "high" : trustScore >= 50 ? "medium" : "low"
   const trustColor = trustLevel === "high" ? "bg-emerald-500" : trustLevel === "medium" ? "bg-amber-500" : "bg-muted-foreground"
-  const responseLabel = language === "en" ? "Usually responds in 24h" : "ብዙውን ጊዜ በ24 ሰዓት ይመልሳል"
+  const responseLabel =
+    language === "en"
+      ? "Contact for response times"
+      : "ለምላሽ ጊዜ አባሪን ያግኙ"
 
   const handleInquiry = async () => {
     if (!hireData.name || !hireData.phone) {
@@ -204,7 +207,7 @@ function ProfessionalCard({ professional, index, onRequestQuote }: {
 
         {professional.is_verified && (
           <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-            <Clock3 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="line-clamp-1">{responseLabel}</span>
           </div>
         )}
