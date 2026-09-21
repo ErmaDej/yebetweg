@@ -159,6 +159,54 @@ export function useDeleteBoqActual() {
   })
 }
 
+// ============================================================================
+// Chart aggregation — pure functions (unit-tested in tests/boq-actuals.test.ts)
+// ============================================================================
+
+export type MonthlySpendPoint = { month: string; total: number }
+
+/**
+ * Continuous monthly series for the last `months` months (empty months are 0,
+ * so trends don't lie by skipping gaps). Ends at the current month.
+ */
+export function aggregateMonthlySpend(entries: BoqActual[], months = 6): MonthlySpendPoint[] {
+  const byMonth = new Map<string, number>()
+  for (const e of entries) {
+    const month = (e.spent_at || "").slice(0, 7)
+    if (!/^\d{4}-\d{2}$/.test(month)) continue
+    byMonth.set(month, (byMonth.get(month) ?? 0) + (Number(e.amount) || 0))
+  }
+  const points: MonthlySpendPoint[] = []
+  const now = new Date()
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    points.push({ month: key, total: byMonth.get(key) ?? 0 })
+  }
+  return points
+}
+
+export type CategorySlice = { category: BoqActualCategory; total: number; pct: number }
+
+/** Category totals with percentages of the whole (0 pct when no entries). */
+export function aggregateByCategory(entries: BoqActual[]): CategorySlice[] {
+  const order: BoqActualCategory[] = ["material", "labor", "structure", "overhead", "other"]
+  const totals = new Map<BoqActualCategory, number>()
+  let grand = 0
+  for (const e of entries) {
+    const amt = Number(e.amount) || 0
+    totals.set(e.category, (totals.get(e.category) ?? 0) + amt)
+    grand += amt
+  }
+  return order
+    .filter((c) => (totals.get(c) ?? 0) > 0)
+    .map((c) => ({
+      category: c,
+      total: totals.get(c) ?? 0,
+      pct: grand > 0 ? ((totals.get(c) ?? 0) / grand) * 100 : 0,
+    }))
+}
+
 export type VarianceRow = {
   estimate: BoqEstimate
   actuals: ActualsSummary

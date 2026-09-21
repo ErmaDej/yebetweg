@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress"
 import { useDashboardData, buildActivityFeed, type ActivityKind } from "@/hooks/useDashboardData"
 import { profileStrength, roleKeyFor, planBenefits, planFromRole } from "@/lib/entitlements"
 import type { PremiumTier } from "@/types/payment"
+import type { RfqContext } from "@/components/sections/RfqModal"
 import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
 import { useBoqEstimates, useDeleteBoqEstimate } from "@/hooks/useBoqEstimates"
@@ -51,6 +52,7 @@ export function Dashboard() {
   const [activityFilter, setActivityFilter] = useState<"all" | ActivityKind>("all")
   const [activitySort, setActivitySort] = useState<"newest" | "oldest">("newest")
   const [rfqModalOpen, setRfqModalOpen] = useState(false)
+  const [rfqModalContext, setRfqModalContext] = useState<RfqContext | null>(null)
   const [pendingBoqDelete, setPendingBoqDelete] = useState<{ id: string; title: string } | null>(null)
   const {
     data: dashboardData,
@@ -669,6 +671,10 @@ export function Dashboard() {
                   unreadInquiries={dashboardData?.stats.unread ?? 0}
                   savedEstimates={boqEstimates.length}
                   unreadNotifications={assistantUnread}
+                  onLaunchRfq={(drafted) => {
+                    setRfqModalContext(drafted)
+                    setRfqModalOpen(true)
+                  }}
                 />
               </CardContent>
             </Card>
@@ -1204,7 +1210,6 @@ export function Dashboard() {
                 </CardContent>
               </Card>
 
-              <RfqModal open={rfqModalOpen} onOpenChange={setRfqModalOpen} rfqContext={null} />
             </div>
           </TabsContent>
 
@@ -1214,6 +1219,11 @@ export function Dashboard() {
             </TabsContent>
           )}
         </Tabs>
+
+        {/* Page-level (outside <Tabs>): Radix unmounts TabsContent of inactive
+            tabs, which left RFQ modal open=true with nothing rendered — the
+            Submit RFQ button silently did nothing on non-activity tabs. */}
+        <RfqModal open={rfqModalOpen} onOpenChange={setRfqModalOpen} rfqContext={rfqModalContext} />
 
         <ConfirmActionDialog
           open={pendingBoqDelete !== null}

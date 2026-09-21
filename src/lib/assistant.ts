@@ -2,6 +2,7 @@ import { profileStrength } from "@/lib/entitlements"
 import type { UserProfile } from "@/hooks/useUserProfile"
 import type { PremiumTier } from "@/types/payment"
 import type { Language } from "@/lib/i18n"
+import type { RfqContext } from "@/components/sections/RfqModal"
 
 export type AssistantContext = {
   openRfqs: number
@@ -18,6 +19,8 @@ export interface AssistantMessage {
   content: string
   key?: string
   suggestions?: string[]
+  /** Set on the "rfq_new" intent answer — the card renders a chip that launches the draft flow. */
+  startRfqDraft?: boolean
 }
 
 export function buildContext(partial: {
@@ -135,7 +138,7 @@ type FaqIntent = {
   key: string
   en: string[]
   am: string[]
-  answer: (ctx: AssistantContext, language: Language) => string
+  answer: (ctx: AssistantContext, language: Language) => string | AssistantMessage
   suggestions?: (ctx: AssistantContext, language: Language) => string[]
 }
 
@@ -146,6 +149,25 @@ const PLAN_LABEL: Record<PremiumTier, { en: string; am: string }> = {
 }
 
 const FAQS: FaqIntent[] = [
+  {
+    key: "rfq_draft",
+    // Single tokens "draft"/"create" + the phrase "new rfq" so "draft a new RFQ"
+    // (4 pts) beats generic rfqs (2), while "show me new prices" (draft 0) stays prices.
+    // "አዲስ" is deliberately excluded — it's a substring of አዲስ አበባ (Addis Ababa).
+    en: ["draft", "create", "new rfq", "draft rfq"],
+    am: ["አዘጋጅ"],
+    answer: (_ctx, language) => ({
+      role: "assistant" as const,
+      key: "rfq_draft",
+      startRfqDraft: true,
+      content:
+        language === "am"
+          ? "እርምጃ እንጀምር — ከታች 'የዋጋ ጥያቄ አዘጋጅ' ይጫኑ፣ እኔ 3 ፈጣን ጥያቄዎችን እጠይቃለሁ እና ቅጹን አሞልቻለሁ።"
+          : "Happy to draft it with you — tap the 'Draft my RFQ' chip below and I'll ask 3 quick questions, then open the form pre-filled.",
+    }),
+    suggestions: (_ctx, language) =>
+      language === "am" ? ["የዋጋ ጥያቄዎቼ"] : ["My RFQs"],
+  },
   {
     key: "rfqs",
     en: ["rfq", "rfqs", "quote request", "my rfq", "request for quotation", "supplier quote"],
@@ -340,10 +362,14 @@ export function answerQuestion(
   }
 
   if (best) {
+    const answer = best.answer(ctx, language)
+    if (typeof answer === "object") {
+      return { ...answer, suggestions: answer.suggestions ?? best.suggestions?.(ctx, language) }
+    }
     return {
       role: "assistant",
       key: best.key,
-      content: best.answer(ctx, language),
+      content: answer,
       suggestions: best.suggestions?.(ctx, language),
     }
   }
@@ -358,4 +384,151 @@ export function answerQuestion(
         : "I can help with your RFQs, profile strength, market prices, BOQ estimates, and finding professionals. What would you like to know?",
     suggestions: helpIntent.suggestions?.(ctx, language),
   }
+}
+
+// ============================================================================
+// RFQ drafting — a small clarifying-question state machine that ends with a
+// pre-filled RfqContext the card hands to the RFQ modal. Pure functions so the
+// whole conversation is unit-testable.
+// ============================================================================
+
+export type RfqDraftStep = "material" | "city" | "budget" | "confirm"
+
+export type RfqDraftSession = {
+  active: boolean
+  step: RfqDraftStep
+  material?: string
+  city?: string
+  budget?: number | null
+}
+
+export function newRfqDraft(): RfqDraftSession {
+  return { active: true, step: "material" }
+}
+
+export type RfqDraftResult = {
+  message: AssistantMessage
+  session: RfqDraftSession
+  /** Set on the final confirm step — hand this to the RFQ modal. */
+  completed?: RfqContext
+}
+
+const CANCEL_WORDS = ["cancel", "stop", "never mind", "nevermind", "exit", "quit", "ተወው", "አቁም"]
+const CONFIRM_WORDS = ["send", "yes", "confirm", "ok", "okay", "go", "ላክ", "አዎ", "እሺ"]
+const SKIP_WORDS = ["skip", "no", "none", "don't know", "dont know", "unknown", "አላውቅም", "አይ", "የለም"]
+
+const hits = (text: string, words: string[]) => {
+  const t = text.toLowerCase()
+  return words.some((w) => t.includes(w))
+}
+
+const DRAFT_TEXT = {
+  material: {
+    en: "Let's draft your RFQ — 3 quick questions. What material or work is this for? (e.g. cement, Grade 60 rebar, plumbing)",
+    am: "የዋጋ ጥያቄዎን እናዘጋጅ — 3 ፈጣን ጥያቄዎች። ምን ቁሳቁስ ወይም ሥራ ነው? (ለምሳሌ፡ ሲሚንቶ፣ ባር፣ የቧንቧ ሥራ)",
+  },
+  city: {
+    en: "Which city should suppliers quote for?",
+    am: "አቅራቢዎች ለየትኛው ከተማ ዋጋ ይጠይቁ?",
+  },
+  budget: {
+    en: "What's your target price in ETB? (type 'skip' if not sure)",
+    am: "የሚፈልጉት ዋጋ በ ETB ስንት ነው? (ካላወቁ 'አላውቅም' ይብሉ)",
+  },
+  cancel: {
+    en: "No problem — draft discarded. Ask me anything else anytime.",
+    am: "መልካም — እርምጃው ተሰርዟል። በማንኛውም ጊዜ ጠይቁኝ።",
+  },
+} as const
+
+function parseBudget(text: string): number | null {
+  const digits = text.replace(/[^0-9]/g, "")
+  if (!digits) return null
+  const n = Number(digits)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+function titleCase(s: string): string {
+  return s
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ")
+}
+
+export function rfqDraftRespond(
+  session: RfqDraftSession,
+  input: string,
+  language: Language = "en"
+): RfqDraftResult {
+  const text = (input || "").trim()
+
+  if (hits(text, CANCEL_WORDS)) {
+    return { message: { role: "assistant", key: "draft_cancel", content: DRAFT_TEXT.cancel[language] }, session: { active: false, step: "material" } }
+  }
+
+  if (session.step === "material") {
+    const material = titleCase(text.slice(0, 80))
+    if (!material) {
+      return { message: { role: "assistant", key: "draft_material", content: DRAFT_TEXT.material[language] }, session }
+    }
+    return {
+      session: { ...session, step: "city", material },
+      message: { role: "assistant", key: "draft_city", content: DRAFT_TEXT.city[language] },
+    }
+  }
+
+  if (session.step === "city") {
+    const city = titleCase(text.slice(0, 60))
+    if (!city) {
+      return { message: { role: "assistant", key: "draft_city", content: DRAFT_TEXT.city[language] }, session }
+    }
+    return {
+      session: { ...session, step: "budget", city },
+      message: { role: "assistant", key: "draft_budget", content: DRAFT_TEXT.budget[language] },
+    }
+  }
+
+  if (session.step === "budget") {
+    const budget = hits(text, SKIP_WORDS) ? null : parseBudget(text)
+    if (budget === null && !hits(text, SKIP_WORDS)) {
+      return { message: { role: "assistant", key: "draft_budget", content: DRAFT_TEXT.budget[language] }, session }
+    }
+    const summary =
+      language === "am"
+        ? `ማጠቃለያ፡ ${session.material ?? ""} · ${session.city ?? ""} · ${budget ? `${budget.toLocaleString()} ETB` : "ዋጋ አልተጠቀሰም"}። ለመላክ 'ላክ' ይብሉ — ለመተው 'ተወው'።`
+        : `Here's the summary: ${session.material ?? ""} · ${session.city ?? ""} · ${budget ? `${budget.toLocaleString()} ETB` : "no target price"}. Reply 'send' to open the RFQ form pre-filled — or 'cancel' to discard.`
+    return {
+      session: { ...session, step: "confirm", budget },
+      message: { role: "assistant", key: "draft_confirm", content: summary },
+    }
+  }
+
+  // step === "confirm"
+  if (hits(text, CONFIRM_WORDS)) {
+    const completed: RfqContext = {
+      sourceType: "manual",
+      itemName: session.material || "",
+      specification: language === "en" ? "Drafted with YeBetWeg Assistant" : "ከYeBetWeg ረዳት ጋር ተዘጋጅቷል",
+      targetPrice: session.budget ?? null,
+      city: session.city || "Addis Ababa",
+    }
+    const msg: AssistantMessage = {
+      role: "assistant",
+      key: "draft_done",
+      content:
+        language === "am"
+          ? "የዋጋ ጥያቄ ቅጹ ተከፍቷል — ዝርዝሮቹ ተሞልተዋል። ይመልከቱና ያስገቡ።"
+          : "Opening the RFQ form with your details pre-filled — review and submit when ready.",
+    }
+    return { message: msg, session: { active: false, step: "material" }, completed }
+  }
+
+  // Anything else at confirm → re-show summary
+  const again =
+    language === "am"
+      ? `ለመላክ 'ላክ' ወይም ለመተው 'ተወው' ይብሉ። ማጠቃለያ፡ ${session.material ?? ""} · ${session.city ?? ""}።`
+      : `Reply 'send' to open the form or 'cancel' to discard. Summary: ${session.material ?? ""} · ${session.city ?? ""}.`
+  return { message: { role: "assistant", key: "draft_confirm", content: again }, session }
 }

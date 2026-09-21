@@ -1,17 +1,34 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts"
 import { ChevronDown, ChevronUp, Loader2, Plus, Trash2, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { useBoqActualsByEstimate, useCreateBoqActual, useDeleteBoqActual, buildVarianceRows, type BoqActualCategory } from "@/hooks/useBoqActuals"
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { useBoqActualsByEstimate, useCreateBoqActual, useDeleteBoqActual, buildVarianceRows, aggregateMonthlySpend, aggregateByCategory, type BoqActualCategory, type BoqActual } from "@/hooks/useBoqActuals"
 import type { BoqEstimate } from "@/hooks/useBoqEstimates"
 
 // ============================================================================
 // BOQ → actuals panel: log real spend against saved estimates, see variance.
-// Pure ledger UI — the math lives in useBoqActuals (summarizeActuals/buildVarianceRows).
+// Pure ledger UI — the math lives in useBoqActuals (summarizeActuals,
+// buildVarianceRows, aggregateMonthlySpend, aggregateByCategory).
 // ============================================================================
 
 const CATS: BoqActualCategory[] = ["structure", "material", "labor", "overhead", "other"]
+
+const CAT_COLORS: Record<BoqActualCategory, string> = {
+  material: "var(--color-chart-1)",
+  labor: "var(--color-chart-2)",
+  structure: "var(--color-chart-3)",
+  overhead: "var(--color-chart-4)",
+  other: "var(--color-chart-5)",
+}
+
+function formatMonth(ym: string, language: "en" | "am") {
+  const [y, m] = ym.split("-").map(Number)
+  const d = new Date(y, m - 1, 1)
+  return d.toLocaleDateString(language === "am" ? "am-ET" : "en-US", { month: "short" })
+}
 
 const catLabel = (c: BoqActualCategory, language: "en" | "am") =>
   ({
@@ -30,6 +47,14 @@ export function BoqActualsPanel({ language, estimates }: { language: "en" | "am"
 
   const rows = buildVarianceRows(estimates, actualsByEstimate)
   const rowsWithActuals = rows.filter((r) => r.actuals.count > 0).length
+
+  const allEntries: BoqActual[] = useMemo(
+    () => Object.values(actualsByEstimate).flatMap((s) => s.entries),
+    [actualsByEstimate]
+  )
+  const monthly = useMemo(() => aggregateMonthlySpend(allEntries, 6), [allEntries])
+  const categories = useMemo(() => aggregateByCategory(allEntries), [allEntries])
+  const hasChartData = allEntries.length > 0
 
   if (estimates.length === 0) return null
 
@@ -51,6 +76,8 @@ export function BoqActualsPanel({ language, estimates }: { language: "en" | "am"
           ? "Log what you actually spent per category — YeBetWeg compares it with the estimate so your next one is sharper."
           : "በምድብ የሚውለውን እውነተኛ ወጪ ይመዝግቡ — ከግምቱ ጋር ተወዳድሮ ቀጣዩ ግምት ይሻሻላል።"}
       </p>
+
+      {hasChartData && <ActualsCharts language={language} monthly={monthly} categories={categories} />}
 
       {isLoading ? (
         <div className="flex justify-center py-2">
@@ -136,6 +163,98 @@ export function BoqActualsPanel({ language, estimates }: { language: "en" | "am"
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Charts — 6-month spend trend (bar) + category split (donut).
+// ============================================================================
+
+const catLabelText = (c: BoqActualCategory, language: "en" | "am") => catLabel(c, language)
+
+function ActualsCharts({
+  language,
+  monthly,
+  categories,
+}: {
+  language: "en" | "am"
+  monthly: ReturnType<typeof aggregateMonthlySpend>
+  categories: ReturnType<typeof aggregateByCategory>
+}) {
+  const chartConfig: ChartConfig = {
+    total: {
+      label: language === "en" ? "Spent (ETB)" : "ወጪ (ETB)",
+      color: "var(--chart-1)",
+    },
+  }
+
+  const monthLabel = (ym: string) => formatMonth(ym, language)
+
+  return (
+    <div className="mb-3 grid gap-3 sm:grid-cols-2">
+      <div className="rounded-md border border-border/50 p-2.5">
+        <p className="mb-1 text-xs font-medium">
+          {language === "en" ? "Last 6 months" : "የመጨረሻ 6 ወራት"}
+        </p>
+        <ChartContainer config={chartConfig} className="h-[140px] w-full" >
+          <BarChart data={monthly.map((p) => ({ ...p, monthLabel: monthLabel(p.month) }))} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="monthLabel"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={4}
+              fontSize={10}
+            />
+            <YAxis hide domain={[0, "auto"]} />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Bar dataKey="total" fill="var(--color-total)" radius={3} />
+          </BarChart>
+        </ChartContainer>
+      </div>
+
+      <div className="rounded-md border border-border/50 p-2.5">
+        <p className="mb-1 text-xs font-medium">
+          {language === "en" ? "By category" : "በምድብ"}
+        </p>
+        <div className="flex items-center gap-3">
+          <ChartContainer config={{}} className="h-[140px] w-[140px] shrink-0">
+            <PieChart>
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Pie
+                data={categories.map((c) => ({
+                  name: catLabelText(c.category, language),
+                  value: Math.round(c.total),
+                  pct: c.pct,
+                }))}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={38}
+                outerRadius={62}
+                strokeWidth={1}
+              >
+                {categories.map((c) => (
+                  <Cell key={c.category} fill={CAT_COLORS[c.category]} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ChartContainer>
+          <ul className="min-w-0 flex-1 space-y-1 text-xs">
+            {categories.map((c) => (
+              <li key={c.category} className="flex items-center gap-1.5">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: CAT_COLORS[c.category] }}
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1 truncate">{catLabelText(c.category, language)}</span>
+                <span className="shrink-0 tabular-nums text-muted-foreground">{c.pct.toFixed(0)}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   )
 }

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/lib/i18n"
-import { assistantGreeting, answerQuestion, type AssistantContext, type AssistantMessage } from "@/lib/assistant"
+import { assistantGreeting, answerQuestion, newRfqDraft, rfqDraftRespond, type AssistantContext, type AssistantMessage, type RfqDraftSession } from "@/lib/assistant"
+import type { RfqContext } from "@/components/sections/RfqModal"
 import type { UserProfile } from "@/hooks/useUserProfile"
 import type { PremiumTier } from "@/types/payment"
 
@@ -17,6 +18,8 @@ export type AssistantCardProps = {
   savedEstimates?: number
   actualsLogged?: number
   unreadNotifications?: number
+  /** Called when an assistant RFQ draft completes — opens the modal pre-filled. */
+  onLaunchRfq?: (ctx: RfqContext) => void
 }
 
 const QUICK_INTENT_KEYS: ReadonlyArray<keyof typeof labels.en> = ["myRfqs", "profile", "prices", "boq", "pro"]
@@ -46,11 +49,12 @@ const labels = {
   },
 }
 
-export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiries, savedEstimates = 0, actualsLogged = 0, unreadNotifications = 0 }: AssistantCardProps) {
+export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiries, savedEstimates = 0, actualsLogged = 0, unreadNotifications = 0, onLaunchRfq }: AssistantCardProps) {
   const { t } = useLanguage()
   const [messages, setMessages] = useState<AssistantMessage[]>([])
   const [input, setInput] = useState("")
   const [sending, setSending] = useState(false)
+  const [draft, setDraft] = useState<RfqDraftSession | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const l = labels[language]
 
@@ -77,9 +81,33 @@ export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiri
     addMessage({ role: "user", content: text })
     setSending(true)
     setTimeout(() => {
-      addMessage(answerQuestion(text, ctx, language))
+      // Active draft session: every reply feeds the clarifying-question flow.
+      if (draft?.active) {
+        const result = rfqDraftRespond(draft, text, language)
+        addMessage(result.message)
+        setDraft(result.session)
+        if (result.completed) {
+          onLaunchRfq?.(result.completed)
+        }
+      } else {
+        addMessage(answerQuestion(text, ctx, language))
+      }
       setSending(false)
     }, 320)
+  }
+
+  const startDraft = () => {
+    if (sending || draft?.active) return
+    addMessage({ role: "user", content: language === "am" ? "የዋጋ ጥያቄ አዘጋጅ" : "Draft my RFQ" })
+    setDraft(newRfqDraft())
+    addMessage({
+      role: "assistant",
+      key: "draft_material",
+      content:
+        language === "am"
+          ? "ምን ቁሳቁስ ወይም ሥራ ነው? (ለምሳሌ፡ ሲሚንቶ፣ ባር፣ የቧንቧ ሥራ)"
+          : "Great — what material or work is this for? (e.g. cement, Grade 60 rebar, plumbing)",
+    })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -125,6 +153,17 @@ export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiri
                 >
                   {m.content}
                 </div>
+                {m.role === "assistant" && m.startRfqDraft && i === messages.length - 1 && (
+                  <div className="mt-1.5">
+                    <Badge
+                      variant="default"
+                      className="cursor-pointer text-[10px]"
+                      onClick={startDraft}
+                    >
+                      {language === "am" ? "የዋጋ ጥያቄ አዘጋጅ" : "Draft my RFQ"}
+                    </Badge>
+                  </div>
+                )}
                 {m.role === "assistant" && m.suggestions && m.suggestions.length > 0 && i === messages.length - 1 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {m.suggestions.map((s) => (
