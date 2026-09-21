@@ -25,6 +25,7 @@ import { useBoqEstimates, useDeleteBoqEstimate } from "@/hooks/useBoqEstimates"
 import { useSiteLogs } from "@/hooks/useSiteLogs"
 import { useProjectSaves } from "@/hooks/useProjectSaves"
 import { toast } from "sonner"
+import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
 
 export function Dashboard() {
   const { language, t } = useLanguage()
@@ -46,6 +47,7 @@ export function Dashboard() {
   const [activityFilter, setActivityFilter] = useState<"all" | ActivityKind>("all")
   const [activitySort, setActivitySort] = useState<"newest" | "oldest">("newest")
   const [rfqModalOpen, setRfqModalOpen] = useState(false)
+  const [pendingBoqDelete, setPendingBoqDelete] = useState<{ id: string; title: string } | null>(null)
   const {
     data: dashboardData,
     loading: statsLoading,
@@ -417,11 +419,10 @@ export function Dashboard() {
                     variant="ghost"
                     size="icon"
                     className="shrink-0 text-destructive hover:text-destructive"
-                    onClick={() => {
-                      if (window.confirm(language === "en" ? "Delete this estimate?" : "ይህን ግምት ይሰርዙ?")) {
-                        deleteBoq.mutate(est.id)
-                      }
-                    }}
+                    onClick={() => setPendingBoqDelete({
+                      id: est.id,
+                      title: `${est.inputs?.cityLabel ?? ""} · ${est.inputs?.area ?? ""} m²`,
+                    })}
                     disabled={deleteBoq.isPending}
                     aria-label={language === "en" ? "Delete estimate" : "ግምት ሰርዝ"}
                   >
@@ -1121,6 +1122,31 @@ export function Dashboard() {
             </TabsContent>
           )}
         </Tabs>
+
+        <ConfirmActionDialog
+          open={pendingBoqDelete !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingBoqDelete(null)
+          }}
+          title={language === "en" ? "Delete this estimate?" : "ይህን ግምት ይሰርዙ?"}
+          description={
+            (pendingBoqDelete?.title
+              ? language === "en"
+                ? `${pendingBoqDelete.title} — `
+                : `${pendingBoqDelete.title} — `
+              : "") +
+            (language === "en"
+              ? "Saved estimate will be permanently removed. This cannot be undone."
+              : "የተቀመጠው ግምት በቋሚነት ይጠፋል። መመለስ አይቻልም።")
+          }
+          confirmLabel={language === "en" ? "Delete estimate" : "ግምት ሰርዝ"}
+          busy={deleteBoq.isPending}
+          onConfirm={() => {
+            const id = pendingBoqDelete?.id
+            setPendingBoqDelete(null)
+            if (id) deleteBoq.mutate(id)
+          }}
+        />
       </div>
     </div>
   )

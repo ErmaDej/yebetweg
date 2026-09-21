@@ -139,7 +139,7 @@ export function FilterPanel({
             </Button>
           )}
           {onToggle && variant !== "inline" && (
-            <Button variant="ghost" size="icon" onClick={onToggle} className="h-7 w-7">
+            <Button variant="ghost" size="icon" onClick={onToggle} className="h-7 w-7" aria-label={language === "en" ? "Close filters" : "ማጣሪያዎችን ዝጋ"}>
               <X className="h-4 w-4" />
             </Button>
           )}

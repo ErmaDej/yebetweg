@@ -121,6 +121,7 @@ export function SmartSearchBar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label={language === "en" ? "Clear search" : "ፍለጋውን አጽዳ"}
               className={cn(
                 "absolute right-1 top-1/2 -translate-y-1/2 hover:bg-transparent",
                 compact ? "h-6 w-6" : "h-8 w-8",

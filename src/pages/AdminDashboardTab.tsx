@@ -15,6 +15,7 @@ import { callAdminAction } from "@/lib/api"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { supabase } from "@/lib/supabase"
 import { useAdminOperationalSummary } from "@/hooks/useAdminOperationalSummary"
+import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
 import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
 import { TelegramPriceQueue } from "@/components/admin/TelegramPriceQueue"
 import { RfqManager } from "@/components/admin/RfqManager"
@@ -65,6 +66,12 @@ export function AdminDashboardTab() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createAction, setCreateAction] = useState<string>("")
   const [selectedListings, setSelectedListings] = useState<string[]>([])
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string
+    description: string
+    confirmLabel: string
+    run: () => Promise<void>
+  } | null>(null)
   const isMobile = useIsMobile()
 
   const safeCount = async (table: string, query?: (q: any) => any) => {
@@ -446,7 +453,32 @@ export function AdminDashboardTab() {
                             </Button>
                           )}
                           {action === "ban_users" && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Ban/Suspend" : "አግድ/አስቁም"} onClick={() => handleActionWithPayload("ban_users", { userId: item.id, status: item.status === "active" ? "suspended" : "active" })}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              title={language === "en" ? "Ban/Suspend" : "አግድ/አስቁም"}
+                              aria-label={language === "en" ? "Ban or suspend this user" : "ተጠቃሚውን አግድ/አስቁም"}
+                              onClick={() => {
+                                const suspend = item.status === "active"
+                                setConfirmAction({
+                                  title: language === "en"
+                                    ? (suspend ? "Suspend this user?" : "Reactivate this user?")
+                                    : (suspend ? "ተጠቃሚውን አግድ?" : "ተጠቃሚውን አንቃ?"),
+                                  description: language === "en"
+                                    ? (suspend
+                                      ? "They will lose access to their dashboard, RFQs and inquiries until reactivated."
+                                      : "They will regain full access to their account.")
+                                    : (suspend
+                                      ? "እስኪነቃ ድረስ ዳሽቦርድ፣ የዋጋ ጥያቄዎችና ጥያቄዎችን ያጣል።"
+                                      : "የመለያውን ሙሉ መዳረሻ እንደገና ያገኛል።"),
+                                  confirmLabel: language === "en"
+                                    ? (suspend ? "Suspend user" : "Reactivate user")
+                                    : (suspend ? "አግድ" : "አንቃ"),
+                                  run: () => handleActionWithPayload("ban_users", { userId: item.id, status: suspend ? "suspended" : "active" }),
+                                })
+                              }}
+                            >
                               <Ban className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -455,7 +487,21 @@ export function AdminDashboardTab() {
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500" title={language === "en" ? "Edit" : "አርትዕ"} onClick={() => { setEditingRecord(item); setEditDialogOpen(true) }}>
                                 <Edit className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title={language === "en" ? "Delete" : "ሰርዝ"} onClick={() => handleActionWithPayload(action, { id: item.id, delete: true })}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive"
+                                title={language === "en" ? "Delete" : "ሰርዝ"}
+                                aria-label={language === "en" ? "Delete permanently" : "በቋሚነት ሰርዝ"}
+                                onClick={() => setConfirmAction({
+                                  title: language === "en" ? "Delete this content?" : "ይህን ይሰርዙ?",
+                                  description: language === "en"
+                                    ? "This permanently removes it from the site. This cannot be undone."
+                                    : "ከድረ-ገጹ በቋሚነት ይጠፋል። መመለስ አይቻልም።",
+                                  confirmLabel: language === "en" ? "Delete" : "ሰርዝ",
+                                  run: () => handleActionWithPayload(action, { id: item.id, delete: true }),
+                                })}
+                              >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </>
@@ -581,6 +627,21 @@ export function AdminDashboardTab() {
       <ExpandableSection title={language === "en" ? "User Management" : "ተጠቃሚ አስተዳደር"} defaultOpen={false}>
         <UserManagementSection language={language} />
       </ExpandableSection>
+
+      <ConfirmActionDialog
+        open={confirmAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmAction(null)
+        }}
+        title={confirmAction?.title ?? ""}
+        description={confirmAction?.description ?? ""}
+        confirmLabel={confirmAction?.confirmLabel ?? ""}
+        onConfirm={() => {
+          const run = confirmAction?.run
+          setConfirmAction(null)
+          void run?.()
+        }}
+      />
     </div>
   )
 }
@@ -790,6 +851,7 @@ function UserManagementSection({ language }: { language: string }) {
   const [search, setSearch] = useState("")
   const [updating, setUpdating] = useState<string | null>(null)
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null)
+  const [pendingStatus, setPendingStatus] = useState<{ userId: string; username: string; suspend: boolean } | null>(null)
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
@@ -837,6 +899,13 @@ function UserManagementSection({ language }: { language: string }) {
     } finally {
       setStatusUpdating(null)
     }
+  }
+
+  const confirmToggleStatus = async () => {
+    if (!pendingStatus) return
+    const target = users.find((u) => u.id === pendingStatus.userId)
+    setPendingStatus(null)
+    if (target) await handleToggleStatus(target.id, target.status)
   }
 
   const filtered = search
@@ -922,7 +991,13 @@ function UserManagementSection({ language }: { language: string }) {
                       title={u.status === "active"
                         ? (language === "en" ? "Suspend" : "አስቁም")
                         : (language === "en" ? "Activate" : "አንቃ")}
-                      onClick={() => handleToggleStatus(u.id, u.status)}
+                      onClick={() =>
+                        setPendingStatus({
+                          userId: u.id,
+                          username: u.username || u.email,
+                          suspend: u.status === "active",
+                        })
+                      }
                       disabled={statusUpdating === u.id}
                     >
                       {statusUpdating === u.id
@@ -937,6 +1012,27 @@ function UserManagementSection({ language }: { language: string }) {
           </Table>
         </div>
       )}
+
+      <ConfirmActionDialog
+        open={pendingStatus !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingStatus(null)
+        }}
+        title={pendingStatus?.suspend
+          ? (language === "en" ? `Suspend ${pendingStatus.username}?` : `${pendingStatus.username} ይከለከል?`)
+          : (language === "en" ? `Reactivate ${pendingStatus?.username ?? ""}?` : `${pendingStatus?.username ?? ""} ይነቃ?`)}
+        description={pendingStatus?.suspend
+          ? (language === "en"
+            ? "They will lose access to their dashboard, RFQs and inquiries until reactivated."
+            : "እስኪነቃ ድረስ ዳሽቦርድ፣ የዋጋ ጥያቄዎችንና ጥያቄዎችን ያጣል።")
+          : (language === "en"
+            ? "They will regain full access to their account."
+            : "የመለያውን ሙሉ መዳረሻ እንደገና ያገኛል።")}
+        confirmLabel={pendingStatus?.suspend
+          ? (language === "en" ? "Suspend user" : "አግድ")
+          : (language === "en" ? "Reactivate user" : "አንቃ")}
+        onConfirm={() => void confirmToggleStatus()}
+      />
     </div>
   )
 }

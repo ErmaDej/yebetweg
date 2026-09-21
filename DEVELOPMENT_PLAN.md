@@ -103,7 +103,7 @@ Compatible with CLI-driven migration pushes — it is just another migration fil
 - [ ] Verify deployed RPC quotas match claims: `create_listing` 3-active-listing cap, `submit_rfq` monthly cap (business_rules.md claims fixed — confirm against production DB).
 - [ ] BOQ data layer: persist estimates (`boq_estimates` table: inputs JSONB, outputs, **canonical city key** — RfqModal currently sends the localized Amharic label), save/load/list in Dashboard, shareable permalink.
 - [ ] Price freshness automation: cron edge function flags `freshness_status='expired'`; admin stale-price badge.
-- [ ] Admin model alignment: one admin definition everywhere; confirmation dialogs on destructive admin ops (content delete / user ban fire immediately today).
+- [ ] Admin model alignment: one admin definition everywhere. ~~confirmation dialogs on destructive admin ops~~ (done Sep 20: shared `ConfirmActionDialog` on content delete, user ban/suspend, telegram price reject, BOQ estimate delete).
 
 **Exit criteria:** premium data not retrievable via network tab by free users; BOQ survives refresh; admins never need the SQL console.
 
@@ -114,7 +114,7 @@ Compatible with CLI-driven migration pushes — it is just another migration fil
 **Goal:** appeal + trust for the Ethiopian audience.
 
 - [ ] **Amharic copy pass (highest-leverage):** native review of all 200 i18n keys — many AM strings are gibberish machine translation ("ቨርያቄ አቅማቅያን", "አሉታዊ" for Recent, stray Georgian char in AdminDashboardTab, `dashboard.benefits.title` semantic mismatch). Migrate inline `language === 'en' ? … : …` ternaries into `i18n.tsx` as touched.
-- [ ] Accessibility sweep: associate floating Labels (Marketplace/CreateListing/Professionals hire dialog), aria-label icon-only buttons (admin row actions, Footer send, search submit), keyboard-operable filter-chip Badges, skip-to-content link, extend `prefers-reduced-motion` to marquee/neon/float/shimmer/typewriter, live regions for async alerts.
+- [ ] Accessibility sweep: associate floating Labels (Marketplace/CreateListing/Professionals hire dialog), keyboard-operable filter-chip Badges, live regions for async alerts. ~~aria-label icon-only buttons~~ (done Sep 20: admin row actions, Footer send, search clear, filter close), ~~skip-to-content link~~ (verified present), ~~extend `prefers-reduced-motion` to marquee/neon/float/shimmer/typewriter~~ (done Sep 20).
 - [ ] Mobile gaps: language label/username restore (B1); add search to mobile Sheet (zero search below `md` today); always-visible card actions (not hover-only); mobile labels for icon-only Dashboard tabs.
 - [ ] Honesty pass: replace fabricated-as-live numbers (hero counters, Tips ticker duplicating DB data, Professionals "Trust Score" formula + "responds in 24h", SocialBridge fake play/view counts, VideoShowcase member count) with real COUNT queries or explicit illustrative labeling. Posters + `preload=none` on dual autoplay videos.
 - [ ] State completeness: uniform skeleton/empty/error triad across all six list sections; success feedback after Join-network submit; "send another message" reset on Contact.

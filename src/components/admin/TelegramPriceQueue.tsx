@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
 import { useLanguage } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 import { callAdminAction } from "@/lib/api"
@@ -37,6 +38,7 @@ export function TelegramPriceQueue() {
   const [error, setError] = useState("")
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
+  const [rejectRow, setRejectRow] = useState<QueueRow | null>(null)
 
   const fetchQueue = useCallback(async () => {
     setLoading(true)
@@ -158,7 +160,7 @@ export function TelegramPriceQueue() {
                     <Check className="h-3.5 w-3.5" />
                     {am ? "አረጋግጥ" : "Verify"}
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-1.5" disabled={busyId === r.id} onClick={() => act(r, false)}>
+                  <Button size="sm" variant="outline" className="gap-1.5" disabled={busyId === r.id} onClick={() => setRejectRow(r)}>
                     <X className="h-3.5 w-3.5" />
                     {am ? "አትቀበል" : "Reject"}
                   </Button>
@@ -176,6 +178,24 @@ export function TelegramPriceQueue() {
           </ul>
         )}
       </CardContent>
+
+      <ConfirmActionDialog
+        open={rejectRow !== null}
+        onOpenChange={(open) => {
+          if (!open) setRejectRow(null)
+        }}
+        title={rejectRow ? (am ? `${rejectRow.material_en} ይከለከል?` : `Reject ${rejectRow.material_en}?`) : ""}
+        description={am
+          ? "ዋጋው እንደተከለከለ ይታያልና ገበያ ማሳያው ላይ አይታይም። አቅራቢው እንደገና ማስገባት ይችላል።"
+          : "The price will be marked expired and hidden from the market table. The supplier can resubmit if this was a mistake."}
+        confirmLabel={am ? "አትቀበል" : "Reject"}
+        busy={busyId !== null}
+        onConfirm={() => {
+          const row = rejectRow
+          setRejectRow(null)
+          if (row) void act(row, false)
+        }}
+      />
     </Card>
   )
 }

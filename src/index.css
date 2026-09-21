@@ -63,6 +63,7 @@
   --secondary-foreground: oklch(0.38 0.1 240);
   --muted: oklch(0.95 0.008 240);
   --muted-foreground: oklch(0.5 0.02 240);
+  --muted-ink: oklch(0.42 0.02 240);
   --accent: oklch(0.7 0.16 60);
   --accent-foreground: oklch(0.2 0.04 60);
   --destructive: oklch(0.577 0.245 27.325);
@@ -250,6 +251,36 @@
   .animate-image-fade,
   .animate-scale-in {
     animation: none;
+  }
+
+  /* Marquee: stop the scroll, keep the content readable (no translate). */
+  .animate-marquee {
+    animation: none;
+    transform: none;
+  }
+
+  /* Typewriter: reveal full text immediately, drop the caret blink. */
+  .animate-typewriter {
+    animation: none;
+    width: 100%;
+    border-right: none;
+  }
+
+  /* Decorative motion loops: freeze in place. */
+  .animate-float,
+  .animate-neon-glow,
+  .animate-neon-float,
+  .animate-neon-rotate,
+  .animate-neon-shimmer {
+    animation: none;
+    transform: none;
+  }
+
+  /* Shimmer highlight sweep: hide the moving gradient, keep the base. */
+  .animate-shimmer,
+  .animate-neon-shimmer {
+    animation: none;
+    background-image: none;
   }
 }
 

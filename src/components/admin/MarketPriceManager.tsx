@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
 import { useLanguage } from "@/lib/i18n"
 import { callAdminAction } from "@/lib/api"
 
@@ -62,6 +63,7 @@ export function MarketPriceManager() {
   const [success, setSuccess] = useState("")
   const [search, setSearch] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<MarketPrice | null>(null)
   const [form, setForm] = useState(emptyPrice)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [csvDialogOpen, setCsvDialogOpen] = useState(false)
@@ -105,7 +107,6 @@ export function MarketPriceManager() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(language === "en" ? "Delete this market price?" : "ይህን የገበያ ዋጋ ይሰርዙ?")) return
     try {
       await callAdminAction("manage_market_prices", { priceId: id, delete: true })
       setPrices((prev) => prev.filter((p) => p.id !== id))
@@ -113,6 +114,7 @@ export function MarketPriceManager() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Delete failed")
     }
+    setPendingDelete(null)
   }
 
   const handleEdit = (price: MarketPrice) => {
@@ -294,7 +296,7 @@ export function MarketPriceManager() {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(price)} aria-label={language === "en" ? `Edit ${price.material_en}` : `አርትዕ ${price.material_am}`}>
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(price.id)} aria-label={language === "en" ? `Delete ${price.material_en}` : `ሰርዝ ${price.material_am}`}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setPendingDelete(price)} aria-label={language === "en" ? `Delete ${price.material_en}` : `ሰርዝ ${price.material_am}`}>
                         <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
                     </div>
@@ -476,6 +478,21 @@ export function MarketPriceManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmActionDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null)
+        }}
+        title={language === "en"
+          ? `Delete ${pendingDelete?.material_en ?? "this price"}?`
+          : `${pendingDelete?.material_am ?? "ዋጋው"} ይሰርዙ?`}
+        description={language === "en"
+          ? "Buyers will no longer see this price in the market table. This cannot be undone."
+          : "ገበያ ማሳያው ላይ ዋጋው አይታይም። መመለስ አይቻልም።"}
+        confirmLabel={language === "en" ? "Delete" : "ሰርዝ"}
+        onConfirm={() => pendingDelete && void handleDelete(pendingDelete.id)}
+      />
     </div>
   )
 }
