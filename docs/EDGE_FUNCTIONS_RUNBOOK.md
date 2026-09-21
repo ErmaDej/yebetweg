@@ -30,11 +30,14 @@ npx supabase db push
 **Path B — Dashboard SQL Editor (per file, in filename order):**
 
 Supabase → SQL Editor → paste each file's contents → Run. Apply in this order
-(alphabetical = dependency order):
+(NOTE: run the pg_cron enabler **first**, even though its filename sorts last —
+the freshness migration schedules a cron job and fails with
+`schema "cron" does not exist` if pg_cron isn't enabled yet):
 
-1. `20260919010000_freshness_automation.sql` — pg_cron schedule + alert tables
-2. `20260920000000_notifications_in_app.sql` — in-app notifications table/RLS/realtime
-3. `20260920010000_replace_dead_unsplash_images.sql` — image URL repair
+1. `20260920020000_enable_pg_cron_and_freshness_schedule.sql` — **enables pg_cron** + schedules the daily DB-side freshness flagging
+2. `20260919010000_freshness_automation.sql` — freshness RPCs + alert tables (if it aborted mid-run on the `cron` error, its earlier statements are already committed — verify with `npm run verify:deploy` check 1; if it passes, you only need step 1 to add the missing schedule)
+3. `20260920000000_notifications_in_app.sql` — in-app notifications table/RLS/realtime
+4. `20260920010000_replace_dead_unsplash_images.sql` — image URL repair
 
 > With the Editor path, `supabase_migrations` won't know about them — that's
 > fine for a dashboard-managed project, but note it in the tracker so nobody
@@ -43,8 +46,8 @@ Supabase → SQL Editor → paste each file's contents → Run. Apply in this or
 **Verify:**
 
 ```sql
-select cron.jobname, cron.schedule, cron.active from cron.job;
--- expect: yebetweg-refresh-freshness | 0 2 * * * | true
+select jobname, schedule, active from cron.job;
+-- expect: yebetweg-refresh-freshness-v2 | 0 2 * * * | true
 select count(*) from pg_policies where tablename = 'notifications';  -- 3
 select exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and tablename='notifications');  -- true
 ```
@@ -102,9 +105,6 @@ npx supabase secrets set TELEGRAM_CHAT_ID="-1001234567890"
 > • *Group:* add **@RawDataBot** to the group, read `chat.id`, remove it.
 > • *Just yourself (DM):* message the bot once, then `getUpdates` → positive id.
 > Channel ids start at `-100`; group ids are small negatives; DMs are positive.
-
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically —
-never set them by hand.
 
 > **Secrets are function-scoped and project-wide**, not stored in your repo or
 > `.env` — nothing to copy between machines. They only take effect for
@@ -169,6 +169,13 @@ select cron.schedule(
 
 ## 6. Verification checks (end-to-end)
 
+**Automated:** `npm run verify:deploy` runs the machine-checkable subset of
+this matrix (1–8 minus the human-eye checks) against the live project and
+reports PASS/FAIL/SKIP per check — exit code 1 if anything failed. Optional
+deeper checks activate when you export `CRON_SECRET`, `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_CHAT_ID` (and `TEST_EMAIL`/`TEST_PASSWORD` for the signed-in RLS
+check); `--post-test` sends one silent test message to the admin chat.
+
 | # | Check | Command / action | Expected |
 |---|-------|------------------|----------|
 | 1 | Functions live | `curl -s -o /dev/null -w "%{http_code}" https://<ref>.supabase.co/functions/v1/freshness_cron` | `204` (no cron key) — proves the guard works; `200` here means CRON_SECRET isn't enforced |
@@ -198,8 +205,9 @@ select cron.unschedule('yebetweg-freshness-digest');
 |------|----------------|--------------|
 | `20260918000000_market_prices_tips_entitlement_rls.sql` | ✅ applied by owner (SQL editor) | none |
 | `20260919000000_fix_entitlement_policy_function_privilege.sql` | ✅ applied by owner | none |
-| `20260919010000_freshness_automation.sql` | pending | §1 above |
+| `20260919010000_freshness_automation.sql` | ⚠️ previously aborted on missing `cron` schema | §1 above — apply 20260920020000 FIRST, then re-run this one |
 | `20260920000000_notifications_in_app.sql` | pending | §1 above |
 | `20260920010000_replace_dead_unsplash_images.sql` | pending | §1 above |
+| `20260920020000_enable_pg_cron_and_freshness_schedule.sql` | pending | §1 above — apply FIRST (enables pg_cron) |
 | `refresh_market_price_freshness` / `expire_stale_market_prices` / `upsert_market_price_from_telegram` RPCs | inside the pending migrations | §1 applies them |
 | edge functions (code only) | `supabase/functions/*` | §2–§5 above |

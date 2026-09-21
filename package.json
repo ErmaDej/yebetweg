@@ -15,6 +15,7 @@
     "migration:run": "bash ./scripts/run-migrations.sh",
     "sitemap:generate": "node scripts/generate-sitemap.js",
     "probe:rls": "node scripts/probe-rls.js",
+    "verify:deploy": "node scripts/verify-deployment.js",
     "audit:i18n": "node scripts/audit-i18n.js",
     "audit:rls": "node scripts/audit-rls-privileges.js"
   },
