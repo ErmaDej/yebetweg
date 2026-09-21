@@ -347,7 +347,7 @@ async function checkSignedInNotifications() {
 // --- check 8: OPTIONAL live post to the admin chat (--post-test; runbook #8) -----
 
 async function checkTelegramPost() {
-  if (!args.postTest) {
+  if (!arg.postTest) {
     return
   }
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {

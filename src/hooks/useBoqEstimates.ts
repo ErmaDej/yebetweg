@@ -19,6 +19,10 @@ export type BoqOutputs = {
   material: number
   labor: number
   overhead: number
+  // Persisted by BoqLiteSection since the multi-city phase — optional here so
+  // older saved rows without a breakdown still type-check.
+  materialBreakdown?: Array<{ key: string; amount: number; live: boolean }>
+  otherMaterials?: number
 }
 
 export type BoqEstimate = {

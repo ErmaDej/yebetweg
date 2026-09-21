@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Calculator, Bookmark, Trash2, type LucideIcon } from "lucide-react"
+import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, FileDown, Printer, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Calculator, Bookmark, Trash2, type LucideIcon } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -23,6 +23,10 @@ import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
 import { useBoqEstimates, useDeleteBoqEstimate } from "@/hooks/useBoqEstimates"
 import { useSiteLogs } from "@/hooks/useSiteLogs"
+import { BoqActualsPanel } from "@/components/dashboard/BoqActualsPanel"
+import { buildProReportHtml, buildCsv, openPrintWindow, downloadCsv, canExportBoq } from "@/lib/boq-export"
+import { useBoqActualsByEstimate, summarizeActuals, type ActualsSummary } from "@/hooks/useBoqActuals"
+import { useNotifications } from "@/hooks/useNotifications"
 import { useProjectSaves } from "@/hooks/useProjectSaves"
 import { toast } from "sonner"
 import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
@@ -57,9 +61,12 @@ export function Dashboard() {
     loadMore: loadMoreActivity,
   } = useDashboardData(profile?.id ?? null)
 
+  const { unreadCount: assistantUnread } = useNotifications()
+
   const isMobile = useIsMobile()
   const navigate = useNavigate()
   const { data: boqEstimates = [] } = useBoqEstimates()
+  const { data: actualsByEstimate = {} } = useBoqActualsByEstimate()
   const deleteBoq = useDeleteBoqEstimate()
   const { logs: siteLogs } = useSiteLogs(profile?.id)
   const totalEstimated = useMemo(
@@ -70,6 +77,54 @@ export function Dashboard() {
     () => siteLogs.reduce((sum, l) => sum + (Number(l.payments) || 0), 0),
     [siteLogs]
   )
+
+  // --- Phase 5: Pro export + actuals helpers -------------------------------
+  function boqExportLabels(language: "en" | "am", est: (typeof boqEstimates)[number]) {
+    return {
+      city: est.inputs.cityLabel || est.inputs.city,
+      projectType: est.inputs.projectType,
+      finish: est.inputs.finishLevel,
+      cat: {
+        structure: language === "en" ? "Structure (32%)" : "መዋቅር (32%)",
+        material: language === "en" ? "Materials (38%)" : "ቁሳቁሶች (38%)",
+        labor: language === "en" ? "Labor (18%)" : "የሠራተኛ (18%)",
+        overhead: language === "en" ? "Overhead (12%)" : "የተገቢ (12%)",
+        other: language === "en" ? "other materials" : "ሌሎች ቁሳቁሶች",
+      } as Record<string, string>,
+    }
+  }
+
+  function handleCsvExport(est: (typeof boqEstimates)[number], actuals: ActualsSummary) {
+    if (!canExportBoq(plan)) {
+      toast.error(language === "en" ? "Exporting requires Premium." : "ለመላክ ፕሪሚየም ያስፈልጋል።")
+      navigate("/#premium")
+      return
+    }
+    const csv = buildCsv(est, actuals.count > 0 ? actuals : null, boqExportLabels(language, est))
+    downloadCsv(csv, `yeboq-estimate-${est.id.slice(0, 8)}.csv`)
+    toast.success(language === "en" ? "CSV downloaded" : "CSV ወርዷል")
+  }
+
+  function handleProExport(est: (typeof boqEstimates)[number], actuals: ActualsSummary) {
+    if (!canExportBoq(plan)) {
+      toast.error(language === "en" ? "Exporting requires Premium." : "ለመላክ ፕሪሚየም ያስፈልጋል።")
+      navigate("/#premium")
+      return
+    }
+    const html = buildProReportHtml(
+      est,
+      actuals.count > 0 ? actuals : null,
+      {
+        clientName: profile?.full_name || profile?.username || "",
+        preparedBy: "YeBetWeg BOQ Lite",
+        includeActuals: actuals.count > 0,
+      },
+      boqExportLabels(language, est)
+    )
+    if (!openPrintWindow(html)) {
+      toast.error(language === "en" ? "Allow pop-ups to print the report." : "ሪፖርቱን ለማተም ፖፕ-አፖች ይፍቀዱ።")
+    }
+  }
   const { items: savedItems, remove: removeSaved } = useProjectSaves()
 
   const handleEditClick = () => {
@@ -402,7 +457,13 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {boqEstimates.map((est) => (
+              {boqEstimates.map((est) => {
+                const actuals = actualsByEstimate[est.id] ?? summarizeActuals([])
+                const variancePct =
+                  actuals.count > 0 && Number(est.outputs?.total) > 0
+                    ? ((actuals.total - Number(est.outputs.total)) / Number(est.outputs.total)) * 100
+                    : null
+                return (
                 <div
                   key={est.id}
                   className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
@@ -413,23 +474,52 @@ export function Dashboard() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(est.created_at).toLocaleDateString(language === "am" ? "am-ET" : "en-US")} · {Math.round(est.outputs.total).toLocaleString()} ETB
+                      {variancePct !== null && (
+                        <span className={variancePct > 0 ? "text-amber-600" : "text-emerald-600"}>
+                          {"  ·  "}{variancePct > 0 ? "+" : ""}{variancePct.toFixed(1)}% {language === "en" ? "actual" : "እውነተኛ"}
+                        </span>
+                      )}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-destructive hover:text-destructive"
-                    onClick={() => setPendingBoqDelete({
-                      id: est.id,
-                      title: `${est.inputs?.cityLabel ?? ""} · ${est.inputs?.area ?? ""} m²`,
-                    })}
-                    disabled={deleteBoq.isPending}
-                    aria-label={language === "en" ? "Delete estimate" : "ግምት ሰርዝ"}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-primary"
+                      onClick={() => handleProExport(est, actuals)}
+                      aria-label={language === "en" ? "Export report" : "ሪፖርት አውጣ"}
+                      title={canExportBoq(plan) ? (language === "en" ? "Print / save PDF" : "አትም / PDF አስቀምጥ") : language === "en" ? "Premium required" : "ፕሪሚየም ያስፈልጋል"}
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-primary"
+                      onClick={() => handleCsvExport(est, actuals)}
+                      aria-label={language === "en" ? "Download CSV" : "CSV አውርድ"}
+                      title={canExportBoq(plan) ? (language === "en" ? "Download CSV" : "CSV አውርድ") : language === "en" ? "Premium required" : "ፕሪሚየም ያስፈልጋል"}
+                    >
+                      <FileDown className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setPendingBoqDelete({
+                        id: est.id,
+                        title: `${est.inputs?.cityLabel ?? ""} · ${est.inputs?.area ?? ""} m²`,
+                      })}
+                      disabled={deleteBoq.isPending}
+                      aria-label={language === "en" ? "Delete estimate" : "ግምት ሰርዝ"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              ))}
+                )
+              })}
+              <BoqActualsPanel language={language} estimates={boqEstimates} />
               {totalActual > 0 && totalEstimated > 0 && (
                 <div className="rounded-lg bg-muted/60 p-3 text-xs">
                   <p className="font-medium">
@@ -577,6 +667,8 @@ export function Dashboard() {
                   plan={plan}
                   openRfqs={dashboardData?.stats.rfqs ?? 0}
                   unreadInquiries={dashboardData?.stats.unread ?? 0}
+                  savedEstimates={boqEstimates.length}
+                  unreadNotifications={assistantUnread}
                 />
               </CardContent>
             </Card>

@@ -14,6 +14,9 @@ export type AssistantCardProps = {
   plan: PremiumTier
   openRfqs: number
   unreadInquiries: number
+  savedEstimates?: number
+  actualsLogged?: number
+  unreadNotifications?: number
 }
 
 const QUICK_INTENT_KEYS: ReadonlyArray<keyof typeof labels.en> = ["myRfqs", "profile", "prices", "boq", "pro"]
@@ -43,7 +46,7 @@ const labels = {
   },
 }
 
-export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiries }: AssistantCardProps) {
+export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiries, savedEstimates = 0, actualsLogged = 0, unreadNotifications = 0 }: AssistantCardProps) {
   const { t } = useLanguage()
   const [messages, setMessages] = useState<AssistantMessage[]>([])
   const [input, setInput] = useState("")
@@ -51,7 +54,7 @@ export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiri
   const scrollRef = useRef<HTMLDivElement>(null)
   const l = labels[language]
 
-  const ctx: AssistantContext = { openRfqs, unreadInquiries, profile, plan }
+  const ctx: AssistantContext = { openRfqs, unreadInquiries, profile, plan, savedEstimates, actualsLogged, unreadNotifications }
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -114,12 +117,28 @@ export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiri
         <div className="space-y-3 pr-2">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[82%] rounded-lg px-3 py-2 text-sm ${
-                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                }`}
-              >
-                {m.content}
+              <div className={`max-w-[82%] ${m.role === "user" ? "" : "w-[82%]"}`}>
+                <div
+                  className={`rounded-lg px-3 py-2 text-sm ${
+                    m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                  }`}
+                >
+                  {m.content}
+                </div>
+                {m.role === "assistant" && m.suggestions && m.suggestions.length > 0 && i === messages.length - 1 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {m.suggestions.map((s) => (
+                      <Badge
+                        key={s}
+                        variant="outline"
+                        className="cursor-pointer text-[10px]"
+                        onClick={() => handleSend(s)}
+                      >
+                        {s}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}

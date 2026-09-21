@@ -7,7 +7,15 @@ const ctx = (over: Partial<Parameters<typeof buildContext>[0]> = {}) =>
 describe("buildContext", () => {
   it("applies defaults for missing fields", () => {
     const c = buildContext({})
-    expect(c).toEqual({ openRfqs: 0, unreadInquiries: 0, profile: null, plan: "free" })
+    expect(c).toEqual({
+      openRfqs: 0,
+      unreadInquiries: 0,
+      profile: null,
+      plan: "free",
+      savedEstimates: 0,
+      actualsLogged: 0,
+      unreadNotifications: 0,
+    })
   })
 })
 
@@ -56,5 +64,41 @@ describe("answerQuestion", () => {
     const msg = answerQuestion("cancel my subscription", ctx({ plan: "pro" }), "en")
     expect(msg.key).toBe("subscription")
     expect(msg.content).toContain("Pro")
+  })
+
+  it("scores multi-intent questions instead of first-match-wins", () => {
+    // "prices" appears as exact token AND in the "market prices" phrase → prices (4) beats rfqs (2)
+    expect(answerQuestion("how are my rfqs and market prices", ctx(), "en").key).toBe("prices")
+  })
+
+  it("tolerates single-key typos", () => {
+    expect(answerQuestion("current market prcies", ctx(), "en").key).toBe("prices")
+  })
+
+  it("answers new actuals/export/notifications/telegram/freshness/help intents", () => {
+    expect(answerQuestion("how do I track my spending", ctx(), "en").key).toBe("actuals")
+    expect(answerQuestion("can I get a pdf", ctx(), "en").key).toBe("export")
+    expect(answerQuestion("where are my notifications", ctx(), "en").key).toBe("notifications")
+    expect(answerQuestion("submitprice telegram bot", ctx(), "en").key).toBe("telegram")
+    expect(answerQuestion("why does it say expired", ctx(), "en").key).toBe("freshness")
+    expect(answerQuestion("help", ctx(), "en").key).toBe("help")
+  })
+
+  it("attaches follow-up suggestions to answers and greeting", () => {
+    const msg = answerQuestion("boq", ctx({ plan: "pro" }), "en")
+    expect(msg.suggestions?.length).toBeGreaterThan(0)
+    const greeting = assistantGreeting(ctx(), "en")
+    expect(greeting.suggestions?.length).toBeGreaterThan(0)
+  })
+
+  it("uses saved-estimate context in the boq answer", () => {
+    const c = buildContext({ openRfqs: 0, savedEstimates: 3 })
+    const msg = answerQuestion("boq", c, "en")
+    expect(msg.content).toContain("3 saved estimates")
+  })
+
+  it("answers in Amharic for new intents", () => {
+    expect(answerQuestion("እውነተኛ ወጪ", ctx(), "am").key).toBe("actuals")
+    expect(answerQuestion("ቴሌግራም", ctx(), "am").key).toBe("telegram")
   })
 })

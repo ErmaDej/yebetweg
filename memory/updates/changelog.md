@@ -25,6 +25,15 @@
 - PWA or native app work
 
 ## Changelog
+### September 21, 2026 — Phase 5 build-out: Pro export, BOQ→actuals, assistant intelligence
+
+- **BOQ→actuals**: new `boq_actuals` ledger (migration `20260921000000`, RLS mirrors boq_estimates) + `useBoqActuals` hook (per-estimate summaries, variance math) + `BoqActualsPanel` on the dashboard — log real spend per category (structure/material/labor/overhead/other) with date + note, see over/under % vs the estimate.
+- **Pro export**: `src/lib/boq-export.ts` — one `buildReportRows` source feeding both a CSV (actuals + variance included) and a print-ready branded HTML report (cover sheet, sections, variance line) via `openPrintWindow`. Gated `premium`+ (`canExportBoq`); free users get a bilingual toast + redirect to /#premium. Dashboard estimate rows now have Print / CSV / Delete actions with variance chips.
+- **Assistant intelligence**: rewritten `src/lib/assistant.ts` — scored keyword matching (exact=2, phrase=2, typo≤1 edit=1) replaces first-match-wins; **6 new intents** (actuals, export, notifications, telegram, freshness, help); follow-up suggestion chips on answers + greeting; context now includes saved estimates / logged actuals / unread notifications. `AssistantCard` renders suggestions; greeting adapts to BOQ data.
+- **verify-deployment fix**: `args.postTest` → `arg.postTest` (ReferenceError crash on the `--post-test` path found by the owner's run).
+- **AssistantCard subtitle** honesty fix in i18n (EN+AM): "AI guidance coming soon" → describes the actual rule-based assistant.
+- Tests: +13 (assistant scoring/typo/new intents/suggestions, boq-export rows/CSV/print/gating) → **95/95**; typecheck, build, audit:i18n, audit:rls all green. Verified live in preview: estimate save (201), dashboard card + actuals panel render, assistant answers, export buttons on premium plan.
+
 ### September 20, 2026 (3) — pg_cron enablement, deploy verifier, a11y + confirm-dialog sweep
 - **`20260920020000_enable_pg_cron_and_freshness_schedule.sql`**: enables pg_cron in the `extensions` schema (hosted projects ship without it — the owner's `schema "cron" does not exist` error) and schedules the daily 02:00 UTC DB-side freshness flagging as `yebetweg-refresh-freshness-v2`. Owner applied it — cron now live.
 - **`npm run verify:deploy`** (`scripts/verify-deployment.js`): automates the runbook §6 matrix — migrations, freshness_cron guard (204 without key / 200+ok with key), telegram-webhook guard, webhook registration + chat reachability, notifications RLS (anon + signed-in), optional `--post-test` chat delivery. PASS/FAIL/SKIP per check, exit 1 on failure. Currently flags the deployed freshness_cron as pre-guard (redeploy pending).
