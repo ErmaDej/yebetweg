@@ -25,6 +25,15 @@
 - PWA or native app work
 
 ## Changelog
+### September 21, 2026 (2) — Phase 4 finish, save-to-project polish, quota security fix, Project Bible
+
+- **Share permalinks**: `boq_share_tokens` migration (20260921020000) + rotate-token mutation + **Copy share link** on estimate rows + public read-only `/boq/:token` page (`SharedBoqPage`, invalid-token fallback verified live).
+- **Saved collections**: free-form collection labels in `useProjectSaves` (backward-compatible) + dashboard collections chips (aria-pressed filter buttons) + inline "New collection…" creation from each saved item.
+- **Phase 4 a11y closed**: keyboard-operable tips category chips (button + aria-pressed), assistant chat log + notification bell live regions (aria-live/role=status), mobile dashboard tabs show visible text labels; the floating-label tracker item was audited stale (all three forms already properly associated).
+- **Security**: live probe found anon sessions could execute `submit_rfq` (ownerless rows, free-cap bypass) → migration `20260921010000_submit_rfq_reject_anon.sql` (REVOKE from anon, harden body, clean probe row); `verify:deploy` gained check 9 (quota RPCs). `create_listing` verified safe.
+- **Docs**: `docs/PROJECT_BIBLE.md` (differentiators, architecture, full feature reference, tier-by-tier user guides, admin ops manual, 30s/2min/demo scripts, security model) and `docs/VERCEL_LAUNCH_CHECKLIST.md` (env vars, domain, analytics, 14-point smoke test, rollback).
+- Verified: tsc ✓ · 104/104 tests ✓ · build ✓ · audits ✓ · preview E2E (share fallback, collections create/filter, dashboard). Pushed `fb3e643` to **dev + stable + main**.
+
 ### September 21, 2026 — Phase 5 build-out: Pro export, BOQ→actuals, assistant intelligence
 
 - **BOQ→actuals**: new `boq_actuals` ledger (migration `20260921000000`, RLS mirrors boq_estimates) + `useBoqActuals` hook (per-estimate summaries, variance math) + `BoqActualsPanel` on the dashboard — log real spend per category (structure/material/labor/overhead/other) with date + note, see over/under % vs the estimate.
