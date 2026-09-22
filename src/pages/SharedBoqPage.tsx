@@ -50,7 +50,7 @@ export function SharedBoqPage() {
   const etb = (n?: number) => `${Math.round(n ?? 0).toLocaleString()} ETB`
 
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-4 py-10">
+    <main id="main-content" className="mx-auto max-w-2xl px-4 pt-24 pb-12 md:pt-28">
         {state === "loading" && (
           <div className="space-y-3" aria-busy="true">
             <div className="h-8 w-2/3 animate-pulse rounded-md bg-muted" />
