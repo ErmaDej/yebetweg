@@ -141,6 +141,9 @@ export function AssistantCard({ language, profile, plan, openRfqs, unreadInquiri
         className="flex-1 overflow-y-auto"
         ref={scrollRef}
         style={{ maxHeight: "220px", minHeight: "64px" }}
+        role="log"
+        aria-live="polite"
+        aria-label={t("dashboard.assistant.title") || l.title}
       >
         <div className="space-y-3 pr-2">
           {messages.map((m, i) => (

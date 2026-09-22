@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, FileDown, Printer, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Calculator, Bookmark, Trash2, type LucideIcon } from "lucide-react"
+import { Crown, Heart, LogOut, Settings, User, ShieldCheck, TrendingUp, Zap, CheckCircle2, AlertTriangle, ArrowRight, Bell, FileText, FileDown, Printer, Share2, PackageCheck, ReceiptText, Sparkles, ClipboardList, ArrowDownAZ, Users, Store, Newspaper, Calculator, Bookmark, Trash2, X, type LucideIcon } from "lucide-react"
 import { useAuthContext } from "@/context/AuthContext"
 import { Loader2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -22,7 +22,7 @@ import type { PremiumTier } from "@/types/payment"
 import type { RfqContext } from "@/components/sections/RfqModal"
 import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
-import { useBoqEstimates, useDeleteBoqEstimate } from "@/hooks/useBoqEstimates"
+import { useBoqEstimates, useDeleteBoqEstimate, useRotateShareToken } from "@/hooks/useBoqEstimates"
 import { useSiteLogs } from "@/hooks/useSiteLogs"
 import { BoqActualsPanel } from "@/components/dashboard/BoqActualsPanel"
 import { buildProReportHtml, buildCsv, openPrintWindow, downloadCsv, canExportBoq } from "@/lib/boq-export"
@@ -70,6 +70,7 @@ export function Dashboard() {
   const { data: boqEstimates = [] } = useBoqEstimates()
   const { data: actualsByEstimate = {} } = useBoqActualsByEstimate()
   const deleteBoq = useDeleteBoqEstimate()
+  const rotateShare = useRotateShareToken()
   const { logs: siteLogs } = useSiteLogs(profile?.id)
   const totalEstimated = useMemo(
     () => boqEstimates.reduce((sum, e) => sum + (Number(e.outputs?.total) || 0), 0),
@@ -127,7 +128,14 @@ export function Dashboard() {
       toast.error(language === "en" ? "Allow pop-ups to print the report." : "ሪፖርቱን ለማተም ፖፕ-አፖች ይፍቀዱ።")
     }
   }
-  const { items: savedItems, remove: removeSaved } = useProjectSaves()
+  const { items: savedItems, remove: removeSaved, assignCollection, collections } = useProjectSaves()
+  const [newCollectionFor, setNewCollectionFor] = useState<string | null>(null)
+  const [newCollectionValue, setNewCollectionValue] = useState("")
+  const [activeCollection, setActiveCollection] = useState<string | null>(null)
+  const visibleSavedItems = useMemo(
+    () => (activeCollection === null ? savedItems : savedItems.filter((i) => i.collection === activeCollection)),
+    [savedItems, activeCollection]
+  )
 
   const handleEditClick = () => {
     if (!profile) return
@@ -488,6 +496,28 @@ export function Dashboard() {
                       variant="ghost"
                       size="icon"
                       className="text-muted-foreground hover:text-primary"
+                      onClick={async () => {
+                        try {
+                          const token =
+                            est.share_token ??
+                            (await rotateShare.mutateAsync(est.id))
+                          const url = `${window.location.origin}/boq/${token}`
+                          await navigator.clipboard.writeText(url)
+                          toast.success(language === "en" ? "Share link copied" : "የማጋሪያ ሊንክ ተቀድቷል")
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : language === "en" ? "Could not copy link" : "ሊንኩን መቅዳት አልተቻለም")
+                        }
+                      }}
+                      disabled={rotateShare.isPending}
+                      aria-label={language === "en" ? "Copy share link" : "የማጋሪያ ሊንክ ቅዳ"}
+                      title={language === "en" ? "Copy public read-only link" : "የሕዝብ የማያስተካክል ሊንክ ቅዳ"}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-primary"
                       onClick={() => handleProExport(est, actuals)}
                       aria-label={language === "en" ? "Export report" : "ሪፖርት አውጣ"}
                       title={canExportBoq(plan) ? (language === "en" ? "Print / save PDF" : "አትም / PDF አስቀምጥ") : language === "en" ? "Premium required" : "ፕሪሚየም ያስፈልጋል"}
@@ -561,7 +591,32 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {savedItems.map((item) => (
+              {collections.length > 0 && (
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label={language === "en" ? "Collections" : "ስብስቦች"}>
+                  <Badge
+                    asChild
+                    variant={activeCollection === null ? "default" : "outline"}
+                    className="cursor-pointer text-[11px]"
+                  >
+                    <button type="button" aria-pressed={activeCollection === null} onClick={() => setActiveCollection(null)}>
+                      {language === "en" ? "All" : "ሁሉም"} ({savedItems.length})
+                    </button>
+                  </Badge>
+                  {collections.map((c) => (
+                    <Badge
+                      key={c}
+                      asChild
+                      variant={activeCollection === c ? "default" : "outline"}
+                      className="cursor-pointer text-[11px]"
+                    >
+                      <button type="button" aria-pressed={activeCollection === c} onClick={() => setActiveCollection(c)}>
+                        {c} ({savedItems.filter((i) => (i.collection ?? null) === c).length})
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {visibleSavedItems.map((item) => (
                 <div
                   key={`${item.type}-${item.id}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
@@ -570,20 +625,84 @@ export function Dashboard() {
                     <p className="text-sm font-medium truncate">{item.title}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {item.type} {item.subtitle ? `· ${item.subtitle}` : ""}
+                      {item.collection ? ` · ${language === "en" ? "in" : "በ"} ${item.collection}` : ""}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => {
-                      removeSaved(item.id, item.type)
-                      toast.success(language === "en" ? "Removed" : "ተወግዷል")
-                    }}
-                    aria-label={language === "en" ? "Remove" : "አስወግድ"}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {newCollectionFor === `${item.type}-${item.id}` ? (
+                      <form
+                        className="flex items-center gap-1"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          const name = newCollectionValue.trim().slice(0, 40)
+                          if (name) {
+                            assignCollection(item.id, item.type, name)
+                            toast.success(language === "en" ? `Added to “${name}”` : `ወደ “${name}” ታክሏል`)
+                          }
+                          setNewCollectionFor(null)
+                          setNewCollectionValue("")
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          value={newCollectionValue}
+                          onChange={(e) => setNewCollectionValue(e.target.value)}
+                          maxLength={40}
+                          placeholder={language === "en" ? "Collection name" : "የስብስብ ስም"}
+                          aria-label={language === "en" ? "New collection name" : "አዲስ የስብስብ ስም"}
+                          className="h-8 w-28 rounded-md border border-border bg-background px-1.5 text-[11px]"
+                        />
+                        <Button type="submit" size="sm" variant="secondary" className="h-8 px-2 text-[11px]">
+                          {language === "en" ? "Save" : "አስቀምጥ"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          aria-label={language === "en" ? "Cancel" : "ተወው"}
+                          onClick={() => {
+                            setNewCollectionFor(null)
+                            setNewCollectionValue("")
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </form>
+                    ) : (
+                    <select
+                      value={item.collection ?? ""}
+                      onChange={(e) => {
+                        if (e.target.value === "__new__") {
+                          setNewCollectionFor(`${item.type}-${item.id}`)
+                          setNewCollectionValue("")
+                          return
+                        }
+                        assignCollection(item.id, item.type, e.target.value || null)
+                      }}
+                      aria-label={language === "en" ? "Move to collection" : "ወደ ስብስብ አዛውር"}
+                      className="h-8 max-w-[120px] rounded-md border border-border bg-background px-1.5 text-[11px]"
+                    >
+                      <option value="">{language === "en" ? "No collection" : "የለም"}</option>
+                      {collections.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="__new__">+ {language === "en" ? "New collection…" : "አዲስ ስብስብ…"}</option>
+                    </select>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        removeSaved(item.id, item.type)
+                        toast.success(language === "en" ? "Removed" : "ተወግዷል")
+                      }}
+                      aria-label={language === "en" ? "Remove" : "አስወግድ"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -592,22 +711,23 @@ export function Dashboard() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className={`grid w-full ${profile.role === "admin" ? "grid-cols-4" : "grid-cols-3"}`}>
-              <TabsTrigger value="profile" className="flex items-center gap-2" aria-label={t("dashboard.tab.profile")}>
-                <User className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{t("dashboard.tab.profile")}</span>
+              {/* Labels always visible (11px on mobile) — icon-only tabs fail WCAG 2.5.3. */}
+              <TabsTrigger value="profile" className="flex items-center gap-1.5 sm:gap-2 px-1">
+                <User className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="text-[11px] leading-tight sm:text-sm">{t("dashboard.tab.profile")}</span>
               </TabsTrigger>
-              <TabsTrigger value="settings" className="flex items-center gap-2" aria-label={t("dashboard.tab.settings")}>
-                <Settings className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{t("dashboard.tab.settings")}</span>
+              <TabsTrigger value="settings" className="flex items-center gap-1.5 sm:gap-2 px-1">
+                <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="text-[11px] leading-tight sm:text-sm">{t("dashboard.tab.settings")}</span>
               </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-2" aria-label={t("dashboard.tab.activity")}>
-                <Heart className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">{t("dashboard.tab.activity")}</span>
+              <TabsTrigger value="activity" className="flex items-center gap-1.5 sm:gap-2 px-1">
+                <Heart className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="text-[11px] leading-tight sm:text-sm">{t("dashboard.tab.activity")}</span>
               </TabsTrigger>
               {profile.role === "admin" && (
-                <TabsTrigger value="admin" className="flex items-center gap-2" aria-label={t("dashboard.tab.admin")}>
-                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{t("dashboard.tab.admin")}</span>
+                <TabsTrigger value="admin" className="flex items-center gap-1.5 sm:gap-2 px-1">
+                  <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="text-[11px] leading-tight sm:text-sm">{t("dashboard.tab.admin")}</span>
                 </TabsTrigger>
               )}
           </TabsList>

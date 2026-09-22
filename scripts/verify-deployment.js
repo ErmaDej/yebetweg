@@ -344,6 +344,64 @@ async function checkSignedInNotifications() {
   }
 }
 
+// --- check 9: quota RPCs hardened (anon can't call submit_rfq / create_listing) --
+
+async function checkQuotaRpcs() {
+  // submit_rfq: probe with full named params (empty body → PGRST202 route-miss,
+  // which proves nothing). A 200 + success:true here means ANON CAN CREATE RFQs
+  // and bypass the free cap. After 20260921010000 the answer must be denied.
+  const rfq = await post(`${REST}/rpc/submit_rfq`, {
+    p_requester_name: "verify-probe",
+    p_requester_email: "verify-probe@example.com",
+    p_requester_phone: "",
+    p_city: "Addis Ababa",
+    p_project_type: "",
+    p_message: "verify-deployment probe",
+    p_source_type: "manual",
+    p_material_name: "",
+    p_specification: "",
+    p_unit: "",
+    p_quantity: null,
+    p_target_price: null,
+  }, { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` })
+  const rfqBody = rfq.body.toLowerCase()
+  if (rfq.status === 401 || rfq.status === 403 || rfqBody.includes("42501") || rfqBody.includes("permission denied")) {
+    report("9", "quota-rpc submit_rfq", "PASS", `anon denied (HTTP ${rfq.status}) — cap enforced server-side only`)
+  } else if (rfq.status === 200 && rfqBody.includes('"success":true')) {
+    report("9", "quota-rpc submit_rfq", "FAIL", "anon CREATED an RFQ (ownerless, cap bypassed) — apply migration 20260921010000_submit_rfq_reject_anon.sql")
+  } else if (rfq.status === 200 && rfqBody.includes("sign in")) {
+    report("9", "quota-rpc submit_rfq", "PASS", "anon blocked in-function (sign-in required) — ownerless inserts impossible")
+  } else {
+    report("9", "quota-rpc submit_rfq", "FAIL", `unexpected response HTTP ${rfq.status}: ${rfq.body.slice(0, 90)}`)
+  }
+
+  // create_listing: requires a users row, so anon already fails with 'User not
+  // found' (verified live). Probe the correct param names and assert the block.
+  const lst = await post(`${REST}/rpc/create_listing`, {
+    p_listing_type: "material",
+    p_title_am: "verify-probe",
+    p_title_en: "verify-probe",
+    p_description: "verify-deployment probe",
+    p_price: 1,
+    p_location: "probe",
+    p_contact_phone: "000",
+    p_contact_email: "verify-probe@example.com",
+    p_category: "material",
+    p_images: [],
+  }, { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` })
+  const lstBody = lst.body.toLowerCase()
+  if (lst.status === 401 || lst.status === 403 || lstBody.includes("42501") || lstBody.includes("permission denied")) {
+    report("9", "quota-rpc create_listing", "PASS", `anon denied (HTTP ${lst.status})`)
+  } else if (lst.status === 200 && (lstBody.includes("user not found") || lstBody.includes('"success":false'))) {
+    report("9", "quota-rpc create_listing", "PASS", "anon blocked (no profile row → 'User not found')")
+  } else if (lst.status === 200 && lstBody.includes('"success":true')) {
+    report("9", "quota-rpc create_listing", "FAIL", "anon CREATED a listing — investigate immediately")
+  } else {
+    report("9", "quota-rpc create_listing", "FAIL", `unexpected response HTTP ${lst.status}: ${lst.body.slice(0, 90)}`)
+  }
+  console.log("  (Free-tier caps: 3 RFQs/month, 3 active listings — verify the cap itself with a disposable free account: submit a 4th RFQ and expect the 'Upgrade' error message.)")
+}
+
 // --- check 8: OPTIONAL live post to the admin chat (--post-test; runbook #8) -----
 
 async function checkTelegramPost() {
@@ -381,6 +439,7 @@ await checkWebhookGuard()
 await checkTelegram()
 await checkNotifications()
 await checkSignedInNotifications()
+await checkQuotaRpcs()
 await checkTelegramPost()
 
 const pass = results.filter((r) => r.status === "PASS").length

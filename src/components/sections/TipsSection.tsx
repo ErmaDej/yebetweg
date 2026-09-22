@@ -249,31 +249,42 @@ export function TipsSection({ activePlan = "free" }: { activePlan?: PremiumTier 
           />
         </div>
 
-        {/* Category & Premium filter badges */}
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
+        {/* Category & Premium filter chips — real buttons so keyboard users can
+            focus/activate them (Badge asChild keeps the identical styling). */}
+        <div className="flex flex-wrap justify-center gap-2 mb-6" role="group" aria-label={language === "en" ? "Filter tips" : "ምክሮች ማጣሪያ"}>
           {(tipCategories.data?.slice(0, 10) ?? []).map((cat: string) => (
             <Badge
               key={cat}
+              asChild
               variant={selectedCategory === cat ? "default" : "outline"}
               className="cursor-pointer text-xs"
-              onClick={() => toggleCategory(cat)}
             >
-              {cat}
+              <button
+                type="button"
+                aria-pressed={selectedCategory === cat}
+                onClick={() => toggleCategory(cat)}
+              >
+                {cat}
+              </button>
             </Badge>
           ))}
           <Badge
+            asChild
             variant={premiumFilter === true ? "default" : "outline"}
             className="cursor-pointer text-xs"
-            onClick={() => togglePremium(true)}
           >
-            {language === "en" ? "Premium" : "ፕሪሚየም"} ✨
+            <button type="button" aria-pressed={premiumFilter === true} onClick={() => togglePremium(true)}>
+              {language === "en" ? "Premium" : "ፕሪሚየም"} ✨
+            </button>
           </Badge>
           <Badge
+            asChild
             variant={premiumFilter === false ? "default" : "outline"}
             className="cursor-pointer text-xs"
-            onClick={() => togglePremium(false)}
           >
-            {language === "en" ? "Free" : "ነፃ"}
+            <button type="button" aria-pressed={premiumFilter === false} onClick={() => togglePremium(false)}>
+              {language === "en" ? "Free" : "ነፃ"}
+            </button>
           </Badge>
         </div>
 

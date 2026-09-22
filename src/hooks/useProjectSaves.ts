@@ -7,6 +7,8 @@ export type SavedItem = {
   subtitle?: string
   image?: string
   savedAt: string
+  /** Optional collection label — free-form, max 40 chars (mirrors saved_collections). */
+  collection?: string
 }
 
 const STORAGE_KEY = "yebetweg-saved-items"
@@ -65,10 +67,27 @@ export function useProjectSaves() {
     })
   }, [])
 
+  /** Assign an item to a collection (null = none). Creates the label on first use. */
+  const assignCollection = useCallback((id: string, type: SavedItem["type"], collection: string | null) => {
+    const clean = collection?.trim().slice(0, 40) || null
+    setItems((prev) => {
+      const next = prev.map((i) =>
+        i.id === id && i.type === type ? { ...i, collection: clean ?? undefined } : i
+      )
+      save(next)
+      return next
+    })
+  }, [])
+
+  /** Distinct collection labels in first-use order. */
+  const collections = Array.from(
+    new Set(items.map((i) => i.collection).filter((c): c is string => Boolean(c)))
+  )
+
   const clear = useCallback(() => {
     setItems([])
     save([])
   }, [])
 
-  return { items, isSaved, toggle, remove, clear, count: items.length }
+  return { items, isSaved, toggle, remove, clear, assignCollection, collections, count: items.length }
 }

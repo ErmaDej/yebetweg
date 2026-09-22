@@ -41,6 +41,9 @@ export function NotificationBell({ isAdmin = false }: { isAdmin?: boolean }) {
           size="sm"
           className="relative h-9 w-9 p-0"
           aria-label={`${t("notif.title")}${unreadCount > 0 ? ` (${unreadCount})` : ""}`}
+          // Announce unread-count changes to screen readers (count itself is
+          // aria-hidden inside the button, so this is the single spoken source).
+          aria-live={"polite"}
         >
           {unreadCount > 0 ? (
             <BellRing className="h-4 w-4 text-primary" />

@@ -21,6 +21,7 @@ import { SearchResults } from "@/pages/SearchResults"
 import { PaymentSuccessPage } from "@/pages/PaymentSuccessPage"
 import { AuthCallbackPage } from "@/pages/AuthCallbackPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
+import { SharedBoqPage } from "@/pages/SharedBoqPage"
 import { NotificationsPage } from "@/pages/NotificationsPage"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
@@ -176,6 +177,17 @@ export function App() {
           element={
             <ErrorBoundary>
               <ResetPasswordPage />
+            </ErrorBoundary>
+          }
+        />
+        {/* Public read-only BOQ view by share token — no auth. */}
+        <Route
+          path="/boq/:token"
+          element={
+            <ErrorBoundary>
+              <MainLayout>
+                <SharedBoqPage />
+              </MainLayout>
             </ErrorBoundary>
           }
         />

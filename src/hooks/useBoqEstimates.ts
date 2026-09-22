@@ -32,6 +32,8 @@ export type BoqEstimate = {
   outputs: BoqOutputs
   created_at: string
   updated_at: string
+  /** Set by 20260921020000 (share links) — null until that migration is applied. */
+  share_token?: string | null
 }
 
 async function fetchUserId(): Promise<string | null> {
@@ -94,6 +96,21 @@ export function useCreateBoqEstimate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["boq_estimates", user?.id] })
+    },
+  })
+}
+
+/** Rotate an estimate's share token — invalidates the previous permalink. */
+export function useRotateShareToken() {
+  return useMutation({
+    mutationFn: async (estimateId: string) => {
+      const { data, error } = await supabase.rpc("rotate_boq_share_token", {
+        p_estimate_id: estimateId,
+      })
+      if (error) throw error
+      const result = data as { success: boolean; share_token?: string; error?: string }
+      if (!result.success) throw new Error(result.error ?? "Failed to rotate link")
+      return result.share_token!
     },
   })
 }
