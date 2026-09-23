@@ -146,11 +146,29 @@ intelligence.*
 
 ### 3.13 Payments (Chapa)
 - **Flow:** choose tier → Chapa checkout (Telebirr, CBE Birr, cards) → `chapa-webhook` confirms → subscription row flips to `is_active:true` → tier benefits unlock instantly; receipt emailed.
+- **Sep 2026 hardening:** a Vercel routing bug (explicit rewrites dropped the SPA fallback) made `/payment/success` 404 at the edge, so activation never ran and paid users stayed "free". Fixed rewrites; `activate_subscription` is now **idempotent** (return page + webhook races converge safely) and writes a `subscription_payments` ledger row that powers revenue reporting; the success page retries once on failure; stuck payments can be healed by admins in Revenue Monitoring.
 
 ### 3.14 Platform qualities
 - **PWA/offline:** service worker caches the shell; dead navigations serve `public/offline.html`.
 - **SEO:** per-page titles/descriptions, `sitemap.xml` regenerated on every build, semantic landmarks, skip-to-content.
 - **Accessibility (Phase 4):** keyboard-operable chips, live regions on the assistant log and notification badge, labeled icon buttons, visible mobile tab labels, reduced-motion support for every animation, confirmation dialogs on all destructive admin actions.
+
+### 3.15 Tip Q&A community threads
+- **What:** every construction tip carries a StackOverflow-style Q&A thread. Signed-in members ask questions; anyone signed-in answers; premium answerers get an "Expert answer" badge; the asker can delete their own questions, admins can moderate everything.
+- **How it works:** `tipsSection` renders a question-count teaser on each card; clicking opens a **scrollable modal dialog** (sticky ask form, newest-question auto-scroll). Data lives in `tip_questions`/`tip_answers` with RLS; writes go through `ask_tip_question` / `answer_tip_question` RPCs. **Supabase Realtime** pushes new questions/answers into open threads live — no reload. The `useTipQa` hook owns one subscription per card.
+- **Abuse defenses (server-side, cannot be bypassed):** per-user caps (5 questions/hour, 15/day; 10 answers/hour, 40/day), duplicate-question rejection, ≥3-links and URL-shortener blocking, ALL-CAPS shouting filter, minimum lengths. Every deletion (owner, admin, or service) is recorded in `moderation_log` with a content snapshot — reviewable by admins.
+- **Moderation surface:** Admin → Tip Q&A Moderation (browse, search, delete with confirmation dialog).
+- **Admin awareness:** a DB trigger notifies every active admin in-app the moment a question lands (`tip_qa` notification type — bell + `/notifications` page). A daily **email digest** (`tip-qa-digest` edge function, pg_cron 06:30 UTC) summarizes unread tip Q&A notifications via Resend so moderation never depends on remembering to check the dashboard.
+
+### 3.16 Admin revenue monitoring & tax-ready reporting
+- **What:** Admin → Revenue Monitoring & Reports: this-month / last-30-days / all-time revenue KPIs, active-subscriber MRR at canonical pricing (premium 500 / pro 1000 ETB), a 12-month revenue bar chart, per-tier split, and a searchable, date-ranged **payment ledger**.
+- **Export:** one-click **CSV export** (RFC 4180-escaped) with explicit `amount_etb`, `currency`, `vat_rate`, `vat_etb`, `gross_etb`, payer identity and status columns — laid out so a tax authority or accountant can consume it directly.
+- **Reconciliation:** pending subscriptions surface with an "Activate" action backed by the `admin_activate_subscription` RPC (admin-gated, audited) — this heals payments that succeeded at Chapa but whose activation failed (see the 3.13 payment-fix note).
+
+### 3.17 Media reliability & performance
+- All showcase imagery is **self-hosted** (`public/images/`) — no third-party hotlink failures. The hero renders a 17KB WebP logo (down from a 1.5MB PNG), videos use real first-frame posters with `preload="metadata"`, and the favicon is a WebP. Anchor navigation (`/#premium` etc.) re-corrects after layout shift and yields to the user's first scroll.
+
+---
 
 ---
 
@@ -280,6 +298,8 @@ Sign-in seeds (dev): admin `admin1@yebetweg.com` / `Admin123` · premium `premiu
 
 Local commands: `npm run dev` · `npm run build` (typecheck+build+sitemap) · `npm test` · `npm run verify:deploy` · `npm run audit:rls` · `npm run audit:i18n` · `npm run probe:rls`.
 
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) runs `npm run typecheck` + `npm test` on every push/PR — broken commits fail CI before Vercel ever builds them. Tests run with inert Supabase env dummies (`tests/setup.env.ts`), so no secrets are needed in CI.
+
 ---
 
 ## 9. Known limitations & roadmap
@@ -288,6 +308,6 @@ Local commands: `npm run dev` · `npm run build` (typecheck+build+sitemap) · `n
 - Non-Addis cities have thin price coverage → estimator rows fall back to "est." ratios until suppliers in those cities join the funnel (this is the growth flywheel: more suppliers → tighter estimates).
 - The assistant is rule-based — broad but not conversational; it won't handle free-form chat.
 - Save-collections and saved items are client-persisted (localStorage) — they don't roam between devices yet.
-- Weekly watch must be triggered by an admin (`/watch`); full auto-scheduling of the Telegram digest is a roadmap item.
+- Weekly Telegram watch is still admin-triggered (`/watch`); the tip Q&A admin digest IS automated (daily 06:30 UTC email).
 
 **Roadmap candidates:** Pro analytics dashboards (city comparisons, price history charts), auto-scheduled Telegram digest, server-side roaming for saved items, Telebirr direct checkout, supplier rating/reputation on verified submissions, SMS notifications for non-smartphone users.
