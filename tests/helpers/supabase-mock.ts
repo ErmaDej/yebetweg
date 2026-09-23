@@ -52,6 +52,8 @@ export function mockSupabaseModule(overrides: {
   from?: (table: string) => unknown
   rpc?: (fn: string, args?: unknown) => unknown
   auth?: Record<string, unknown>
+  /** Any extra client members (e.g. channel/removeChannel for realtime tests). */
+  [key: string]: unknown
 } = {}) {
   // Register by the alias specifier only: vitest resolves "@/lib/supabase"
   // through the same vite resolver the subjects use, so one registration
@@ -70,6 +72,8 @@ export function mockSupabaseModule(overrides: {
           throw new Error("rpc() not configured for this test")
         }),
       auth: overrides.auth ?? {},
+      // Pass through extra client members (channel, removeChannel, …).
+      ...Object.fromEntries(Object.entries(overrides).filter(([k]) => !['from', 'rpc', 'auth'].includes(k))),
     }
     return { supabase: client }
   })

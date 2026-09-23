@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX } from "lucide-react"
+import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX, MessageCircleQuestion, BadgeCheck, Send, Loader2, Trash2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useTips, useTipCategories } from "@/hooks/useTips"
+import { useTipQa, askTipQuestion, answerTipQuestion, deleteTipQuestion } from "@/hooks/useTipQa"
+import { useAuthContext } from "@/context/AuthContext"
 import { useMarketPrices } from "@/hooks/useMarketPrices"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
@@ -40,16 +42,185 @@ const iconMap: Record<string, any> = {
   "hard-hat": HardHat,
 }
 
+/** Q&A thread for one tip: questions list + ask form. Renders below the tip content when expanded. */
+function TipQaSection({ tip, am }: { tip: any; am: boolean }) {
+  const { session } = useAuthContext()
+  const { questions, answers, isLoading, error, myUserId, reload } = useTipQa(tip.id, session?.user?.id ?? null)
+  const [askText, setAskText] = useState("")
+  const [askBusy, setAskBusy] = useState(false)
+  const [askError, setAskError] = useState<string | null>(null)
+  const [answerFor, setAnswerFor] = useState<string | null>(null)
+  const [answerText, setAnswerText] = useState("")
+  const [answerBusy, setAnswerBusy] = useState(false)
+  const [answerError, setAnswerError] = useState<string | null>(null)
+
+  const submitAsk = async () => {
+    setAskBusy(true)
+    setAskError(null)
+    const err = await askTipQuestion(tip.id, askText)
+    setAskBusy(false)
+    if (err) {
+      setAskError(err)
+      return
+    }
+    setAskText("")
+    void reload()
+  }
+
+  const submitAnswer = async (questionId: string) => {
+    setAnswerBusy(true)
+    setAnswerError(null)
+    const err = await answerTipQuestion(questionId, answerText)
+    setAnswerBusy(false)
+    if (err) {
+      setAnswerError(err)
+      return
+    }
+    setAnswerFor(null)
+    setAnswerText("")
+    void reload()
+  }
+
+  const removeQuestion = async (questionId: string) => {
+    const err = await deleteTipQuestion(questionId)
+    if (!err) void reload()
+  }
+
+  if (!session) {
+    return null // Q&A visible only when signed in; visitors see the tip itself
+  }
+
+  return (
+    <div className="mt-4 border-t border-border/40 pt-3" aria-label={am ? "ጥያቄና መልስ" : "Questions & answers"}>
+      <div className="flex items-center gap-1.5 mb-2">
+        <MessageCircleQuestion className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs font-semibold text-muted-foreground">
+          {am ? `ጥያቄዎች (${questions.length})` : `Questions (${questions.length})`}
+        </span>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {am ? "በመጫን ላይ…" : "Loading…"}
+        </div>
+      ) : error ? (
+        <p className="py-1 text-xs text-muted-foreground/80">
+          {am ? "ጥያቄዎችን መጫን አልተቻለም።" : "Q&A is unavailable right now."}
+        </p>
+      ) : (
+        <ul className="space-y-2.5">
+          {questions.map((q) => (
+            <li key={q.id} className="rounded-md bg-muted/40 p-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-medium leading-snug">{q.question}</p>
+                {myUserId && q.user_id === myUserId && (
+                  <button
+                    type="button"
+                    aria-label={am ? "ጥያቄ ሰርዝ" : "Delete question"}
+                    className="shrink-0 text-muted-foreground/50 hover:text-destructive"
+                    onClick={() => void removeQuestion(q.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                {q.asker_name || (am ? "አባል" : "Member")}
+              </p>
+              {(answers[q.id]?.length ?? 0) > 0 && (
+                <ul className="mt-2 space-y-1.5 border-l-2 border-primary/30 pl-2.5">
+                  {answers[q.id].map((a) => (
+                    <li key={a.id}>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        {a.answer}
+                        {a.is_expert && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[10px] font-semibold text-accent">
+                            <BadgeCheck className="h-3 w-3" />
+                            {am ? "የአማካሪ መልስ" : "Expert answer"}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/60">{a.answerer_name || (am ? "አባል" : "Member")}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {answerFor === q.id ? (
+                <div className="mt-2">
+                  <textarea
+                    autoFocus
+                    value={answerText}
+                    onChange={(e) => setAnswerText(e.target.value)}
+                    maxLength={2000}
+                    rows={2}
+                    aria-label={am ? "መልስዎ" : "Your answer"}
+                    placeholder={am ? "መልስዎን ይጻፉ…" : "Write your answer…"}
+                    className="w-full rounded-md border border-border bg-background p-2 text-xs"
+                  />
+                  {answerError && <p className="mt-1 text-[10px] text-destructive">{answerError}</p>}
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => void submitAnswer(q.id)}>
+                      {answerBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                      {am ? "ላክ" : "Post"}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => { setAnswerFor(null); setAnswerText(""); setAnswerError(null) }}>
+                      {am ? "ተወው" : "Cancel"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="mt-1.5 text-[11px] font-medium text-primary hover:underline"
+                  onClick={() => { setAnswerFor(q.id); setAnswerText(""); setAnswerError(null) }}
+                >
+                  {am ? "መልስ ይጻፉ" : "Answer"}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-3">
+        <textarea
+          value={askText}
+          onChange={(e) => setAskText(e.target.value)}
+          maxLength={500}
+          rows={2}
+          aria-label={am ? "አዲስ ጥያቄ" : "New question"}
+          placeholder={am ? "በዚህ ምክር ላይ ጥያቄ ይጠይቁ…" : "Ask the community about this tip…"}
+          className="w-full rounded-md border border-border bg-background p-2 text-xs"
+        />
+        {askError && <p className="mt-1 text-[10px] text-destructive">{askError}</p>}
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-1.5 h-7 px-2.5 text-[11px]"
+          disabled={askBusy || askText.trim().length < 8}
+          onClick={() => void submitAsk()}
+        >
+          {askBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageCircleQuestion className="h-3 w-3" />}
+          {am ? "ጥያቄ ጠይቅ" : "Ask question"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canReadPremium: boolean }) {
   const navigate = useNavigate()
   const { language, t } = useLanguage()
+  const { session } = useAuthContext()
+  const [expanded, setExpanded] = useState(false)
   const title = language === "am" ? tip.title_am : tip.title_en
   const IconComponent = iconMap[tip.icon] || Shield
   const isLocked = tip.is_premium && !canReadPremium
 
   return (
     <Card
-      className={`group relative overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:shadow-lg ${tip.is_premium ? "" : ""}`}
+      className={`group relative overflow-hidden border-border/50 hover:border-accent/50 transition-all duration-300 hover:shadow-lg`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       {isLocked && (
@@ -79,9 +250,26 @@ function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canR
                 {tip.is_premium ? t("tips.premium") : t("tips.free")}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground line-clamp-3">{tip.content}</p>
+            <p
+              id={`tip-content-${tip.id}`}
+              className={expanded ? "text-xs text-muted-foreground whitespace-pre-line" : "text-xs text-muted-foreground line-clamp-3"}
+            >
+              {tip.content}
+            </p>
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={`tip-content-${tip.id}`}
+              onClick={() => setExpanded((v) => !v)}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              {expanded
+                ? (language === "en" ? "Show less" : "ዝጋ")
+                : (language === "en" ? "Read more" : "ያንብቡ")}
+            </button>
           </div>
         </div>
+        {session && <TipQaSection tip={tip} am={language === "am"} />}
       </CardContent>
     </Card>
   )

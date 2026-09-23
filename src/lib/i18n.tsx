@@ -571,7 +571,7 @@ export const translations: Record<Language, Record<TranslationKey, string>> = {
      "dashboard.currentPlan": "የአሁኑ እቅድ",
      "dashboard.accessStrength": "የመዳረሻ ጥንካሬ",
      "dashboard.tab.profile": "ገለጻ",
-     "dashboard.tab.settings": "ቅናሾች",
+     "dashboard.tab.settings": "መቼቶች",
      "dashboard.tab.activity": "እንቅስቃሴ",
      "dashboard.tab.admin": "አስተዳዳሪ",
      "dashboard.stat.plan": "እቅድ",

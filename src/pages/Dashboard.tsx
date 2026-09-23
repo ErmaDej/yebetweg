@@ -22,6 +22,7 @@ import type { PremiumTier } from "@/types/payment"
 import type { RfqContext } from "@/components/sections/RfqModal"
 import { AssistantCard } from "@/components/assistant/AssistantCard"
 import { RfqModal } from "@/components/sections/RfqModal"
+import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog"
 import { useBoqEstimates, useDeleteBoqEstimate, useRotateShareToken } from "@/hooks/useBoqEstimates"
 import { useSiteLogs } from "@/hooks/useSiteLogs"
 import { BoqActualsPanel } from "@/components/dashboard/BoqActualsPanel"
@@ -178,6 +179,8 @@ export function Dashboard() {
     await signOut()
     navigate("/")
   }
+
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const roleKey = useMemo(() => roleKeyFor(profile, subscription), [profile, subscription?.tier])
 
@@ -995,14 +998,29 @@ export function Dashboard() {
                   <h3 className="text-lg font-semibold mb-4">
                     {language === "en" ? "Danger Zone" : "አደገኛ ቦታ"}
                   </h3>
-                  <Button
-                    onClick={handleSignOut}
-                    variant="destructive"
-                    className="w-full sm:w-auto"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    {language === "en" ? "Sign Out" : "ውጣ"}
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      onClick={handleSignOut}
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {language === "en" ? "Sign Out" : "ውጣ"}
+                    </Button>
+                    <Button
+                      onClick={() => setDeleteOpen(true)}
+                      variant="destructive"
+                      className="w-full sm:w-auto"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {language === "en" ? "Delete Account" : "መለያ ሰርዝ"}
+                    </Button>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {language === "en"
+                      ? "Deleting removes your estimates, spend history, and subscriptions permanently. Marketplace records you created are anonymized."
+                      : "መሰረዝ የግምቶችዎን፣ የወጪ ታሪክዎን እና ደንበኝነትዎን በቋሚነት ያስወግዳል።"}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -1344,6 +1362,7 @@ export function Dashboard() {
             tabs, which left RFQ modal open=true with nothing rendered — the
             Submit RFQ button silently did nothing on non-activity tabs. */}
         <RfqModal open={rfqModalOpen} onOpenChange={setRfqModalOpen} rfqContext={rfqModalContext} />
+        <DeleteAccountDialog open={deleteOpen} onOpenChange={setDeleteOpen} />
 
         <ConfirmActionDialog
           open={pendingBoqDelete !== null}
