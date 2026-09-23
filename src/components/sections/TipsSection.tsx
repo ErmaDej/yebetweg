@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX, MessageCircleQuestion, BadgeCheck, Send, Loader2, Trash2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -42,10 +48,70 @@ const iconMap: Record<string, any> = {
   "hard-hat": HardHat,
 }
 
-/** Q&A thread for one tip: questions list + ask form. Renders below the tip content when expanded. */
-function TipQaSection({ tip, am }: { tip: any; am: boolean }) {
-  const { session } = useAuthContext()
-  const { questions, answers, isLoading, error, myUserId, reload } = useTipQa(tip.id, session?.user?.id ?? null)
+/** Strip under a tip card: question count + CTA that opens the full Q&A thread dialog. */
+function TipQaTeaser({
+  am,
+  count,
+  isLoading,
+  error,
+  onOpen,
+}: {
+  am: boolean
+  count: number
+  isLoading: boolean
+  error: string | null
+  onOpen: () => void
+}) {
+  return (
+    <div className="mt-4 border-t border-border/40 pt-3" aria-label={am ? "ጥያቄና መልስ" : "Questions & answers"}>
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {am ? "ጥያቄዎች በመጫን ላይ…" : "Loading Q&A…"}
+        </div>
+      ) : error ? (
+        <p className="py-1 text-xs text-muted-foreground/80">
+          {am ? "ጥያቄዎችን መጫን አልተቻለም።" : "Q&A is unavailable right now."}
+        </p>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-haspopup="dialog"
+          className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left transition-colors hover:bg-muted/40"
+        >
+          <span className="flex items-center gap-1.5">
+            <MessageCircleQuestion className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-semibold text-muted-foreground">
+              {am ? `ጥያቄዎች (${count})` : `Questions (${count})`}
+            </span>
+          </span>
+          <span className="text-[11px] font-medium text-primary hover:underline">
+            {count > 0 ? (am ? "ክፈት እና ተሳተፉ" : "View & join") : (am ? "ጥያቄ ጠይቅ" : "Ask a question")}
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Full Q&A thread for one tip, in a modal dialog: header with count, scrollable
+ *  question list (all questions, no card-space limits), sticky ask form. Realtime
+ *  updates flow through the shared useTipQa instance owned by TipCard. */
+function TipQaDialog({
+  tip,
+  am,
+  open,
+  onOpenChange,
+  qa,
+}: {
+  tip: any
+  am: boolean
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  qa: ReturnType<typeof useTipQa>
+}) {
+  const { questions, answers, isLoading, error, myUserId, reload } = qa
   const [askText, setAskText] = useState("")
   const [askBusy, setAskBusy] = useState(false)
   const [askError, setAskError] = useState<string | null>(null)
@@ -53,6 +119,17 @@ function TipQaSection({ tip, am }: { tip: any; am: boolean }) {
   const [answerText, setAnswerText] = useState("")
   const [answerBusy, setAnswerBusy] = useState(false)
   const [answerError, setAnswerError] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const prevCountRef = useRef(0)
+
+  // Keep the newest question in view: scroll to bottom when the list grows.
+  useEffect(() => {
+    if (questions.length > prevCountRef.current) {
+      const el = scrollRef.current
+      if (el) requestAnimationFrame(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }))
+    }
+    prevCountRef.current = questions.length
+  }, [questions.length])
 
   const submitAsk = async () => {
     setAskBusy(true)
@@ -86,126 +163,145 @@ function TipQaSection({ tip, am }: { tip: any; am: boolean }) {
     if (!err) void reload()
   }
 
-  if (!session) {
-    return null // Q&A visible only when signed in; visitors see the tip itself
-  }
-
   return (
-    <div className="mt-4 border-t border-border/40 pt-3" aria-label={am ? "ጥያቄና መልስ" : "Questions & answers"}>
-      <div className="flex items-center gap-1.5 mb-2">
-        <MessageCircleQuestion className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs font-semibold text-muted-foreground">
-          {am ? `ጥያቄዎች (${questions.length})` : `Questions (${questions.length})`}
-        </span>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
+        aria-describedby={undefined}
+      >
+        <DialogHeader className="border-b border-border/60 px-4 py-3">
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <MessageCircleQuestion className="h-4 w-4 text-primary" />
+            <span className="line-clamp-1">{am ? tip.title_am : tip.title_en}</span>
+            <Badge variant="secondary" className="ml-auto shrink-0 text-[10px]">
+              {am ? `${questions.length} ጥያቄ` : `${questions.length} questions`}
+            </Badge>
+          </DialogTitle>
+        </DialogHeader>
 
-      {isLoading ? (
-        <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          {am ? "በመጫን ላይ…" : "Loading…"}
-        </div>
-      ) : error ? (
-        <p className="py-1 text-xs text-muted-foreground/80">
-          {am ? "ጥያቄዎችን መጫን አልተቻለም።" : "Q&A is unavailable right now."}
-        </p>
-      ) : (
-        <ul className="space-y-2.5">
-          {questions.map((q) => (
-            <li key={q.id} className="rounded-md bg-muted/40 p-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-medium leading-snug">{q.question}</p>
-                {myUserId && q.user_id === myUserId && (
-                  <button
-                    type="button"
-                    aria-label={am ? "ጥያቄ ሰርዝ" : "Delete question"}
-                    className="shrink-0 text-muted-foreground/50 hover:text-destructive"
-                    onClick={() => void removeQuestion(q.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-              <p className="mt-0.5 text-[10px] text-muted-foreground/70">
-                {q.asker_name || (am ? "አባል" : "Member")}
-              </p>
-              {(answers[q.id]?.length ?? 0) > 0 && (
-                <ul className="mt-2 space-y-1.5 border-l-2 border-primary/30 pl-2.5">
-                  {answers[q.id].map((a) => (
-                    <li key={a.id}>
-                      <p className="text-xs text-muted-foreground leading-snug">
-                        {a.answer}
-                        {a.is_expert && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[10px] font-semibold text-accent">
-                            <BadgeCheck className="h-3 w-3" />
-                            {am ? "የአማካሪ መልስ" : "Expert answer"}
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60">{a.answerer_name || (am ? "አባል" : "Member")}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {answerFor === q.id ? (
-                <div className="mt-2">
-                  <textarea
-                    autoFocus
-                    value={answerText}
-                    onChange={(e) => setAnswerText(e.target.value)}
-                    maxLength={2000}
-                    rows={2}
-                    aria-label={am ? "መልስዎ" : "Your answer"}
-                    placeholder={am ? "መልስዎን ይጻፉ…" : "Write your answer…"}
-                    className="w-full rounded-md border border-border bg-background p-2 text-xs"
-                  />
-                  {answerError && <p className="mt-1 text-[10px] text-destructive">{answerError}</p>}
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => void submitAnswer(q.id)}>
-                      {answerBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                      {am ? "ላክ" : "Post"}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => { setAnswerFor(null); setAnswerText(""); setAnswerError(null) }}>
-                      {am ? "ተወው" : "Cancel"}
-                    </Button>
+        {/* Scrollable thread */}
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {am ? "ጥያቄዎች በመጫን ላይ…" : "Loading Q&A…"}
+            </div>
+          ) : error ? (
+            <p className="py-6 text-center text-xs text-muted-foreground">
+              {am ? "ጥያቄዎችን መጫን አልተቻለም።" : "Q&A is unavailable right now."}
+            </p>
+          ) : questions.length === 0 ? (
+            <p className="py-10 text-center text-xs text-muted-foreground">
+              {am
+                ? "እስካሁን ጥያቄ የለም — የመጀመሪያው ይሁኑ።"
+                : "No questions yet — be the first to ask about this tip."}
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {questions.map((q) => (
+                <li key={q.id} className="rounded-md bg-muted/40 p-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-medium leading-snug">{q.question}</p>
+                    {myUserId && q.user_id === myUserId && (
+                      <button
+                        type="button"
+                        aria-label={am ? "ጥያቄ ሰርዝ" : "Delete question"}
+                        className="shrink-0 text-muted-foreground/50 hover:text-destructive"
+                        onClick={() => void removeQuestion(q.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="mt-1.5 text-[11px] font-medium text-primary hover:underline"
-                  onClick={() => { setAnswerFor(q.id); setAnswerText(""); setAnswerError(null) }}
-                >
-                  {am ? "መልስ ይጻፉ" : "Answer"}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                  <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                    {q.asker_name || (am ? "አባል" : "Member")}
+                  </p>
+                  {(answers[q.id]?.length ?? 0) > 0 && (
+                    <ul className="mt-2 space-y-1.5 border-l-2 border-primary/30 pl-2.5">
+                      {answers[q.id].map((a) => (
+                        <li key={a.id}>
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            {a.answer}
+                            {a.is_expert && (
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[10px] font-semibold text-accent">
+                                <BadgeCheck className="h-3 w-3" />
+                                {am ? "የአማካሪ መልስ" : "Expert answer"}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/60">{a.answerer_name || (am ? "አባል" : "Member")}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {answerFor === q.id ? (
+                    <div className="mt-2">
+                      <textarea
+                        autoFocus
+                        value={answerText}
+                        onChange={(e) => setAnswerText(e.target.value)}
+                        maxLength={2000}
+                        rows={2}
+                        aria-label={am ? "መልስዎ" : "Your answer"}
+                        placeholder={am ? "መልስዎን ይጻፉ…" : "Write your answer…"}
+                        className="w-full rounded-md border border-border bg-background p-2 text-xs"
+                      />
+                      {answerError && <p className="mt-1 text-[10px] text-destructive">{answerError}</p>}
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => void submitAnswer(q.id)}>
+                          {answerBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          {am ? "ላክ" : "Post"}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => { setAnswerFor(null); setAnswerText(""); setAnswerError(null) }}>
+                          {am ? "ተወው" : "Cancel"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mt-1.5 text-[11px] font-medium text-primary hover:underline"
+                      onClick={() => { setAnswerFor(q.id); setAnswerText(""); setAnswerError(null) }}
+                    >
+                      {am ? "መልስ ይጻፉ" : "Answer"}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
-      <div className="mt-3">
-        <textarea
-          value={askText}
-          onChange={(e) => setAskText(e.target.value)}
-          maxLength={500}
-          rows={2}
-          aria-label={am ? "አዲስ ጥያቄ" : "New question"}
-          placeholder={am ? "በዚህ ምክር ላይ ጥያቄ ይጠይቁ…" : "Ask the community about this tip…"}
-          className="w-full rounded-md border border-border bg-background p-2 text-xs"
-        />
-        {askError && <p className="mt-1 text-[10px] text-destructive">{askError}</p>}
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-1.5 h-7 px-2.5 text-[11px]"
-          disabled={askBusy || askText.trim().length < 8}
-          onClick={() => void submitAsk()}
-        >
-          {askBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageCircleQuestion className="h-3 w-3" />}
-          {am ? "ጥያቄ ጠይቅ" : "Ask question"}
-        </Button>
-      </div>
-    </div>
+        {/* Sticky ask form */}
+        <div className="border-t border-border/60 px-4 py-3">
+          <textarea
+            value={askText}
+            onChange={(e) => setAskText(e.target.value)}
+            maxLength={500}
+            rows={2}
+            aria-label={am ? "አዲስ ጥያቄ" : "New question"}
+            placeholder={am ? "በዚህ ምክር ላይ ጥያቄ ይጠይቁ…" : "Ask the community about this tip…"}
+            className="w-full rounded-md border border-border bg-background p-2 text-xs"
+          />
+          {askError && <p className="mt-1 text-[10px] text-destructive">{askError}</p>}
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <p className="text-[10px] text-muted-foreground/60">
+              {am ? "አዲስ መልሶች በቀጥታ ይታያሉ።" : "New answers appear here live."}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 text-[11px]"
+              disabled={askBusy || askText.trim().length < 8}
+              onClick={() => void submitAsk()}
+            >
+              {askBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageCircleQuestion className="h-3 w-3" />}
+              {am ? "ጥያቄ ጠይቅ" : "Ask question"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -214,6 +310,8 @@ function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canR
   const { language, t } = useLanguage()
   const { session } = useAuthContext()
   const [expanded, setExpanded] = useState(false)
+  const [qaOpen, setQaOpen] = useState(false)
+  const qa = useTipQa(tip.id, session?.user?.id ?? null)
   const title = language === "am" ? tip.title_am : tip.title_en
   const IconComponent = iconMap[tip.icon] || Shield
   const isLocked = tip.is_premium && !canReadPremium
@@ -269,8 +367,25 @@ function TipCard({ tip, index, canReadPremium }: { tip: any; index: number; canR
             </button>
           </div>
         </div>
-        {session && <TipQaSection tip={tip} am={language === "am"} />}
+        {session && (
+          <TipQaTeaser
+            am={language === "am"}
+            count={qa.questions.length}
+            isLoading={qa.isLoading}
+            error={qa.error}
+            onOpen={() => setQaOpen(true)}
+          />
+        )}
       </CardContent>
+      {session && (
+        <TipQaDialog
+          tip={tip}
+          am={language === "am"}
+          open={qaOpen}
+          onOpenChange={setQaOpen}
+          qa={qa}
+        />
+      )}
     </Card>
   )
 }

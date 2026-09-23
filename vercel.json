@@ -48,8 +48,16 @@
     }
   ],
   "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/search", "destination": "/index.html" },
+    { "source": "/payment/success", "destination": "/index.html" },
+    { "source": "/auth/callback", "destination": "/index.html" },
+    { "source": "/reset-password", "destination": "/index.html" },
+    { "source": "/notifications", "destination": "/index.html" },
+    { "source": "/boq/:token", "destination": "/index.html" },
     {
-      "source": "/",
+      "source": "/((?!assets/|images/|videos/|sitemap\\.xml|robots\\.txt|manifest\\.json|sw\\.js|offline\\.html|favicon\\.ico|.*\\.(?:png|jpg|jpeg|svg|webp|ico|mp4|webm|xml|txt|json|html|js|css|woff2?)$).*)",
       "destination": "/index.html"
     }
   ]

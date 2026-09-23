@@ -6,7 +6,7 @@ import { useAuthContext } from "@/context/AuthContext"
 export type AppNotification = {
   id: string
   user_id: string
-  type: "info" | "stale_prices" | "price_submission" | "rfq" | "listing" | "system"
+  type: "info" | "stale_prices" | "price_submission" | "rfq" | "listing" | "system" | "tip_qa"
   title: string
   body: string | null
   link: string | null

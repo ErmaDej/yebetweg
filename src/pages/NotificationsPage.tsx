@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/i18n"
 import { useNotifications, type AppNotification } from "@/hooks/useNotifications"
 
-type FilterKey = "all" | "unread" | "stale_prices" | "price_submission" | "rfq" | "info"
+type FilterKey = "all" | "unread" | "stale_prices" | "price_submission" | "rfq" | "tip_qa" | "info"
 
 const FILTERS: { key: FilterKey; en: string; am: string }[] = [
   { key: "all", en: "All", am: "ሁሉም" },
@@ -17,13 +17,14 @@ const FILTERS: { key: FilterKey; en: string; am: string }[] = [
   { key: "price_submission", en: "Price submissions", am: "የዋጋ ማቅረቢያ" },
   { key: "stale_prices", en: "Stale prices", am: "ያረጁ ዋጋዎች" },
   { key: "rfq", en: "RFQs", am: "የዋጋ ጥያቄዎች" },
+  { key: "tip_qa", en: "Tip questions", am: "የምክር ጥያቄዎች" },
   { key: "info", en: "Other", am: "ሌሎች" },
 ]
 
 function matchesFilter(n: AppNotification, f: FilterKey): boolean {
   if (f === "all") return true
   if (f === "unread") return n.read_at === null
-  if (f === "info") return !["stale_prices", "price_submission", "rfq"].includes(n.type)
+  if (f === "info") return !["stale_prices", "price_submission", "rfq", "tip_qa"].includes(n.type)
   return n.type === f
 }
 
@@ -46,6 +47,8 @@ function typeBadge(n: AppNotification, am: boolean) {
       return <Badge variant="default">{am ? "ማረጋገጥ ይጠባበቃል" : "needs verification"}</Badge>
     case "rfq":
       return <Badge variant="outline">{am ? "የዋጋ ጥያቄ" : "RFQ"}</Badge>
+    case "tip_qa":
+      return <Badge variant="secondary">{am ? "የምክር ጥያቄ" : "tip question"}</Badge>
     default:
       return <Badge variant="outline">{am ? "መረጃ" : "info"}</Badge>
   }

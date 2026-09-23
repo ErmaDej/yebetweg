@@ -20,6 +20,7 @@ import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
 import { TelegramPriceQueue } from "@/components/admin/TelegramPriceQueue"
 import { RfqManager } from "@/components/admin/RfqManager"
 import { TipQaModeration } from "@/components/admin/TipQaModeration"
+import { RevenueMonitor } from "@/components/admin/RevenueMonitor"
 
 type AdminMetricKey =
   | "users"
@@ -623,6 +624,10 @@ export function AdminDashboardTab() {
 
       <ExpandableSection title={language === "en" ? "RFQ Management" : "የዋጋ ጥያቄ አስተዳደር"} defaultOpen={false}>
         <RfqManager />
+      </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "Revenue Monitoring & Reports" : "የገቢ ክትትል እና ሪፖርቶች"} defaultOpen={false}>
+        <RevenueMonitor />
       </ExpandableSection>
 
       <ExpandableSection title={language === "en" ? "Tip Q&A Moderation" : "የምክሮች ጥያቄና መልስ ሞደራሲዮን"} defaultOpen={false}>

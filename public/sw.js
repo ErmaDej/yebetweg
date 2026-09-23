@@ -14,7 +14,7 @@
 // Bump CACHE_VERSION whenever the shell changes to invalidate old caches.
 // ============================================================================
 
-const CACHE_VERSION = 'yebetweg-v3';
+const CACHE_VERSION = 'yebetweg-v4';
 const PRECACHE_CACHE = `${CACHE_VERSION}-precache`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 

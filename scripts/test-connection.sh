@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
+# Quick database connectivity check. Credentials come from the environment —
+# never hardcode them here (this file is tracked in git).
 set -euo pipefail
 
-# Database connection URL using service role key
-DB_URL="postgres://postgres:Kukusha77%21@db.jxyavtdmcloxnhuavokc.supabase.co:5432/postgres"
+DB_URL="${SUPABASE_DB_URL:-${DATABASE_URL:-}}"
 
-echo "Testing database connection with service role key..."
-psql "$DB_URL" -c "SELECT 1 as connection_test;"
+if [ -z "$DB_URL" ]; then
+  echo "error: set SUPABASE_DB_URL (or DATABASE_URL) before running." >&2
+  echo "  e.g. export SUPABASE_DB_URL=\"postgres://<user>:<password>@<host>:5432/postgres\"" >&2
+  exit 1
+fi
+
+echo "Testing database connection..."
+psql "$DB_URL" -c "SELECT 1 AS connection_test;"

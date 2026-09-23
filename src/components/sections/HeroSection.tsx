@@ -101,13 +101,14 @@ export function HeroSection() {
 
               {/* Main logo with neon glow */}
               <img
-                src="/Logo2x.png"
+                src="/images/logo-hero.webp"
                 alt="YeBetWeg"
                 width={120}
                 height={120}
                 className="relative w-32 h-32 object-contain animate-neon-glow animate-neon-float"
                 loading="eager"
                 decoding="async"
+                fetchPriority="high"
               />
 
               {/* Shimmer overlay effect */}

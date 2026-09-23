@@ -13,9 +13,10 @@ interface VideoCardProps {
   large?: boolean
   delay?: number
   isVisible: boolean
+  poster: string
 }
 
-function VideoCard({ src, label, caption, large = false, delay = 0, isVisible }: VideoCardProps) {
+function VideoCard({ src, label, caption, large = false, delay = 0, isVisible, poster }: VideoCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [autoplayAllowed, setAutoplayAllowed] = useState(false)
 
@@ -79,8 +80,8 @@ function VideoCard({ src, label, caption, large = false, delay = 0, isVisible }:
           muted
           loop
           playsInline
-          preload="none"
-          poster="/Logo2x.png"
+          preload="metadata"
+          poster={poster}
           aria-label={`${label} preview video`}
           onClick={togglePlay}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02] cursor-pointer"
@@ -141,6 +142,7 @@ export function VideoShowcaseSection() {
           <div className="lg:col-span-3">
             <VideoCard
               src="/videos/HeroClip1x.mp4"
+              poster="/images/poster-hero-clip.webp"
               label={isEn ? "Real Projects" : "እውነተኛ ፕሮጀክቶች"}
               caption={
                 isEn
@@ -157,6 +159,7 @@ export function VideoShowcaseSection() {
           <div className="lg:col-span-2">
             <VideoCard
               src="/videos/kling_Clip_2.mp4"
+              poster="/images/poster-kling-clip.webp"
               label={isEn ? "Real Impact" : "ውጤታማ ውጤት"}
               caption={
                 isEn

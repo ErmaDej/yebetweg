@@ -21,7 +21,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-leaderboard-1",
     advertiser: "ConstructPro Ethiopia",
-    image_url: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=900&q=80",
+    image_url: "/images/ad-construction-1.jpg",
     link: "https://t.me/yebetweg",
     position: "leaderboard",
     is_active: true,
@@ -37,7 +37,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-leaderboard-3",
     advertiser: "BuildRight Ethiopia",
-    image_url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=900&q=80",
+    image_url: "/images/ad-construction-1.jpg",
     link: "https://t.me/yebetweg",
     position: "leaderboard",
     is_active: true,
@@ -53,7 +53,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-sidebar-2",
     advertiser: "Prime Steel Ethiopia",
-    image_url: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=500&q=80",
+    image_url: "/images/ad-materials-1.jpg",
     link: "https://t.me/yebetweg",
     position: "sidebar",
     is_active: true,
@@ -61,7 +61,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-native-1",
     advertiser: "Ethio Cement Co.",
-    image_url: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&q=80",
+    image_url: "/images/ad-home-1.jpg",
     link: "https://t.me/yebetweg",
     position: "native_card",
     is_active: true,
@@ -69,7 +69,7 @@ const SAMPLE_ADS: Ad[] = [
   {
     id: "sample-native-2",
     advertiser: "Modern Construction Addis",
-    image_url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&q=80",
+    image_url: "/images/ad-home-1.jpg",
     link: "https://t.me/yebetweg",
     position: "native_card",
     is_active: true,

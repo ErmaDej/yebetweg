@@ -61,7 +61,12 @@ function mapAnswer(row: Record<string, unknown>): TipAnswer {
 }
 
 /** Questions (with answers nested) for one tip. Empty until the migration is applied. */
-export function useTipQa(tipId: string | null, authUid: string | null = null) {
+export function useTipQa(
+  tipId: string | null,
+  authUid: string | null = null,
+  /** When false, skip fetching + realtime (used by the collapsed teaser vs open dialog). */
+  enabled = true,
+) {
   const [questions, setQuestions] = useState<TipQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, TipAnswer[]>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -70,7 +75,7 @@ export function useTipQa(tipId: string | null, authUid: string | null = null) {
   const [myUserId, setMyUserId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    if (!tipId) {
+    if (!tipId || !enabled) {
       setQuestions([])
       setAnswers({})
       setMyUserId(null)
@@ -131,11 +136,11 @@ export function useTipQa(tipId: string | null, authUid: string | null = null) {
     } finally {
       setIsLoading(false)
     }
-  }, [tipId, authUid])
+  }, [tipId, authUid, enabled])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (enabled) void load()
+  }, [load, enabled])
 
   // ------------------------------------------------------------------ realtime
   // Live updates without manual reload: postgres_changes events on both tables
@@ -149,7 +154,7 @@ export function useTipQa(tipId: string | null, authUid: string | null = null) {
   }, [load])
 
   useEffect(() => {
-    if (!tipId) return
+    if (!tipId || !enabled) return
     // Realtime is optional: guard so test doubles without .channel() no-op.
     if (typeof (supabase as { channel?: unknown }).channel !== "function") return
 
