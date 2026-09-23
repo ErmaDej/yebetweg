@@ -28,6 +28,7 @@ import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { getActivePlan } from "@/lib/entitlements"
 import { scrollToAnchor } from "@/lib/navigation"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { InstallPrompt } from "@/components/pwa/InstallPrompt"
 
 function HomePage() {
   const { profile } = useUserProfile()
@@ -205,6 +206,7 @@ export function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <InstallPrompt />
     </BrowserRouter>
   )
 }

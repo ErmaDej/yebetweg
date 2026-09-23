@@ -160,10 +160,15 @@ intelligence.*
 - **Moderation surface:** Admin → Tip Q&A Moderation (browse, search, delete with confirmation dialog).
 - **Admin awareness:** a DB trigger notifies every active admin in-app the moment a question lands (`tip_qa` notification type — bell + `/notifications` page). A daily **email digest** (`tip-qa-digest` edge function, pg_cron 06:30 UTC) summarizes unread tip Q&A notifications via Resend so moderation never depends on remembering to check the dashboard.
 
-### 3.16 Admin revenue monitoring & tax-ready reporting
+### 3.16 Admin revenue monitoring, analytics & Ethiopian tax reporting
 - **What:** Admin → Revenue Monitoring & Reports: this-month / last-30-days / all-time revenue KPIs, active-subscriber MRR at canonical pricing (premium 500 / pro 1000 ETB), a 12-month revenue bar chart, per-tier split, and a searchable, date-ranged **payment ledger**.
+- **Analytics tab (new):** month-over-month growth table (absolute Δ and %, red/green badges per month), subscriber movement from the `premium_subscriptions` table (new subs + **churn rate** per month: churned ÷ active-at-start), and a per-month **Ethiopian tax period report**: gross, output VAT 15% (if VAT-registered) **or** Turnover Tax 2% (small-taxpayer scheme), net sales, and the tax due — computed per Proclamations 285/2002 (VAT) and 308/2002 (ToT). Editable legal name / TIN / address, printable **Ministry-of-Revenue-ready report** and a per-period **tax CSV** with per-payment VAT/ToT columns. The VAT-registered toggle also exists server-side via the `VAT_REGISTERED` env secret for the email digest.
 - **Export:** one-click **CSV export** (RFC 4180-escaped) with explicit `amount_etb`, `currency`, `vat_rate`, `vat_etb`, `gross_etb`, payer identity and status columns — laid out so a tax authority or accountant can consume it directly.
 - **Reconciliation:** pending subscriptions surface with an "Activate" action backed by the `admin_activate_subscription` RPC (admin-gated, audited) — this heals payments that succeeded at Chapa but whose activation failed (see the 3.13 payment-fix note).
+- **Weekly revenue email (new):** the `revenue-digest` edge function (pg_cron Mondays 07:00 UTC) emails every active admin a revenue & taxation summary from `subscription_payments`: 7-day/monthly KPIs, MoM %, tier split, VAT/ToT context, and pending activations needing attention. Guard: `x-cron-key` = `CRON_SECRET`; verified against production data.
+
+### 3.16.1 PWA installability
+- **Installable app:** valid manifest (`id`, `scope`, `display_override`, dedicated 192/512 any + padded maskable icons generated from the logo, ~25–117KB). A **graceful install banner** (`InstallPrompt`) appears from the 2nd visit on Chromium (via captured `beforeinstallprompt`) and on iOS Safari (Add-to-Home-Screen instructions); dismissal is remembered for 14 days and standalone-mode users never see it.
 
 ### 3.17 Media reliability & performance
 - All showcase imagery is **self-hosted** (`public/images/`) — no third-party hotlink failures. The hero renders a 17KB WebP logo (down from a 1.5MB PNG), videos use real first-frame posters with `preload="metadata"`, and the favicon is a WebP. Anchor navigation (`/#premium` etc.) re-corrects after layout shift and yields to the user's first scroll.

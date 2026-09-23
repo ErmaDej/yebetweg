@@ -16,7 +16,7 @@ const ANCHOR_ALIASES: Record<string, string[]> = {
   contact: ["contact"],
 }
 
-export function scrollToAnchor(hashOrId: string, maxAttempts = 25, intervalMs = 50): void {
+export function scrollToAnchor(hashOrId: string, maxAttempts = 40, intervalMs = 100): void {
   const clean = hashOrId.replace(/^#/, "").trim()
   if (!clean) {
     try {
@@ -26,23 +26,19 @@ export function scrollToAnchor(hashOrId: string, maxAttempts = 25, intervalMs = 
   }
 
   const candidateIds = ANCHOR_ALIASES[clean] || [clean]
-  let attempts = 0
-  let found = false
   let cancelled = false
-  // Late-loading content above the target (images, lazy sections) shifts the
-  // layout AFTER the first scrollIntoView, landing the user short of the
-  // anchor (e.g. SiteLog instead of Premium). Keep re-correcting briefly.
-  const corrections = [350, 800, 1500]
 
-  const scrollOnce = () => {
+  // Late-loading content above the target (images, lazy sections, data tables)
+  // shifts the layout AFTER the first scrollIntoView, landing the user short of
+  // the anchor (e.g. SiteLog instead of Premium). Keep re-correcting until the
+  // element's position is STABLE for a few consecutive checks — not just for a
+  // fixed window — or until the user scrolls manually.
+  const findEl = () => {
     for (const id of candidateIds) {
       const el = document.getElementById(id)
-      if (el) {
-        el.scrollIntoView({ behavior: found ? "auto" : "smooth", block: "start" })
-        return true
-      }
+      if (el) return el
     }
-    return false
+    return null
   }
 
   const stopOnUserScroll = () => {
@@ -51,27 +47,42 @@ export function scrollToAnchor(hashOrId: string, maxAttempts = 25, intervalMs = 
   window.addEventListener("wheel", stopOnUserScroll, { passive: true, once: true })
   window.addEventListener("touchstart", stopOnUserScroll, { passive: true, once: true })
 
-  const tryScroll = () => {
-    attempts++
-    if (scrollOnce()) {
-      if (!found) {
-        found = true
-        for (const delay of corrections) {
-          setTimeout(() => {
-            if (!cancelled) scrollOnce()
-          }, delay)
-        }
-      }
-      return
-    }
+  let attempts = 0
+  let stableChecks = 0
+  let lastTop = Number.NaN
+  let firstScrollDone = false
 
+  const tick = () => {
+    if (cancelled) return
+    attempts++
+    const el = findEl()
+    if (el) {
+      const top = el.getBoundingClientRect().top
+      const moved = Number.isNaN(lastTop) || Math.abs(top - lastTop) > 1
+      if (!moved && Math.abs(top) <= 400) {
+        // Position unchanged since last check and plausibly at the anchor
+        // (respects scroll-margin-top for the fixed header). Settle after a
+        // few stable reads so late shifts can't strand us mid-page.
+        stableChecks++
+        if (stableChecks >= 3) return
+      } else {
+        stableChecks = 0
+        el.scrollIntoView({
+          behavior: firstScrollDone ? "auto" : "smooth",
+          block: "start",
+        })
+        firstScrollDone = true
+      }
+      lastTop = top
+    }
     if (attempts < maxAttempts) {
-      setTimeout(tryScroll, intervalMs)
+      setTimeout(tick, intervalMs)
     }
   }
 
-  // Initial attempt on next animation frame
-  requestAnimationFrame(tryScroll)
+  // Kick off via timeout (NOT requestAnimationFrame — rAF is paused in
+  // background tabs, which would silently disable anchor scrolling there).
+  setTimeout(tick, 60)
 }
 
 export function navigateTo(path: string) {

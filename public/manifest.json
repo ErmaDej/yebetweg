@@ -1,54 +1,36 @@
 {
+  "id": "/",
   "name": "YeBetWeg",
   "short_name": "YeBetWeg",
   "description": "Ethiopia's leading construction knowledge platform — BOQ estimator, market prices, marketplace, and professionals directory",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
   "orientation": "portrait-primary",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/Logo1x.jpg",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/Logo2x.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/Logo3x.png",
-      "sizes": "1024x1024",
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": ["business", "productivity", "utilities"],
-  "shortcuts": [
-    {
-      "name": "BOQ Estimator",
-      "short_name": "BOQ",
-      "description": "Estimate construction costs",
-      "url": "/#boq",
-      "icons": [{ "src": "/Logo2x.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Market Prices",
-      "short_name": "Prices",
-      "description": "Live construction material prices",
-      "url": "/#market",
-      "icons": [{ "src": "/Logo2x.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Professionals",
-      "short_name": "Pros",
-      "description": "Find verified professionals",
-      "url": "/#professionals",
-      "icons": [{ "src": "/Logo2x.png", "sizes": "192x192" }]
+      "purpose": "maskable"
     }
   ]
 }

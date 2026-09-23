@@ -167,6 +167,45 @@ select cron.schedule(
 );
 ```
 
+## 5b. Schedule tip-qa-digest (daily) and revenue-digest (weekly)
+
+```sql
+-- SQL Editor, once — replace <CRON_SECRET> with the value saved in §3
+select cron.schedule(
+  'yebetweg-tip-qa-digest',
+  '30 6 * * *',  -- daily 06:30 UTC
+  $$
+  select net.http_post(
+    url := 'https://jxyavtdmcloxnhuavokc.supabase.co/functions/v1/tip-qa-digest',
+    headers := jsonb_build_object('Content-Type','application/json','x-cron-key','<CRON_SECRET>'),
+    body := '{}'::jsonb
+  );
+  $$
+);
+
+select cron.schedule(
+  'yebetweg-revenue-digest',
+  '0 7 * * 1',  -- Mondays 07:00 UTC
+  $$
+  select net.http_post(
+    url := 'https://jxyavtdmcloxnhuavokc.supabase.co/functions/v1/revenue-digest',
+    headers := jsonb_build_object('Content-Type','application/json','x-cron-key','<CRON_SECRET>'),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+**revenue-digest** emails every active admin a weekly revenue & taxation summary
+from `subscription_payments`: 7-day + month KPIs, MoM growth %, tier split,
+Ethiopian VAT/ToT context, and pending activations needing attention. Set the
+optional `VAT_REGISTERED=true` function secret if the business is VAT-registered
+(15% output VAT); the default reports the 2% Turnover Tax scheme.
+
+**Deploy note:** both digest functions are deployed with `--no-verify-jwt` —
+pg_cron's `net.http_post` cannot send an `Authorization` header, so the
+in-function `x-cron-key` guard IS the authentication (requests without it get 401).
+
 ## 6. Verification checks (end-to-end)
 
 **Automated:** `npm run verify:deploy` runs the machine-checkable subset of
@@ -211,3 +250,5 @@ select cron.unschedule('yebetweg-freshness-digest');
 | `20260920020000_enable_pg_cron_and_freshness_schedule.sql` | pending | §1 above — apply FIRST (enables pg_cron) |
 | `refresh_market_price_freshness` / `expire_stale_market_prices` / `upsert_market_price_from_telegram` RPCs | inside the pending migrations | §1 applies them |
 | edge functions (code only) | `supabase/functions/*` | §2–§5 above |
+| tip-qa-digest + revenue-digest cron jobs | ✅ live (cron.job ids 5, 6) | none — verify via §6-style POST with `x-cron-key` |
+| ⚠️ Resend sending domain | `yebetweg.com` NOT verified in Resend | Owner: add + verify the domain at resend.com/domains (DKIM/SPF) — until then both digests compute correctly but email delivery 403s |

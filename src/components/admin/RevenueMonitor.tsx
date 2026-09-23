@@ -12,10 +12,13 @@ import {
   TrendingUp,
   Clock,
   Wrench,
+  BarChart3,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useLanguage } from "@/lib/i18n"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
+import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics"
 
 /**
  * Admin revenue monitoring & reporting:
@@ -47,6 +50,15 @@ type PendingSub = {
   chapa_reference: string | null
   created_at: string
   user?: { full_name?: string | null; email?: string | null } | null
+}
+
+type SubRow = {
+  tier: string | null
+  is_active: boolean | null
+  status: string | null
+  starts_at: string | null
+  expires_at: string | null
+  created_at: string
 }
 
 const LEDGER_SELECT =
@@ -113,7 +125,7 @@ export function RevenueMonitor() {
 
   const [rows, setRows] = useState<LedgerRow[]>([])
   const [pending, setPending] = useState<PendingSub[]>([])
-  const [activeSubs, setActiveSubs] = useState<{ tier: string; count: number }[]>([])
+  const [subs, setSubs] = useState<SubRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -141,19 +153,15 @@ export function RevenueMonitor() {
           .limit(50),
         supabase
           .from("premium_subscriptions")
-          .select("tier")
-          .eq("is_active", true),
+          .select("tier, is_active, status, starts_at, expires_at, created_at")
+          .gte("created_at", yearAgo),
       ])
       if (ledgerRes.error) throw ledgerRes.error
       if (pendingRes.error) throw pendingRes.error
       if (subsRes.error) throw subsRes.error
       setRows((ledgerRes.data ?? []) as LedgerRow[])
       setPending((pendingRes.data ?? []) as PendingSub[])
-      const tierCounts = new Map<string, number>()
-      for (const s of (subsRes.data ?? []) as { tier: string }[]) {
-        tierCounts.set(s.tier, (tierCounts.get(s.tier) ?? 0) + 1)
-      }
-      setActiveSubs([...tierCounts.entries()].map(([tier, count]) => ({ tier, count })))
+      setSubs((subsRes.data ?? []) as SubRow[])
     } catch (e) {
       setError(e instanceof Error ? e.message : am ? "መጫን አልተቻለም።" : "Failed to load revenue data.")
     } finally {
@@ -164,6 +172,16 @@ export function RevenueMonitor() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const activeSubs = useMemo(() => {
+    const tierCounts = new Map<string, number>()
+    for (const s of subs) {
+      if (s.is_active && s.status !== "expired" && s.status !== "cancelled") {
+        tierCounts.set(s.tier ?? "unknown", (tierCounts.get(s.tier ?? "unknown") ?? 0) + 1)
+      }
+    }
+    return [...tierCounts.entries()].map(([tier, count]) => ({ tier, count }))
+  }, [subs])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -272,6 +290,19 @@ export function RevenueMonitor() {
         </Alert>
       )}
 
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview" className="gap-1.5 text-xs">
+            <Wallet className="h-3.5 w-3.5" />
+            {am ? "አጠቃላይ" : "Overview"}
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-1.5 text-xs">
+            <BarChart3 className="h-3.5 w-3.5" />
+            {am ? "ትንተና እና ግብር" : "Analytics & tax"}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-4 space-y-4">
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card>
@@ -511,6 +542,22 @@ export function RevenueMonitor() {
           </div>
         </CardContent>
       </Card>
+
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-4">
+          <RevenueAnalytics
+            ledger={rows}
+            subscriptions={subs}
+            business={{
+              legalName: "YeBetWeg",
+              tin: "",
+              vatRegistered: false,
+              address: "Addis Ababa, Ethiopia",
+            }}
+          />
+        </TabsContent>
+      </Tabs>
 
       <ConfirmActionDialog
         open={reconcileTarget !== null}
