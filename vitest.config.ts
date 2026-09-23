@@ -19,6 +19,8 @@ export default defineConfig({
       ["tests/**/*.tsx", "jsdom"],
       ["tests/**/*dom*.test.ts", "jsdom"],
     ],
+    // CI has no .env; supabase.ts throws at import time without these.
+    setupFiles: ["tests/setup.env.ts"],
     globals: false,
     include: ["tests/**/*.{test,spec}.{ts,tsx,mjs}"],
     // The 0-tests silent pass must never happen again: a suite file whose
