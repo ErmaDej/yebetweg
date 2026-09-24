@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, Minus, FileSpreadsheet, Printer, Landmark } from "lucide-react"
+import { TrendingUp, TrendingDown, Minus, FileSpreadsheet, Printer, Landmark, Loader2, Check } from "lucide-react"
 import { useLanguage } from "@/lib/i18n"
+import { useAppSetting, type TaxProfile } from "@/hooks/useAppSettings"
 
 /**
  * Revenue analytics + Ethiopian tax reporting, computed from the
@@ -50,7 +51,9 @@ type SubRow = {
 type Props = {
   ledger: LedgerRow[]
   subscriptions: SubRow[]
-  business: {
+  /** Deprecated: the tax profile now persists in app_settings; kept for the
+   *  call-site shape while RevenueMonitor migrates off the hard-coded props. */
+  business?: {
     legalName: string
     tin: string
     vatRegistered: boolean
@@ -164,10 +167,40 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
   const { language } = useLanguage()
   const am = language === "am"
   const [period, setPeriod] = useState<string>(() => new Date().toISOString().slice(0, 7))
-  const [tin, setTin] = useState(business.tin)
-  const [legalName, setLegalName] = useState(business.legalName)
-  const [vatRegistered, setVatRegistered] = useState(business.vatRegistered)
-  const [address, setAddress] = useState(business.address)
+
+  // Business identity for the tax report persists per business in
+  // app_settings ('tax_profile') — no more re-typing after every refresh.
+  const {
+    value: taxProfile,
+    setValue: setTaxProfile,
+    save: saveTaxProfile,
+    isLoading: taxLoading,
+  } = useAppSetting<TaxProfile>("tax_profile", {
+    legal_name: business?.legalName ?? "YeBetWeg",
+    tin: business?.tin ?? "",
+    address: business?.address ?? "Addis Ababa, Ethiopia",
+    vat_registered: business?.vatRegistered ?? false,
+  })
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const tin = taxProfile.tin
+  const legalName = taxProfile.legal_name
+  const vatRegistered = taxProfile.vat_registered
+  const address = taxProfile.address
+
+  // Persist 600ms after the last keystroke (debounced) so the report is
+  // always saved without a manual button.
+  useEffect(() => {
+    if (taxLoading) return
+    setSaveState("saving")
+    const t = setTimeout(async () => {
+      const err = await saveTaxProfile(taxProfile)
+      setSaveState(err ? "error" : "saved")
+      setSaveError(err)
+      if (!err) setTimeout(() => setSaveState("idle"), 1500)
+    }, 600)
+    return () => clearTimeout(t)
+  }, [taxProfile, taxLoading, saveTaxProfile])
 
   const stats = useMemo(() => computeMonthlyStats(ledger, subscriptions), [ledger, subscriptions])
   const maxRev = Math.max(1, ...stats.map((s) => s.revenue))
@@ -423,6 +456,11 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Landmark className="h-4 w-4" />
             {am ? "የግብር ዘገባ ማጠቃለያ (የኢትዮጵያ ገቢዎች ሚኒስቴር)" : "Ethiopian revenue / tax period summary"}
+            {saveState === "saving" && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" aria-label={am ? "በማስቀመጥ ላይ" : "Saving"} />}
+            {saveState === "saved" && <Check className="h-3.5 w-3.5 text-primary" aria-label={am ? "ተቀምጧል" : "Saved"} />}
+            {saveState === "error" && (
+              <span className="text-[10px] font-normal text-destructive">{saveError ?? (am ? "ማስቀመጥ አልተቻለም" : "Save failed")}</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -434,15 +472,27 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
             </label>
             <label className="text-xs">
               <span className="mb-1 block text-muted-foreground">{am ? "የተቋሙ ስም" : "Legal name"}</span>
-              <Input value={legalName} onChange={(e) => setLegalName(e.target.value)} className="h-8 text-xs" />
+              <Input
+                value={legalName}
+                onChange={(e) => setTaxProfile({ ...taxProfile, legal_name: e.target.value })}
+                className="h-8 text-xs"
+              />
             </label>
             <label className="text-xs">
               <span className="mb-1 block text-muted-foreground">TIN</span>
-              <Input value={tin} onChange={(e) => setTin(e.target.value)} className="h-8 text-xs" />
+              <Input
+                value={tin}
+                onChange={(e) => setTaxProfile({ ...taxProfile, tin: e.target.value })}
+                className="h-8 text-xs"
+              />
             </label>
             <label className="text-xs">
               <span className="mb-1 block text-muted-foreground">{am ? "አድራሻ" : "Address"}</span>
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} className="h-8 text-xs" />
+              <Input
+                value={address}
+                onChange={(e) => setTaxProfile({ ...taxProfile, address: e.target.value })}
+                className="h-8 text-xs"
+              />
             </label>
           </div>
 
@@ -450,7 +500,7 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
             <input
               type="checkbox"
               checked={vatRegistered}
-              onChange={(e) => setVatRegistered(e.target.checked)}
+              onChange={(e) => setTaxProfile({ ...taxProfile, vat_registered: e.target.checked })}
               className="h-3.5 w-3.5"
             />
             {am

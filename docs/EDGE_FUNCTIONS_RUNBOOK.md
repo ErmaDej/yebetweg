@@ -206,6 +206,38 @@ optional `VAT_REGISTERED=true` function secret if the business is VAT-registered
 pg_cron's `net.http_post` cannot send an `Authorization` header, so the
 in-function `x-cron-key` guard IS the authentication (requests without it get 401).
 
+## 5c. Schedule subscription-lifecycle (daily renewal reminders + win-back)
+
+```sql
+-- SQL Editor, once — replace <CRON_SECRET> with the value saved in §3
+select cron.schedule(
+  'yebetweg-subscription-lifecycle',
+  '0 8 * * *',  -- daily 08:00 UTC
+  $$
+  select net.http_post(
+    url := 'https://jxyavtdmcloxnhuavokc.supabase.co/functions/v1/subscription-lifecycle',
+    headers := jsonb_build_object('Content-Type','application/json','x-lifecycle-key','<CRON_SECRET>'),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+**subscription-lifecycle** emails premium/pro members directly (not admins):
+
+- **Renewal reminder** — active subscriptions expiring within 3 days get a
+  renew-now email quoting the buyer-paid gross (ceil(base/0.98), the
+  pass-through price the member actually pays).
+- **Win-back** — premium/pro whose membership expired 1–14 days ago and who
+  have no active subscription get a come-back email (one per user per cycle).
+- **Idempotency** — every send records a `notifications` row whose
+  `meta->>'dedup_key'` embeds subscription id + expiry, so re-runs and cron
+  retries never double-send for the same cycle; dry-runs (`{"dryRun":true}`)
+  write nothing.
+
+Deploy: `npx supabase functions deploy subscription-lifecycle --no-verify-jwt`
+(same auth reasoning as the digests; its guard header is `x-lifecycle-key`).
+
 ## 6. Verification checks (end-to-end)
 
 **Automated:** `npm run verify:deploy` runs the machine-checkable subset of

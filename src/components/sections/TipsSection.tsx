@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useTips, useTipCategories } from "@/hooks/useTips"
-import { useTipQa, askTipQuestion, answerTipQuestion, deleteTipQuestion, voteTipQa } from "@/hooks/useTipQa"
+import { useTipQa, askTipQuestion, answerTipQuestion, deleteTipQuestion } from "@/hooks/useTipQa"
 import { useAuthContext } from "@/context/AuthContext"
 import { useMarketPrices } from "@/hooks/useMarketPrices"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
@@ -165,7 +165,7 @@ function TipQaDialog({
   onOpenChange: (v: boolean) => void
   qa: ReturnType<typeof useTipQa>
 }) {
-  const { questions, answers, isLoading, error, myUserId, reload } = qa
+  const { questions, answers, isLoading, error, myUserId, reload, applyOptimisticVote } = qa
   const { user } = useAuthContext()
   const isSignedIn = !!user
   // Threaded view: top-level answers and their replies, each sorted by score
@@ -192,7 +192,6 @@ function TipQaDialog({
   const [replyText, setReplyText] = useState("")
   const [replyBusy, setReplyBusy] = useState(false)
   const [replyError, setReplyError] = useState<string | null>(null)
-  const [voteBusy, setVoteBusy] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(0)
 
@@ -246,20 +245,14 @@ function TipQaDialog({
     void reload()
   }
 
+  /** Optimistic: score updates instantly; revert (refetch) only on error. */
   const castVote = async (kind: "question" | "answer", id: string, value: 1 | -1) => {
     if (!isSignedIn) {
       toast.error(am ? "ለመድምፅ ይግቡ።" : "Sign in to vote.")
       return
     }
-    const key = `${kind}:${id}`
-    setVoteBusy(key)
-    const err = await voteTipQa({ kind, id }, value)
-    setVoteBusy(null)
-    if (err) {
-      toast.error(err)
-      return
-    }
-    void reload()
+    const err = await applyOptimisticVote({ kind, id }, value)
+    if (err) toast.error(err)
   }
 
   const removeQuestion = async (questionId: string) => {
@@ -310,7 +303,7 @@ function TipQaDialog({
                       score={q.score}
                       myVote={q.myVote}
                       disabled={!isSignedIn}
-                      busy={voteBusy === `question:${q.id}`}
+                      busy={false}
                       onVote={(v) => void castVote("question", q.id, v)}
                     />
                     <div className="min-w-0 flex-1">
@@ -342,7 +335,7 @@ function TipQaDialog({
                                   score={a.score}
                                   myVote={a.myVote}
                                   disabled={!isSignedIn}
-                                  busy={voteBusy === `answer:${a.id}`}
+                                  busy={false}
                                   onVote={(v) => void castVote("answer", a.id, v)}
                                 />
                                 <div className="min-w-0 flex-1">
@@ -367,7 +360,7 @@ function TipQaDialog({
                                             score={r.score}
                                             myVote={r.myVote}
                                             disabled={!isSignedIn}
-                                            busy={voteBusy === `answer:${r.id}`}
+                                            busy={false}
                                             onVote={(v) => void castVote("answer", r.id, v)}
                                           />
                                           <div className="min-w-0 flex-1">

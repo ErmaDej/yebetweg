@@ -2,9 +2,12 @@
 import { describe, expect, it } from "vitest"
 import {
   CHAPA_FEE_RATE,
+  conservativeFeeRate,
   formatFeeBreakdown,
+  resolveFeeRate,
   splitPaidAmount,
   withCheckoutFee,
+  type FeeConfig,
 } from "@/lib/fees"
 
 const tierPrices = { premium: 500, pro: 1000 } as const
@@ -85,6 +88,36 @@ describe("splitPaidAmount (inverse)", () => {
     expect(splitPaidAmount(100)).toEqual({ base: 98, fee: 2, gross: 100 })
     expect(splitPaidAmount(0)).toEqual({ base: 0, fee: 0, gross: 0 })
     expect(splitPaidAmount(-5).base).toBe(0)
+  })
+})
+
+describe("configurable fee rates", () => {
+  const config: FeeConfig = {
+    default_rate: 0.02,
+    methods: { chapa: 0.02, telebirr: 0.02, chapa_card: 0.01 },
+  }
+
+  it("resolves the per-method rate with default fallback", () => {
+    expect(resolveFeeRate(config, "chapa")).toBe(0.02)
+    expect(resolveFeeRate(config, "chapa_card")).toBe(0.01)
+    expect(resolveFeeRate(config, "unknown_method")).toBe(0.02)
+    expect(resolveFeeRate(null, "chapa")).toBe(CHAPA_FEE_RATE)
+  })
+
+  it("charges at the highest configured rate at initiate time (conservative)", () => {
+    expect(conservativeFeeRate(config)).toBe(0.02)
+    // If cards were MORE expensive, the checkout must charge that higher rate.
+    expect(conservativeFeeRate({ default_rate: 0.01, methods: { chapa_card: 0.03 } })).toBe(0.03)
+    expect(conservativeFeeRate(null)).toBe(CHAPA_FEE_RATE)
+  })
+
+  it("applies a custom rate through the same gross-up math", () => {
+    // ceil(500 / 0.99) = 505.06 for the 1% card rate
+    expect(withCheckoutFee(500, resolveFeeRate(config, "chapa_card"))).toEqual({
+      base: 500,
+      fee: 5.06,
+      gross: 505.06,
+    })
   })
 })
 

@@ -162,6 +162,74 @@ describe("useTipQa data path", () => {
   })
 })
 
+describe("useTipQa optimistic voting", () => {
+  function makeVoteHarness(rpcImpl: () => Promise<unknown>) {
+    const rpc = vi.fn(rpcImpl)
+    let questionFetches = 0
+    const from = vi.fn((table: string) => {
+      if (table === "v_tip_qa_scores") return createQueryBuilder({ data: [], error: null }).builder
+      if (table === "users") return createQueryBuilder({ data: [{ id: "u-me" }], error: null }).builder
+      if (table === "tip_questions") {
+        questionFetches += 1
+        return createQueryBuilder({ data: QUESTIONS, error: null }).builder
+      }
+      if (table === "tip_answers") return createQueryBuilder({ data: ANSWERS, error: null }).builder
+      throw new Error(`unexpected table: ${table}`)
+    })
+    return { rpc, from, getFetches: () => questionFetches }
+  }
+
+  it("patches the score instantly, calls the RPC, and does not refetch on success", async () => {
+    const harness = makeVoteHarness(async () => ({ data: { success: true }, error: null }))
+    mockSupabaseModule({ from: harness.from, rpc: harness.rpc, channel: benignChannel(), removeChannel: vi.fn(async () => {}) } as never)
+    const { useTipQa } = await import("@/hooks/useTipQa")
+    const { result } = renderHook(() => useTipQa("tip1", "auth-1"))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const fetchesBefore = harness.getFetches()
+
+    let err: string | null = null
+    await act(async () => {
+      err = await result.current.applyOptimisticVote({ kind: "question", id: "q1" }, 1)
+    })
+    expect(err).toBeNull()
+    expect(result.current.questions.find((q) => q.id === "q1")?.score).toBe(1)
+    expect(result.current.questions.find((q) => q.id === "q1")?.myVote).toBe(1)
+    expect(harness.rpc).toHaveBeenCalledWith("vote_tip_qa", {
+      p_value: 1,
+      p_question_id: "q1",
+      p_answer_id: null,
+    })
+    expect(harness.getFetches()).toBe(fetchesBefore) // optimistic: no refetch
+
+    // Same value again toggles the vote off.
+    await act(async () => {
+      err = await result.current.applyOptimisticVote({ kind: "question", id: "q1" }, 1)
+    })
+    expect(result.current.questions.find((q) => q.id === "q1")?.score).toBe(0)
+    expect(result.current.questions.find((q) => q.id === "q1")?.myVote).toBeNull()
+  })
+
+  it("reverts to server truth when the RPC fails", async () => {
+    const harness = makeVoteHarness(async () => ({ data: null, error: { message: "db down" } }))
+    mockSupabaseModule({ from: harness.from, rpc: harness.rpc, channel: benignChannel(), removeChannel: vi.fn(async () => {}) } as never)
+    const { useTipQa } = await import("@/hooks/useTipQa")
+    const { result } = renderHook(() => useTipQa("tip1", "auth-1"))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    let err: string | null = null
+    await act(async () => {
+      err = await result.current.applyOptimisticVote({ kind: "answer", id: "a1" }, 1)
+    })
+    expect(err).toBe("db down")
+    // The failure triggers a refetch; server truth has no votes recorded.
+    await waitFor(() => {
+      const a1 = result.current.answers.q2?.find((a) => a.id === "a1")
+      expect(a1?.score).toBe(0)
+      expect(a1?.myVote).toBeNull()
+    })
+  })
+})
+
 describe("useTipQa realtime", () => {
   function makeChannelStub() {
     const handlers: Array<{ table: string; cb: () => void }> = []

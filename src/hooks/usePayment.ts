@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useAuthContext } from "@/context/AuthContext"
 import { useLanguage } from "@/lib/i18n"
 import type {
@@ -9,7 +9,8 @@ import {
   initializeChapaPayment,
   formatAmount,
 } from "@/lib/chapa"
-import { withCheckoutFee } from "@/lib/fees"
+import { withCheckoutFee, conservativeFeeRate, type FeeConfig } from "@/lib/fees"
+import { supabase } from "@/lib/supabase"
 import { useUserProfile } from "@/hooks/useUserProfile"
 
 const TIER_PRICES: Record<PremiumTier, number> = {
@@ -24,6 +25,23 @@ export function usePayment() {
   const { user } = useAuthContext()
   const { profile } = useUserProfile()
   const { language } = useLanguage()
+
+  // Admin-configurable fee rates (app_settings 'fee_config' via the public
+  // get_fee_config() RPC). Falls back to the built-in 2% until loaded or if
+  // the RPC is unavailable.
+  const [feeConfig, setFeeConfig] = useState<FeeConfig | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase.rpc("get_fee_config")
+      if (!cancelled && !error && data && typeof data === "object") {
+        setFeeConfig(data as FeeConfig)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const getUserName = useCallback(() => {
     if (!user?.email) return "User"
@@ -62,9 +80,11 @@ export function usePayment() {
       setError(null)
 
       // Pass-through model: the buyer pays the listed price PLUS a checkout
-      // fee that covers Chapa's transaction fee, so YeBetWeg nets the full
-      // listed price (see src/lib/fees.ts).
-      const { fee, gross } = withCheckoutFee(TIER_PRICES[tier])
+      // fee that covers the gateway's transaction fee, so YeBetWeg nets the
+      // full listed price (see src/lib/fees.ts). The channel isn't known
+      // until Chapa's chooser, so charge with the highest configured rate —
+      // a buyer on a cheaper channel can only over-pay the fee, never under-pay.
+      const { fee, gross } = withCheckoutFee(TIER_PRICES[tier], conservativeFeeRate(feeConfig))
       const amount = gross
       const txRef = generateTxRef()
       const projectUrl = import.meta.env.VITE_SUPABASE_URL || window.location.origin
@@ -117,7 +137,7 @@ export function usePayment() {
         setLoading(false)
       }
     },
-    [user, profile, language, getUserName, generateTxRef],
+    [user, profile, language, getUserName, generateTxRef, feeConfig],
   )
 
   return {
@@ -125,8 +145,10 @@ export function usePayment() {
     error,
     initiatePayment,
     tierPrices: TIER_PRICES,
-    /** Pass-through split of a tier price: { base, fee, gross }. */
-    feeSplitFor: (tier: PremiumTier) => withCheckoutFee(TIER_PRICES[tier]),
+    /** Pass-through split of a tier price at the conservative (highest) rate. */
+    feeSplitFor: (tier: PremiumTier) => withCheckoutFee(TIER_PRICES[tier], conservativeFeeRate(feeConfig)),
+    /** Raw fee configuration from get_fee_config() (null until loaded). */
+    feeConfig,
     formatAmount,
   }
 }

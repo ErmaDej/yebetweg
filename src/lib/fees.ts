@@ -21,6 +21,42 @@ export const CHAPA_FEE_RATE = 0.02
 export const CHAPA_FEE_LABEL_EN = "Checkout fee (payment processing)"
 export const CHAPA_FEE_LABEL_AM = "የመክፈያ አገልግሎት ክፍያ"
 
+/**
+ * Admin-configurable fee rates per payment method (app_settings key
+ * 'fee_config', served to the client by the public get_fee_config() RPC and
+ * applied server-side by checkout_fee_rate(method)).
+ */
+export type FeeConfig = {
+  default_rate: number
+  methods: Record<string, number>
+}
+
+const MAX_FEE_RATE = 0.1
+
+function clampRate(rate: number): number {
+  return Math.min(Math.max(rate, 0), MAX_FEE_RATE)
+}
+
+/** Rate for a specific method; unknown methods fall back to default_rate. */
+export function resolveFeeRate(config: FeeConfig | null, method?: string | null): number {
+  if (!config) return CHAPA_FEE_RATE
+  const m = method ? config.methods?.[method] : undefined
+  if (typeof m === "number") return clampRate(m)
+  if (typeof config.default_rate === "number") return clampRate(config.default_rate)
+  return CHAPA_FEE_RATE
+}
+
+/**
+ * Rate used at initiate time: the buyer's channel isn't known until Chapa's
+ * chooser, so charge with the HIGHEST configured rate — the buyer can then
+ * only over-pay the fee (business windfall), never under-pay.
+ */
+export function conservativeFeeRate(config: FeeConfig | null): number {
+  if (!config) return CHAPA_FEE_RATE
+  const rates = [config.default_rate ?? CHAPA_FEE_RATE, ...Object.values(config.methods ?? {})]
+  return clampRate(Math.max(...rates.filter((r) => typeof r === "number")))
+}
+
 export type FeeSplit = {
   /** Listed price — what the business intends to net. */
   base: number

@@ -120,15 +120,21 @@ Suppliers never touch the web app. They message a Telegram bot:
 
 **Canonical pricing:** premium **500 ETB** / pro **1000 ETB** per 30 days.
 Telebirr exists as a secondary gateway reference field; Chapa is primary
-(Telebirr, CBE Birr, cards via Chapa).
+(Telebirr, CBE Birr, cards via Chapa).**Pass-through rule (Sep 2026):** the buyer pays the listed price **plus a checkout fee** covering the gateway's transaction fee, so YeBetWeg nets the full listed price.
 
-**Pass-through rule (Sep 2026):** the buyer pays the listed price **plus a +2%
-checkout fee** so YeBetWeg nets the full listed price and Chapa's transaction
-fee is covered by the fee, not the margin.
-
-- Gross-up: `gross = ceil(base / 0.98)` (single source of truth in
+- **Fee rates are configurable per payment method** (app_settings key
+  `fee_config`, admin-editable; served to the client by the public
+  `get_fee_config()` RPC and applied server-side by `checkout_fee_rate(method)`):
+  `chapa`/`telebirr` default to 2%, `chapa_card` (international cards) to 1% by
+  default — EDIT these to the actual Chapa contract schedule. Unknown methods
+  fall back to `default_rate`; rates clamp to [0, 10%).
+- **Charging rule:** at initiate time the buyer's channel isn't known yet
+  (Chapa shows the channel chooser), so the checkout computes the gross with
+  the **highest configured rate** — a buyer on a cheaper channel can only
+  over-pay the fee slightly (business windfall), never under-pay.
+- Gross-up: `gross = ceil(base / (1 − rate))` (single source of truth in
   `src/lib/fees.ts` `withCheckoutFee` and SQL `checkout_fee_split` — identical
-  math). 500 → **510.21**, 1000 → **1020.41**.
+  math). At 2%: 500 → **510.21**, 1000 → **1020.41**.
 - The checkout UI shows the split (price + fee = total) before payment.
 - Ledger semantics on `subscription_payments`: `amount` = buyer-paid gross,
   `base_amount` = net revenue (tax base), `gateway_fee` = fee covering Chapa.
@@ -158,6 +164,11 @@ fee is covered by the fee, not the margin.
    the ledger row `reconciled_by/at` with a note, and writes moderation_log.
 5. Weekly `revenue-digest` edge function emails (Resend) the owners: net
    revenue MoM, buyer-paid gross, fees, tax context, pending activations.
+6. **Lifecycle emails** (`subscription-lifecycle` edge function, daily cron):
+   renewal reminders to actives expiring within 3 days and win-back emails to
+   members expired 1–14 days ago with no active subscription — idempotent per
+   cycle via `notifications.meta->>'dedup_key'` (no double-sends; dry-runs
+   write nothing). See docs/EDGE_FUNCTIONS_RUNBOOK.md §5c.
 
 **Cancellation/refunds:** none self-service; expiry is time-based
 (30 days); admins manage everything manually.
@@ -304,6 +315,10 @@ one answer per user per question (unique index); **premium/pro answerers get
 2. **Everything financial is ledgered** with idempotency keys (payment
    references) and is reconcilable against Chapa statements (gross = what
    Chapa received).
+2b. **The tax report's business identity (legal name, TIN, address,
+   VAT-registered flag) persists in `app_settings` key `tax_profile`**
+   (admin-only KV, seeded with defaults, auto-saved from RevenueAnalytics) —
+   never re-typed after a refresh.
 3. **Everything destructive is audited** (moderation_log) and confirmed in
    the UI (ConfirmActionDialog).
 4. **Spam/abuse controls are rate-limit + heuristic based, inside the RPCs**,

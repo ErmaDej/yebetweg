@@ -567,16 +567,7 @@ export function RevenueMonitor() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
-          <RevenueAnalytics
-            ledger={rows}
-            subscriptions={subs}
-            business={{
-              legalName: "YeBetWeg",
-              tin: "",
-              vatRegistered: false,
-              address: "Addis Ababa, Ethiopia",
-            }}
-          />
+          <RevenueAnalytics ledger={rows} subscriptions={subs} />
         </TabsContent>
       </Tabs>
 

@@ -21,6 +21,7 @@ import { MarketPriceManager } from "@/components/admin/MarketPriceManager"
 import { TelegramPriceQueue } from "@/components/admin/TelegramPriceQueue"
 import { RfqManager } from "@/components/admin/RfqManager"
 import { TipQaModeration } from "@/components/admin/TipQaModeration"
+import { ModerationLogView } from "@/components/admin/ModerationLogView"
 import { RevenueMonitor } from "@/components/admin/RevenueMonitor"
 
 type AdminMetricKey =
@@ -636,6 +637,10 @@ export function AdminDashboardTab() {
 
       <ExpandableSection title={language === "en" ? "Tip Q&A Moderation" : "የምክሮች ጥያቄና መልስ ሞደራሲዮን"} defaultOpen={false}>
         <TipQaModeration />
+      </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "Moderation Audit Log" : "የሞደራሲዮን መዝገብ"} defaultOpen={false}>
+        <ModerationLogView />
       </ExpandableSection>
 
       <ExpandableSection title={language === "en" ? "User Management" : "ተጠቃሚ አስተዳደር"} defaultOpen={false}>

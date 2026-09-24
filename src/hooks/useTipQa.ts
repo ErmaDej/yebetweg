@@ -257,7 +257,56 @@ export function useTipQa(
     }
   }, [tipId])
 
-  return { questions, answers, isLoading, error, myUserId, reload: load }
+  /**
+   * Optimistic vote: patches the local score/myVote immediately (add, flip,
+   * or toggle-off), fires the RPC, and only on failure refetches to revert.
+   * On success no refetch is needed — the optimistic state IS the server
+   * state; other users' votes arrive via the realtime channel.
+   */
+  const applyOptimisticVote = useCallback(
+    async (
+      target: { kind: "question" | "answer"; id: string },
+      value: 1 | -1,
+    ): Promise<string | null> => {
+      const patch = (
+        prevScore: number,
+        prevVote: 1 | -1 | null,
+      ): { score: number; myVote: 1 | -1 | null } => {
+        if (prevVote === value) return { score: prevScore - value, myVote: null }
+        if (prevVote === null) return { score: prevScore + value, myVote: value }
+        return { score: prevScore + 2 * value, myVote: value }
+      }
+
+      if (target.kind === "question") {
+        setQuestions((qs) =>
+          qs.map((q) => {
+            if (q.id !== target.id) return q
+            const next = patch(q.score, q.myVote)
+            return { ...q, score: next.score, myVote: next.myVote }
+          }),
+        )
+      } else {
+        setAnswers((map) => {
+          const nextMap: Record<string, TipAnswer[]> = {}
+          for (const [qid, list] of Object.entries(map)) {
+            nextMap[qid] = sortAnswers(
+              list.map((a) =>
+                a.id === target.id ? { ...a, ...patch(a.score, a.myVote) } : a,
+              ),
+            )
+          }
+          return nextMap
+        })
+      }
+
+      const err = await voteTipQa(target, value)
+      if (err) void load() // revert from server truth
+      return err
+    },
+    [load],
+  )
+
+  return { questions, answers, isLoading, error, myUserId, reload: load, applyOptimisticVote }
 }
 
 /** Ask a question via the capped RPC. Returns error message or null on success. */
