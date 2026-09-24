@@ -191,7 +191,8 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# 2/hour throttles real signups — raised for launch (dashboard: Auth → Rate Limits).
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -218,7 +219,9 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# Matches the LIVE project (mailer_autoconfirm=false) — the signup flow and
+# /auth/callback page depend on this staying true.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -227,6 +230,15 @@ max_frequency = "1s"
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
+
+# Branded confirmation email (bilingual EN/አማርኛ, links to /auth/callback and
+# offers a 6-digit code fallback). On the HOSTED project this template must be
+# pasted into Dashboard → Authentication → Emails → Templates → "Confirm
+# signup" (config.toml templates only apply to local dev). Source of truth:
+# docs/VERCEL_LAUNCH_CHECKLIST.md §9.
+[auth.email.template.confirmation]
+subject = "Confirm your email — YeBetWeg"
+content_path = "./supabase/templates/confirmation.html"
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]

@@ -67,6 +67,10 @@ UI blur is progressive enhancement, not protection.
   google/facebook) + a custom RPC layer (`authenticate_user`, `login`) that
   validates against the users table (`status='active'` required). On first
   login, `ensure_auth_user_profile` creates the users-table row (`role='user'`).
+- **Email confirmation is required** (`mailer_autoconfirm` off): signup sends a
+  branded bilingual confirmation email that links to `/auth/callback` (with a
+  6-digit code fallback) and redirects into the app on success — see
+  docs/VERCEL_LAUNCH_CHECKLIST.md §8 for the dashboard configuration.
 - **Login hardening:** `record_login_attempt` + `check_login_rate_limit`
   (login_attempts table) throttle brute force; failed logins are logged.
 - **Roles are not self-service.** Signup always creates `role='user'`.

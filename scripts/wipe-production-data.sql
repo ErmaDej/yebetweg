@@ -44,6 +44,12 @@ delete from public.subscription_payments;
 delete from public.premium_subscriptions;
 delete from public.payment_webhook_events;
 delete from public.login_attempts;
+delete from public.moderation_log;
+
+-- Tip Q&A (votes before answers, answers before questions — FK order)
+delete from public.tip_qa_votes;
+delete from public.tip_answers;
+delete from public.tip_questions;
 
 -- ----------------------------------------------------------------------------
 -- 2) Marketplace + content + market data
@@ -66,6 +72,19 @@ delete from public.subscribers;
 -- ----------------------------------------------------------------------------
 delete from public.users;
 -- delete from public.users where role <> 'admin';  -- variant: keep admins
+
+-- ----------------------------------------------------------------------------
+-- 4) Supabase Auth accounts (auth.users)
+--    The app signs members up through supabase.auth.signUp, so every tester
+--    has BOTH a public.users row and an auth.users row (public.users.auth_uid
+--    points at it — no FK, so order doesn't matter, but delete after users
+--    for a consistent story). Admins created via fix-admin-login.sql also
+--    live here. Deleting from auth.users requires the service-role/postgres
+--    role — the SQL Editor's postgres role owns the schema and may do it.
+--    Comment this out if you want to keep every auth identity.
+-- ----------------------------------------------------------------------------
+delete from auth.users;
+-- delete from auth.users where email not like '%@yebetweg.com';  -- variant: keep staff
 
 commit;
 
@@ -95,6 +114,11 @@ union all select 'site_logs', count(*) from public.site_logs
 union all select 'saved_collections', count(*) from public.saved_collections
 union all select 'subscribers', count(*) from public.subscribers
 union all select 'login_attempts', count(*) from public.login_attempts
+union all select 'moderation_log', count(*) from public.moderation_log
+union all select 'tip_questions', count(*) from public.tip_questions
+union all select 'tip_answers', count(*) from public.tip_answers
+union all select 'tip_qa_votes', count(*) from public.tip_qa_votes
+union all select 'auth.users', count(*) from auth.users
 order by rows_left desc;
 
 -- ============================================================================
@@ -113,10 +137,20 @@ order by rows_left desc;
 --   delete from public.rfq_requests;
 --   delete from public.inquiries;
 --
--- Auth note: YeBetWeg uses custom DB auth (public.users), so Supabase's
--- auth.users is normally empty. If you ever enabled Supabase Auth accounts,
--- clear them separately (Dashboard → Authentication → Users) — do NOT
--- touch auth.users from this script.
+-- Auth note (UPDATED): members sign up through Supabase Auth, so auth.users
+-- is NOT empty — section 4 of the main script clears it alongside public.users.
+-- Clear them together or not at all: an auth.users row without its
+-- public.users counterpart breaks the login trigger/RPC expectations.
+--
+-- PRESERVED BY DESIGN (do NOT add these to the wipe):
+--   • public.app_settings — holds 'cron_secret' (all four HTTP cron jobs read
+--     it at fire time via current_cron_secret()) and 'fee_config' (checkout
+--     fee rates). Wiping it silently breaks billing math and scheduled emails.
+--     If you truly want to reset the tax profile only:
+--       delete from public.app_settings where key = 'tax_profile';
+--   • Edge-function secrets (CRON_SECRET, RESEND_API_KEY, CHAPA_*, ...) —
+--     they live in the platform, not the database; rotate them instead
+--     (docs/VERCEL_LAUNCH_CHECKLIST.md §7).
 --
 -- Sequence note: id sequences continue from their current values after a
 -- DELETE (harmless; ids are not sequential-sensitive anywhere). If you want

@@ -13,6 +13,11 @@ export function AuthCallbackPage() {
   const { clearError } = useAuthContext()
   const [message, setMessage] = useState("Processing authentication...")
   const [error, setError] = useState<string | null>(null)
+  // Fallback for email clients that strip link buttons: the user pastes the
+  // 6-digit code from the confirmation email here instead.
+  const [showCodeForm, setShowCodeForm] = useState(false)
+  const [code, setCode] = useState("")
+  const [codeEmail, setCodeEmail] = useState("")
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -23,6 +28,13 @@ export function AuthCallbackPage() {
         const type = params.get("type")
 
         if (!token || !type) {
+          // No token in the URL: offer the code-entry fallback rather than
+          // bouncing the user home.
+          if (!token) {
+            setShowCodeForm(true)
+            setMessage("Enter the 6-digit code from your confirmation email")
+            return
+          }
           setError("Invalid or missing authentication parameters")
           setTimeout(() => window.location.href = "/", 3000)
           return
@@ -89,6 +101,65 @@ export function AuthCallbackPage() {
 
     handleAuthCallback()
   }, [clearError])
+
+  async function handleCodeSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    try {
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email: codeEmail.trim(),
+        token: code.trim(),
+        type: "signup",
+      })
+      if (otpError) {
+        setError(otpError.message || "Invalid or expired code")
+        return
+      }
+      setMessage("Email verified successfully! Redirecting...")
+      clearError()
+      setTimeout(() => window.location.href = "/dashboard", 1200)
+    } catch {
+      setError("An unexpected error occurred")
+    }
+  }
+
+  if (showCodeForm) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <form onSubmit={handleCodeSubmit} className="text-center space-y-4 w-full max-w-sm px-4">
+          <h1 className="text-3xl font-bold text-foreground">YeBetWeg</h1>
+          <p className="text-muted-foreground">Enter the 6-digit code from your confirmation email.</p>
+          <input
+            type="email"
+            required
+            value={codeEmail}
+            onChange={(e) => setCodeEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            required
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="6-digit code"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-center text-lg tracking-[0.4em]"
+          />
+          {error && <div className="text-red-500 text-sm font-semibold">{error}</div>}
+          {message && !error && <div className="text-muted-foreground text-sm">{message}</div>}
+          <button
+            type="submit"
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
+            Verify my email
+          </button>
+        </form>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
