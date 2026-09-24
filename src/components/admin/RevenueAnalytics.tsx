@@ -27,6 +27,8 @@ import { useLanguage } from "@/lib/i18n"
 
 type LedgerRow = {
   amount: number | null
+  base_amount?: number | null
+  gateway_fee?: number | null
   currency: string | null
   method: string | null
   reference: string | null
@@ -101,7 +103,9 @@ export function computeMonthlyStats(ledger: LedgerRow[], subs: SubRow[]): Monthl
     if (r.status !== "completed") continue
     const k = monthKey(r.created_at)
     const cur = revenue.get(k) ?? { total: 0, count: 0 }
-    revenue.set(k, { total: cur.total + Number(r.amount ?? 0), count: cur.count + 1 })
+    // Net revenue (base_amount): what YeBetWeg keeps after the pass-through
+    // checkout fee. Falls back to amount for legacy rows without the split.
+    revenue.set(k, { total: cur.total + Number(r.base_amount ?? r.amount ?? 0), count: cur.count + 1 })
   }
 
   // Subscriber movement per month: new subs by starts_at/created_at, churned by
@@ -176,15 +180,25 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
     const inPeriod = ledger.filter(
       (r) => r.status === "completed" && monthKey(r.created_at) === period,
     )
+    // Pass-through model: the buyer-paid gross includes the checkout fee that
+    // covers Chapa. The business's taxable sales figure is the NET revenue
+    // (base_amount) — the fee is a processing cost, not income.
     const gross = inPeriod.reduce((a, r) => a + Number(r.amount ?? 0), 0)
+    const fees = inPeriod.reduce((a, r) => a + Number(r.gateway_fee ?? 0), 0)
+    const netRevenue = inPeriod.reduce(
+      (a, r) => a + Number(r.base_amount ?? r.amount ?? 0),
+      0,
+    )
     // Canonical pricing is VAT-inclusive at face value; if VAT-registered,
-    // separate output VAT (15/115 of the gross) and show net sales.
-    const vat = vatRegistered ? gross - gross / (1 + VAT_RATE) : 0
-    const net = gross - vat
-    const tot = !vatRegistered ? net * TOT_RATE : 0
+    // separate output VAT (15/115 of the net revenue) and show net sales.
+    const vat = vatRegistered ? netRevenue - netRevenue / (1 + VAT_RATE) : 0
+    const net = netRevenue - vat
+    const tot = !vatRegistered ? netRevenue * TOT_RATE : 0
     return {
       payments: inPeriod.length,
       gross,
+      fees,
+      netRevenue,
       vat,
       net,
       tot,
@@ -206,24 +220,29 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
     }
     const header = [
       "tax_period", "legal_name", "tin", "address", "vat_registered",
-      "payment_date", "reference", "tier", "method", "gross_etb",
+      "payment_date", "reference", "tier", "method",
+      "buyer_paid_etb", "checkout_fee_etb", "net_revenue_etb",
       "output_vat_etb", "net_sales_etb", "tot_etb",
     ]
     const lines = periodRows.map((r) => {
-      const gross = Number(r.amount ?? 0)
-      const vat = vatRegistered ? gross - gross / (1 + VAT_RATE) : 0
-      const net = gross - vat
-      const tot = !vatRegistered ? net * TOT_RATE : 0
+      const buyerPaid = Number(r.amount ?? 0)
+      const fee = Number(r.gateway_fee ?? 0)
+      const netRev = Number(r.base_amount ?? buyerPaid - fee)
+      const vat = vatRegistered ? netRev - netRev / (1 + VAT_RATE) : 0
+      const net = netRev - vat
+      const tot = !vatRegistered ? netRev * TOT_RATE : 0
       return [
         period, legalName, tin, address, vatRegistered ? "yes" : "no",
         new Date(r.created_at).toISOString(), r.reference ?? "",
         String(r.metadata?.tier ?? ""), r.method ?? "",
-        gross.toFixed(2), vat.toFixed(2), net.toFixed(2), tot.toFixed(2),
+        buyerPaid.toFixed(2), fee.toFixed(2), netRev.toFixed(2),
+        vat.toFixed(2), net.toFixed(2), tot.toFixed(2),
       ].map(esc).join(",")
     })
     const totals = [
-      `TOTALS,,,,,,${periodRows.length} payments,,,`,
-      `${periodRows.reduce((a, r) => a + Number(r.amount ?? 0), 0).toFixed(2)}`,
+      `TOTALS,,,,,,${periodRows.length} payments,,,,`,
+      `${taxSummary.gross.toFixed(2)}`, `${taxSummary.fees.toFixed(2)}`,
+      `${taxSummary.netRevenue.toFixed(2)}`,
       taxSummary.vat.toFixed(2), taxSummary.net.toFixed(2), taxSummary.tot.toFixed(2),
     ].join(",")
     const blob = new Blob(["\uFEFF" + [header.join(","), ...lines, totals].join("\n")], {
@@ -242,14 +261,21 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
     if (!win) return
     const rows = periodRows
       .map(
-        (r) => `<tr>
+        (r) => {
+          const buyerPaid = Number(r.amount ?? 0)
+          const fee = Number(r.gateway_fee ?? 0)
+          const netRev = Number(r.base_amount ?? buyerPaid - fee)
+          return `<tr>
           <td>${new Date(r.created_at).toLocaleDateString()}</td>
           <td>${r.reference ?? ""}</td>
           <td>${r.metadata?.tier ?? ""}</td>
-          <td style="text-align:right">${Number(r.amount ?? 0).toFixed(2)}</td>
-          <td style="text-align:right">${(vatRegistered ? Number(r.amount ?? 0) - Number(r.amount ?? 0) / (1 + VAT_RATE) : 0).toFixed(2)}</td>
-          <td style="text-align:right">${(!vatRegistered ? Number(r.amount ?? 0) * TOT_RATE : 0).toFixed(2)}</td>
-        </tr>`,
+          <td style="text-align:right">${buyerPaid.toFixed(2)}</td>
+          <td style="text-align:right">${fee.toFixed(2)}</td>
+          <td style="text-align:right">${netRev.toFixed(2)}</td>
+          <td style="text-align:right">${(vatRegistered ? netRev - netRev / (1 + VAT_RATE) : 0).toFixed(2)}</td>
+          <td style="text-align:right">${(!vatRegistered ? netRev * TOT_RATE : 0).toFixed(2)}</td>
+        </tr>`
+        },
       )
       .join("")
     win.document.write(`<!doctype html><html><head><title>Tax summary ${period}</title>
@@ -272,13 +298,17 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
       </div>
       <h2>Payments in period (${rows.length})</h2>
       <table><thead><tr><th>Date</th><th>Reference</th><th>Tier</th>
-        <th style="text-align:right">Gross ETB</th>
+        <th style="text-align:right">Buyer paid (gross ETB)</th>
+        <th style="text-align:right">Checkout fee</th>
+        <th style="text-align:right">Net revenue ETB</th>
         <th style="text-align:right">Output VAT</th>
         <th style="text-align:right">ToT</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot class="totals"><tr>
         <td colspan="3">Totals</td>
         <td style="text-align:right">${taxSummary.gross.toFixed(2)}</td>
+        <td style="text-align:right">${taxSummary.fees.toFixed(2)}</td>
+        <td style="text-align:right">${taxSummary.netRevenue.toFixed(2)}</td>
         <td style="text-align:right">${taxSummary.vat.toFixed(2)}</td>
         <td style="text-align:right">${taxSummary.tot.toFixed(2)}</td>
       </tr></tfoot></table>
@@ -428,7 +458,7 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
               : "VAT-registered (15% output VAT) — if unchecked, Turnover Tax 2% applies instead"}
           </label>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <div className="rounded-lg border border-border/60 p-3">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
                 {am ? "ክፍያዎች" : "Payments"}
@@ -437,15 +467,27 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
             </div>
             <div className="rounded-lg border border-border/60 p-3">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {am ? "ንጹህ ሽያጭ" : "Net sales"}
+                {am ? "በተጠቃሚ የተከፈለ" : "Buyer paid (gross)"}
               </p>
-              <p className="text-lg font-bold">{fmtETB(taxSummary.net)}</p>
+              <p className="text-lg font-bold">{fmtETB(taxSummary.gross)}</p>
             </div>
             <div className="rounded-lg border border-border/60 p-3">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {vatRegistered ? (am ? "የወጪ ቫት 15%" : "Output VAT 15%") : am ? "የንብርት ታክስ" : "—"}
+                {am ? "የመክፈያ ክፍያ" : "Checkout fees"}
               </p>
-              <p className="text-lg font-bold">{fmtETB(taxSummary.vat)}</p>
+              <p className="text-lg font-bold text-muted-foreground">−{fmtETB(taxSummary.fees)}</p>
+            </div>
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-primary">
+                {am ? "ንጹህ ገቢ (የግብር መሰረት)" : "Net revenue (tax base)"}
+              </p>
+              <p className="text-lg font-bold text-primary">{fmtETB(taxSummary.netRevenue)}</p>
+            </div>
+            <div className="rounded-lg border border-border/60 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                {am ? "ካለ ቫት ሽያጭ" : "Sales excl. VAT"}
+              </p>
+              <p className="text-lg font-bold">{fmtETB(taxSummary.net)}</p>
             </div>
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
               <p className="text-[10px] uppercase tracking-wide text-amber-700">{taxSummary.dueLabel}</p>
@@ -466,7 +508,7 @@ export function RevenueAnalytics({ ledger, subscriptions, business }: Props) {
           <p className="text-[10px] leading-relaxed text-muted-foreground">
             {am
               ? "ከሰርተፍኬሽን ክፍያ መዝገብ የተሰላ ማጠቃለያ ብቻ ነው — ከመክፈል በፊት ከኦፊሴላዊ መጽሐፍትዎ ያረጋግጡ።"
-              : "Computed summary from the subscription ledger only — reconcile against your official books before filing with the Ministry of Revenue. VAT per Proclamation 285/2002; ToT per Proclamation 308/2002."}
+              : "Computed summary from the subscription ledger only — reconcile against your official books before filing with the Ministry of Revenue. VAT per Proclamation 285/2002; ToT per Proclamation 308/2002. Under the pass-through model, buyers pay a +2% checkout fee covering the Chapa transaction fee; the tax base is the NET revenue the business keeps, not the buyer-paid gross."}
           </p>
         </CardContent>
       </Card>

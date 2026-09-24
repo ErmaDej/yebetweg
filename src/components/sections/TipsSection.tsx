@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX, MessageCircleQuestion, BadgeCheck, Send, Loader2, Trash2 } from "lucide-react"
+import { Shield, FlaskConical, Clock, ArrowDownToLine, Paintbrush, Droplets, Zap, Wrench, Palette, HardHat, Lock, SearchX, MessageCircleQuestion, BadgeCheck, Send, Loader2, Trash2, ArrowBigUp, ArrowBigDown, Reply } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
@@ -20,12 +20,13 @@ import {
 } from "@/components/ui/pagination"
 import { useLanguage } from "@/lib/i18n"
 import { useTips, useTipCategories } from "@/hooks/useTips"
-import { useTipQa, askTipQuestion, answerTipQuestion, deleteTipQuestion } from "@/hooks/useTipQa"
+import { useTipQa, askTipQuestion, answerTipQuestion, deleteTipQuestion, voteTipQa } from "@/hooks/useTipQa"
 import { useAuthContext } from "@/context/AuthContext"
 import { useMarketPrices } from "@/hooks/useMarketPrices"
 import { SmartSearchBar } from "@/components/search/SmartSearchBar"
 import { useInView } from "@/hooks/useInView"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import type { PremiumTier } from "@/types/payment"
 
 const TIPS_PER_PAGE = 9
@@ -95,9 +96,62 @@ function TipQaTeaser({
   )
 }
 
+/** Compact up/down vote widget for questions and answers (sign-in gated). */
+function VoteWidget({
+  am,
+  score,
+  myVote,
+  disabled,
+  busy,
+  onVote,
+}: {
+  am: boolean
+  score: number
+  myVote: 1 | -1 | null
+  disabled: boolean
+  busy: boolean
+  onVote: (value: 1 | -1) => void
+}) {
+  const btnBase = "rounded transition-colors disabled:opacity-40 "
+  return (
+    <div className="flex w-7 shrink-0 flex-col items-center gap-0" aria-label={am ? "ድምፅ" : "Votes"}>
+      <button
+        type="button"
+        disabled={disabled || busy}
+        aria-pressed={myVote === 1}
+        aria-label={am ? "አዎንታዊ ድምፅ" : "Upvote"}
+        className={`${btnBase}${myVote === 1 ? "text-primary" : "text-muted-foreground/50 hover:text-primary"}`}
+        onClick={() => onVote(1)}
+      >
+        <ArrowBigUp className={`h-4 w-4 ${myVote === 1 ? "fill-primary" : ""}`} />
+      </button>
+      <span
+        className={`text-[11px] font-semibold tabular-nums ${
+          score > 0 ? "text-primary" : score < 0 ? "text-destructive" : "text-muted-foreground"
+        }`}
+        aria-live="polite"
+      >
+        {score}
+      </span>
+      <button
+        type="button"
+        disabled={disabled || busy}
+        aria-pressed={myVote === -1}
+        aria-label={am ? "አሉታዊ ድምፅ" : "Downvote"}
+        className={`${btnBase}${myVote === -1 ? "text-destructive" : "text-muted-foreground/50 hover:text-destructive"}`}
+        onClick={() => onVote(-1)}
+      >
+        <ArrowBigDown className={`h-4 w-4 ${myVote === -1 ? "fill-destructive" : ""}`} />
+      </button>
+    </div>
+  )
+}
+
 /** Full Q&A thread for one tip, in a modal dialog: header with count, scrollable
  *  question list (all questions, no card-space limits), sticky ask form. Realtime
- *  updates flow through the shared useTipQa instance owned by TipCard. */
+ *  updates flow through the shared useTipQa instance owned by TipCard.
+ *  Threading: answers may reply to a top-level answer (one nesting level);
+ *  questions and answers are up/down-votable (votes toggle via the RPC). */
 function TipQaDialog({
   tip,
   am,
@@ -112,6 +166,21 @@ function TipQaDialog({
   qa: ReturnType<typeof useTipQa>
 }) {
   const { questions, answers, isLoading, error, myUserId, reload } = qa
+  const { user } = useAuthContext()
+  const isSignedIn = !!user
+  // Threaded view: top-level answers and their replies, each sorted by score
+  // (desc) then newest. `answers` is grouped by question_id and score-sorted.
+  const repliesByParent = useMemo(() => {
+    const map: Record<string, typeof answers[string]> = {}
+    for (const list of Object.values(answers)) {
+      for (const a of list) {
+        if (a.parent_answer_id) {
+          map[a.parent_answer_id] = [...(map[a.parent_answer_id] ?? []), a]
+        }
+      }
+    }
+    return map
+  }, [answers])
   const [askText, setAskText] = useState("")
   const [askBusy, setAskBusy] = useState(false)
   const [askError, setAskError] = useState<string | null>(null)
@@ -119,6 +188,11 @@ function TipQaDialog({
   const [answerText, setAnswerText] = useState("")
   const [answerBusy, setAnswerBusy] = useState(false)
   const [answerError, setAnswerError] = useState<string | null>(null)
+  const [replyFor, setReplyFor] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState("")
+  const [replyBusy, setReplyBusy] = useState(false)
+  const [replyError, setReplyError] = useState<string | null>(null)
+  const [voteBusy, setVoteBusy] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(0)
 
@@ -155,6 +229,36 @@ function TipQaDialog({
     }
     setAnswerFor(null)
     setAnswerText("")
+    void reload()
+  }
+
+  const submitReply = async (questionId: string, parentAnswerId: string) => {
+    setReplyBusy(true)
+    setReplyError(null)
+    const err = await answerTipQuestion(questionId, replyText, parentAnswerId)
+    setReplyBusy(false)
+    if (err) {
+      setReplyError(err)
+      return
+    }
+    setReplyFor(null)
+    setReplyText("")
+    void reload()
+  }
+
+  const castVote = async (kind: "question" | "answer", id: string, value: 1 | -1) => {
+    if (!isSignedIn) {
+      toast.error(am ? "ለመድምፅ ይግቡ።" : "Sign in to vote.")
+      return
+    }
+    const key = `${kind}:${id}`
+    setVoteBusy(key)
+    const err = await voteTipQa({ kind, id }, value)
+    setVoteBusy(null)
+    if (err) {
+      toast.error(err)
+      return
+    }
     void reload()
   }
 
@@ -200,72 +304,165 @@ function TipQaDialog({
             <ul className="space-y-3">
               {questions.map((q) => (
                 <li key={q.id} className="rounded-md bg-muted/40 p-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-medium leading-snug">{q.question}</p>
-                    {myUserId && q.user_id === myUserId && (
-                      <button
-                        type="button"
-                        aria-label={am ? "ጥያቄ ሰርዝ" : "Delete question"}
-                        className="shrink-0 text-muted-foreground/50 hover:text-destructive"
-                        onClick={() => void removeQuestion(q.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground/70">
-                    {q.asker_name || (am ? "አባል" : "Member")}
-                  </p>
-                  {(answers[q.id]?.length ?? 0) > 0 && (
-                    <ul className="mt-2 space-y-1.5 border-l-2 border-primary/30 pl-2.5">
-                      {answers[q.id].map((a) => (
-                        <li key={a.id}>
-                          <p className="text-xs text-muted-foreground leading-snug">
-                            {a.answer}
-                            {a.is_expert && (
-                              <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[10px] font-semibold text-accent">
-                                <BadgeCheck className="h-3 w-3" />
-                                {am ? "የአማካሪ መልስ" : "Expert answer"}
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground/60">{a.answerer_name || (am ? "አባል" : "Member")}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {answerFor === q.id ? (
-                    <div className="mt-2">
-                      <textarea
-                        autoFocus
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        maxLength={2000}
-                        rows={2}
-                        aria-label={am ? "መልስዎ" : "Your answer"}
-                        placeholder={am ? "መልስዎን ይጻፉ…" : "Write your answer…"}
-                        className="w-full rounded-md border border-border bg-background p-2 text-xs"
-                      />
-                      {answerError && <p className="mt-1 text-[10px] text-destructive">{answerError}</p>}
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => void submitAnswer(q.id)}>
-                          {answerBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                          {am ? "ላክ" : "Post"}
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => { setAnswerFor(null); setAnswerText(""); setAnswerError(null) }}>
-                          {am ? "ተወው" : "Cancel"}
-                        </Button>
+                  <div className="flex items-start gap-2">
+                    <VoteWidget
+                      am={am}
+                      score={q.score}
+                      myVote={q.myVote}
+                      disabled={!isSignedIn}
+                      busy={voteBusy === `question:${q.id}`}
+                      onVote={(v) => void castVote("question", q.id, v)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-medium leading-snug">{q.question}</p>
+                        {myUserId && q.user_id === myUserId && (
+                          <button
+                            type="button"
+                            aria-label={am ? "ጥያቄ ሰርዝ" : "Delete question"}
+                            className="shrink-0 text-muted-foreground/50 hover:text-destructive"
+                            onClick={() => void removeQuestion(q.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                        {q.asker_name || (am ? "አባል" : "Member")}
+                      </p>
+                      {(answers[q.id]?.length ?? 0) > 0 && (
+                        <ul className="mt-2 space-y-2 border-l-2 border-primary/30 pl-2.5">
+                          {answers[q.id]
+                            .filter((a) => !a.parent_answer_id)
+                            .map((a) => (
+                            <li key={a.id}>
+                              <div className="flex items-start gap-1.5">
+                                <VoteWidget
+                                  am={am}
+                                  score={a.score}
+                                  myVote={a.myVote}
+                                  disabled={!isSignedIn}
+                                  busy={voteBusy === `answer:${a.id}`}
+                                  onVote={(v) => void castVote("answer", a.id, v)}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs text-muted-foreground leading-snug">
+                                    {a.answer}
+                                    {a.is_expert && (
+                                      <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[10px] font-semibold text-accent">
+                                        <BadgeCheck className="h-3 w-3" />
+                                        {am ? "የአማካሪ መልስ" : "Expert answer"}
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground/60">{a.answerer_name || (am ? "አባል" : "Member")}</p>
+
+                                  {/* Threaded replies to this answer (one nesting level) */}
+                                  {(repliesByParent[a.id]?.length ?? 0) > 0 && (
+                                    <ul className="mt-1.5 space-y-1.5 border-l-2 border-border/60 pl-2">
+                                      {repliesByParent[a.id].map((r) => (
+                                        <li key={r.id} className="flex items-start gap-1.5">
+                                          <VoteWidget
+                                            am={am}
+                                            score={r.score}
+                                            myVote={r.myVote}
+                                            disabled={!isSignedIn}
+                                            busy={voteBusy === `answer:${r.id}`}
+                                            onVote={(v) => void castVote("answer", r.id, v)}
+                                          />
+                                          <div className="min-w-0 flex-1">
+                                            <p className="flex flex-wrap items-center gap-1 text-[10px] font-medium text-muted-foreground/80">
+                                              <Reply className="h-3 w-3" />
+                                              {r.answerer_name || (am ? "አባል" : "Member")}
+                                              {r.is_expert && (
+                                                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-accent">
+                                                  <BadgeCheck className="h-2.5 w-2.5" />
+                                                  {am ? "አማካሪ" : "Expert"}
+                                                </span>
+                                              )}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground leading-snug">{r.answer}</p>
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+
+                                  {replyFor === a.id ? (
+                                    <div className="mt-1.5">
+                                      <textarea
+                                        autoFocus
+                                        value={replyText}
+                                        onChange={(e) => setReplyText(e.target.value)}
+                                        maxLength={2000}
+                                        rows={2}
+                                        aria-label={am ? "መልስዎ" : "Your reply"}
+                                        placeholder={am ? "መልስዎን ይጻፉ…" : "Write your reply…"}
+                                        className="w-full rounded-md border border-border bg-background p-2 text-xs"
+                                      />
+                                      {replyError && <p className="mt-1 text-[10px] text-destructive">{replyError}</p>}
+                                      <div className="mt-1 flex items-center gap-1.5">
+                                        <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" disabled={replyBusy} onClick={() => void submitReply(q.id, a.id)}>
+                                          {replyBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Reply className="h-3 w-3" />}
+                                          {am ? "ላክ" : "Post"}
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={replyBusy} onClick={() => { setReplyFor(null); setReplyText(""); setReplyError(null) }}>
+                                          {am ? "ተወው" : "Cancel"}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    isSignedIn && (
+                                      <button
+                                        type="button"
+                                        className="mt-1 flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                                        onClick={() => { setReplyFor(a.id); setReplyText(""); setReplyError(null) }}
+                                      >
+                                        <Reply className="h-3 w-3" />
+                                        {am ? "ምላሽ" : "Reply"}
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {answerFor === q.id ? (
+                        <div className="mt-2">
+                          <textarea
+                            autoFocus
+                            value={answerText}
+                            onChange={(e) => setAnswerText(e.target.value)}
+                            maxLength={2000}
+                            rows={2}
+                            aria-label={am ? "መልስዎ" : "Your answer"}
+                            placeholder={am ? "መልስዎን ይጻፉ…" : "Write your answer…"}
+                            className="w-full rounded-md border border-border bg-background p-2 text-xs"
+                          />
+                          {answerError && <p className="mt-1 text-[10px] text-destructive">{answerError}</p>}
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => void submitAnswer(q.id)}>
+                              {answerBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                              {am ? "ላክ" : "Post"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={answerBusy} onClick={() => { setAnswerFor(null); setAnswerText(""); setAnswerError(null) }}>
+                              {am ? "ተወው" : "Cancel"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="mt-1.5 text-[11px] font-medium text-primary hover:underline"
+                          onClick={() => { setAnswerFor(q.id); setAnswerText(""); setAnswerError(null) }}
+                        >
+                          {am ? "መልስ ይጻፉ" : "Answer"}
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="mt-1.5 text-[11px] font-medium text-primary hover:underline"
-                      onClick={() => { setAnswerFor(q.id); setAnswerText(""); setAnswerError(null) }}
-                    >
-                      {am ? "መልስ ይጻፉ" : "Answer"}
-                    </button>
-                  )}
+                  </div>
                 </li>
               ))}
             </ul>

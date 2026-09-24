@@ -4,6 +4,12 @@ The single reference document for the product: what it is, why it wins, how ever
 feature works, how each user tier experiences it, how to run it as an admin, and
 how to present it. If code and this doc ever disagree, trust the code and fix this doc.
 
+> **Companion doc:** [BUSINESS_RULES.md](BUSINESS_RULES.md) — the authoritative
+> code-grounded statement of *who can do what*: authentication, Telegram price
+> verification, RFQ management, listings & their transactions, Q&A submissions
+> (threading + voting), commissions/revenues, role privileges, and every
+> end-to-end workflow for all roles.
+
 > **Product in one sentence:** YeBetWeg (የቤት-ወግ, "for home construction") is a bilingual
 > (English/አማርኛ) Ethiopian construction decision platform that takes a homeowner or
 > contractor from *idea → realistic budget → trusted prices → suppliers & professionals →

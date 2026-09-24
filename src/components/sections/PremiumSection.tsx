@@ -22,6 +22,7 @@ import { useInView } from "@/hooks/useInView"
 import { usePayment } from "@/hooks/usePayment"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { withCheckoutFee } from "@/lib/fees"
 import type { Subscription } from "@/types/payment"
 import { useAuthContext } from "@/context/AuthContext"
 
@@ -115,11 +116,12 @@ export function PremiumSection({
 }) {
   const { t, language } = useLanguage()
   const { ref, isInView } = useInView()
-  const { loading, error, initiatePayment, tierPrices } = usePayment()
+  const { loading, error, initiatePayment, tierPrices, feeSplitFor } = usePayment()
   const navigate = useNavigate()
   const { user } = useAuthContext()
   const [selectedTier, setSelectedTier] = useState<PremiumTier | null>(null)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const feeSplit = selectedTier ? feeSplitFor(selectedTier) : null
 
   const isSignedIn = !!user
 
@@ -192,6 +194,12 @@ export function PremiumSection({
                     <div className="mt-2">
                       <span className="text-3xl font-bold">{tierPrices[tier.key].toLocaleString()}</span>
                       <span className="text-sm text-muted-foreground"> {t("common.etb")}{t("premium.month")}</span>
+                      {tier.key !== "free" && (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          + {withCheckoutFee(tierPrices[tier.key]).fee.toFixed(2)} ETB{" "}
+                          {language === "en" ? "checkout fee at payment" : "የመክፈያ አገልግሎት ክፍያ"}
+                        </p>
+                      )}
                     </div>
                     {tier.highlight && (
                       <Badge className="mt-2 bg-accent text-accent-foreground">Popular</Badge>
@@ -355,8 +363,8 @@ export function PremiumSection({
             <DialogDescription>
               {selectedTier
                 ? (language === "en"
-                    ? `Complete your payment of ETB ${tierPrices[selectedTier] || 0} for ${selectedTier} membership`
-                    : `ለ${selectedTier} አባልነት የETB ${tierPrices[selectedTier] || 0} ክፍያ ያጠናቀቁ`)
+                    ? `Complete your payment for ${selectedTier} membership`
+                    : `ለ${selectedTier} አባልነት ክፍያዎን ያጠናቀቁ`)
                 : (language === "en"
                     ? "Complete your membership payment"
                     : "የአባልነት ክፍያዎን ያጠናቁ")}
@@ -364,6 +372,22 @@ export function PremiumSection({
           </DialogHeader>
 
           <div className="py-4">
+            {feeSplit && (
+              <div className="mb-3 space-y-1 rounded-lg border border-border/60 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>{language === "en" ? "Membership price" : "የአባልነት ዋጋ"}</span>
+                  <span className="font-medium">{feeSplit.base.toFixed(2)} ETB</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{language === "en" ? "Checkout fee (payment processing)" : "የመክፈያ አገልግሎት ክፍያ"}</span>
+                  <span>{feeSplit.fee.toFixed(2)} ETB</span>
+                </div>
+                <div className="flex justify-between border-t border-border/60 pt-1 font-semibold">
+                  <span>{language === "en" ? "Total to pay" : "አጠቃላይ ይከፈል"}</span>
+                  <span>{feeSplit.gross.toFixed(2)} ETB</span>
+                </div>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">
               {language === "en"
                 ? "You will be redirected to Chapa to complete your payment securely."

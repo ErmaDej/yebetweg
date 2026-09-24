@@ -5,7 +5,11 @@ import { buildCsv } from "@/components/admin/RevenueMonitor"
 const rows = [
   {
     id: "r1",
-    amount: 500,
+    // Pass-through row as written by the hardened RPC: buyer paid 510 gross,
+    // 10 ETB covered the Chapa checkout fee, 500 ETB is net revenue.
+    amount: 510,
+    base_amount: 500,
+    gateway_fee: 10,
     currency: "ETB",
     method: "chapa",
     reference: "YBTEST1",
@@ -16,6 +20,7 @@ const rows = [
   },
   {
     id: "r2",
+    // Legacy row predating the fee split: fee columns fall back to zero.
     amount: 1000,
     currency: "ETB",
     method: "chapa",
@@ -25,20 +30,33 @@ const rows = [
     metadata: { tier: "pro" },
     payer: null,
   },
-] as Parameters<typeof buildCsv>[0]
+] as unknown as Parameters<typeof buildCsv>[0]
 
 describe("buildCsv (tax-ready revenue export)", () => {
-  it("emits a header plus one row per payment with VAT columns", () => {
+  it("emits a header plus one row per payment with the pass-through split", () => {
     const csv = buildCsv(rows)
     const lines = csv.split("\n")
     expect(lines).toHaveLength(3)
     expect(lines[0]).toBe(
-      "payment_date,reference,tier,method,amount_etb,currency,vat_rate,vat_etb,gross_etb,payer_name,payer_email,status",
+      "payment_date,reference,tier,method,gross_etb,checkout_fee_etb,net_revenue_etb,currency,vat_rate,vat_on_net_etb,payer_name,payer_email,status",
     )
     expect(lines[1]).toContain("YBTEST1")
     expect(lines[1]).toContain("premium")
-    expect(lines[1]).toContain("500.00")
-    expect(lines[1]).toContain("0.00") // vat_etb default 0
+    expect(lines[1]).toContain("500.00") // net revenue = tax-reportable base
+  })
+
+  it("splits gross into checkout fee + net revenue", () => {
+    const csv = buildCsv(rows)
+    // gross = 510.00, fee = 10.00, net = 500.00
+    expect(csv).toContain("510.00")
+    expect(csv).toContain("10.00")
+  })
+
+  it("treats legacy rows without fee columns as fee-free", () => {
+    const csv = buildCsv(rows)
+    const pro = csv.split("\n")[2]
+    expect(pro).toContain("YBTEST2")
+    expect(pro).toContain("1000.00") // net = gross when no fee recorded
   })
 
   it("escapes commas and quotes in payer names (RFC 4180)", () => {

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 import { RefreshCw, Loader2, SearchX, Eye, MessageSquare, Copy, Share2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -130,17 +131,27 @@ export function RfqManager() {
     setSaving(false)
   }
 
-  const filtered = rfqs.filter((r) => {
-    if (statusFilter !== "all" && r.status !== statusFilter) return false
-    if (!search) return true
-    const q = search.toLowerCase()
-    return (
-      r.requester_name.toLowerCase().includes(q) ||
-      r.requester_email.toLowerCase().includes(q) ||
-      r.requester_phone.includes(q) ||
-      r.city.toLowerCase().includes(q)
-    )
-  })
+  const filtered = useMemo(
+    () =>
+      rfqs.filter((r) => {
+        if (statusFilter !== "all" && r.status !== statusFilter) return false
+        if (!search) return true
+        const q = search.toLowerCase()
+        return (
+          r.requester_name.toLowerCase().includes(q) ||
+          r.requester_email.toLowerCase().includes(q) ||
+          r.requester_phone.includes(q) ||
+          r.city.toLowerCase().includes(q)
+        )
+      }),
+    [rfqs, statusFilter, search],
+  )
+  // RFQs accumulate indefinitely — never render the whole backlog at once.
+  const { pageItems: rfqPageItems, paginationProps: rfqPagination } = useDataPagination(
+    filtered,
+    "admin-rfqs",
+    25,
+  )
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(language === "am" ? "am-ET" : "en-US", {
@@ -217,7 +228,7 @@ export function RfqManager() {
         )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-2">
-            {filtered.map((rfq) => (
+            {rfqPageItems.map((rfq) => (
               <Card
                 key={rfq.id}
                 className={`cursor-pointer transition-all hover:border-accent/50 ${selectedRfq?.id === rfq.id ? "border-accent ring-1 ring-accent" : ""}`}
@@ -273,6 +284,7 @@ export function RfqManager() {
                 </CardContent>
               </Card>
             ))}
+            <DataPagination {...rfqPagination} />
           </div>
 
           <div>

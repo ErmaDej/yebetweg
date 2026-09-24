@@ -9,6 +9,7 @@ import {
   initializeChapaPayment,
   formatAmount,
 } from "@/lib/chapa"
+import { withCheckoutFee } from "@/lib/fees"
 import { useUserProfile } from "@/hooks/useUserProfile"
 
 const TIER_PRICES: Record<PremiumTier, number> = {
@@ -60,7 +61,11 @@ export function usePayment() {
       setLoading(true)
       setError(null)
 
-      const amount = TIER_PRICES[tier]
+      // Pass-through model: the buyer pays the listed price PLUS a checkout
+      // fee that covers Chapa's transaction fee, so YeBetWeg nets the full
+      // listed price (see src/lib/fees.ts).
+      const { fee, gross } = withCheckoutFee(TIER_PRICES[tier])
+      const amount = gross
       const txRef = generateTxRef()
       const projectUrl = import.meta.env.VITE_SUPABASE_URL || window.location.origin
       const callbackUrl = `${projectUrl.replace(/\/$/, "")}/functions/v1/chapa-webhook`
@@ -86,7 +91,7 @@ export function usePayment() {
           return_url: returnUrl,
           customization: {
             title: "YeBetWeg",
-            description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} - ETB ${amount}`,
+            description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} - ETB ${amount.toFixed(2)} (incl. ETB ${fee.toFixed(2)} checkout fee)`,
           },
           subscription: {
             user_id: profile.id,
@@ -120,6 +125,8 @@ export function usePayment() {
     error,
     initiatePayment,
     tierPrices: TIER_PRICES,
+    /** Pass-through split of a tier price: { base, fee, gross }. */
+    feeSplitFor: (tier: PremiumTier) => withCheckoutFee(TIER_PRICES[tier]),
     formatAmount,
   }
 }

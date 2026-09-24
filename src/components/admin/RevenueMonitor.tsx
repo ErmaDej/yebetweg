@@ -17,6 +17,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { useLanguage } from "@/lib/i18n"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
 import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics"
 
@@ -34,6 +35,8 @@ import { RevenueAnalytics } from "@/components/admin/RevenueAnalytics"
 type LedgerRow = {
   id: string
   amount: number | null
+  base_amount?: number | null
+  gateway_fee?: number | null
   currency: string | null
   method: string | null
   reference: string | null
@@ -62,7 +65,7 @@ type SubRow = {
 }
 
 const LEDGER_SELECT =
-  "id, amount, currency, method, reference, status, created_at, metadata, payer:users(full_name, email)"
+  "id, amount, base_amount, gateway_fee, currency, method, reference, status, created_at, metadata, payer:users(full_name, email)"
 const PENDING_SELECT =
   "id, user_id, tier, chapa_reference, created_at, user:users(full_name, email)"
 
@@ -77,17 +80,20 @@ function monthKey(iso: string): string {
 }
 
 export function buildCsv(rows: LedgerRow[]): string {
-  // Tax-ready layout: one row per payment, explicit currency, VAT context.
+  // Tax-ready layout: one row per payment with the full pass-through split:
+  // gross (buyer-paid) = net revenue (base) + checkout fee (covers Chapa).
+  // Net revenue is the tax-reportable figure; the fee is a processing cost.
   const header = [
     "payment_date",
     "reference",
     "tier",
     "method",
-    "amount_etb",
+    "gross_etb",
+    "checkout_fee_etb",
+    "net_revenue_etb",
     "currency",
     "vat_rate",
-    "vat_etb",
-    "gross_etb",
+    "vat_on_net_etb",
     "payer_name",
     "payer_email",
     "status",
@@ -98,17 +104,20 @@ export function buildCsv(rows: LedgerRow[]): string {
   }
   const lines = rows.map((r) => {
     const tier = (r.metadata?.tier as string) || ""
-    const amount = Number(r.amount ?? 0)
+    const gross = Number(r.amount ?? 0)
+    const fee = Number(r.gateway_fee ?? 0)
+    const net = Number(r.base_amount ?? gross - fee)
     return [
       new Date(r.created_at).toISOString(),
       r.reference ?? "",
       tier,
       r.method ?? "",
-      amount.toFixed(2),
+      gross.toFixed(2),
+      fee.toFixed(2),
+      net.toFixed(2),
       r.currency ?? "ETB",
       "0",
       "0.00",
-      amount.toFixed(2),
       r.payer?.full_name ?? "",
       r.payer?.email ?? "",
       r.status ?? "",
@@ -195,18 +204,26 @@ export function RevenueMonitor() {
       return hay.includes(q)
     })
   }, [rows, search, range])
+  const { pageItems: ledgerPageItems, paginationProps: ledgerPagination } =
+    useDataPagination(filtered, "revenue-ledger", 25)
 
   const kpis = useMemo(() => {
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const d30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
     const completed = rows.filter((r) => r.status === "completed")
-    const sum = (list: LedgerRow[]) => list.reduce((a, r) => a + Number(r.amount ?? 0), 0)
+    // Net revenue (base_amount) is the headline figure: what YeBetWeg keeps
+    // after the pass-through checkout fee that covers Chapa.
+    const sumNet = (list: LedgerRow[]) =>
+      list.reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0)
+    const sumFees = (list: LedgerRow[]) =>
+      list.reduce((a, r) => a + Number(r.gateway_fee ?? 0), 0)
     const mrr = activeSubs.reduce((a, s) => a + (CANONICAL_PRICE[s.tier] ?? 0) * s.count, 0)
     return {
-      thisMonth: sum(completed.filter((r) => r.created_at >= monthStart)),
-      last30: sum(completed.filter((r) => r.created_at >= d30)),
-      allTime: sum(completed),
+      thisMonth: sumNet(completed.filter((r) => r.created_at >= monthStart)),
+      last30: sumNet(completed.filter((r) => r.created_at >= d30)),
+      allTime: sumNet(completed),
+      feesThisMonth: sumFees(completed.filter((r) => r.created_at >= monthStart)),
       mrr,
       countThisMonth: completed.filter((r) => r.created_at >= monthStart).length,
     }
@@ -316,6 +333,8 @@ export function RevenueMonitor() {
             <p className="text-xl font-bold">{fmtETB(kpis.thisMonth)}</p>
             <p className="text-xs text-muted-foreground">
               {am ? `${kpis.countThisMonth} ክፍያዎች` : `${kpis.countThisMonth} payments`}
+              {kpis.feesThisMonth > 0 &&
+                ` · ${am ? "ክፍያ ከፍሏል" : "fees"} ${fmtETB(kpis.feesThisMonth)}`}
             </p>
           </CardContent>
         </Card>
@@ -493,12 +512,14 @@ export function RevenueMonitor() {
                   <th className="py-1.5 pr-2 font-medium">{am ? "አባል" : "Payer"}</th>
                   <th className="py-1.5 pr-2 font-medium">{am ? "እቅድ" : "Tier"}</th>
                   <th className="py-1.5 pr-2 font-medium">{am ? "መጠን" : "Amount"}</th>
+                  <th className="py-1.5 pr-2 font-medium">{am ? "የመክፈያ ክፍያ" : "Checkout fee"}</th>
+                  <th className="py-1.5 pr-2 font-medium">{am ? "ንጹህ ገቢ" : "Net revenue"}</th>
                   <th className="py-1.5 pr-2 font-medium">{am ? "ማጣቀሻ" : "Reference"}</th>
                   <th className="py-1.5 font-medium">{am ? "ሁኔታ" : "Status"}</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 100).map((r) => (
+                {ledgerPageItems.map((r) => (
                   <tr key={r.id} className="border-b border-border/40">
                     <td className="py-1.5 pr-2 whitespace-nowrap">
                       {new Date(r.created_at).toLocaleDateString()}
@@ -508,6 +529,12 @@ export function RevenueMonitor() {
                     </td>
                     <td className="py-1.5 pr-2 capitalize">{String(r.metadata?.tier ?? "—")}</td>
                     <td className="py-1.5 pr-2 font-medium">{fmtETB(Number(r.amount ?? 0))}</td>
+                    <td className="py-1.5 pr-2 text-muted-foreground">
+                      {fmtETB(Number(r.gateway_fee ?? 0))}
+                    </td>
+                    <td className="py-1.5 pr-2 font-medium">
+                      {fmtETB(Number(r.base_amount ?? Number(r.amount ?? 0) - Number(r.gateway_fee ?? 0)))}
+                    </td>
                     <td className="max-w-[140px] truncate py-1.5 pr-2 font-mono">{r.reference ?? "—"}</td>
                     <td className="py-1.5">
                       <Badge
@@ -525,20 +552,14 @@ export function RevenueMonitor() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-4 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-4 text-center text-muted-foreground">
                       {am ? "መዝገብ ባዶ ነው።" : "No payments match."}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-            {filtered.length > 100 && (
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                {am
-                  ? `ከ${filtered.length} ውስጥ የመጀመሪያዎቹ 100 ብቻ ይታያሉ — CSV ሙሉውን ይዟል።`
-                  : `Showing first 100 of ${filtered.length} — the CSV export contains all of them.`}
-              </p>
-            )}
+            <DataPagination {...ledgerPagination} />
           </div>
         </CardContent>
       </Card>

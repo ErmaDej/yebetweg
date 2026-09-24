@@ -2,6 +2,7 @@ import { useState, useMemo } from "react"
 import { useRequireAuth } from "@/components/ProtectedRoute"
 import { useSubscription, useUserProfile } from "@/hooks/useUserProfile"
 import { useLanguage, type TranslationKey } from "@/lib/i18n"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -138,6 +139,16 @@ export function Dashboard() {
     [savedItems, activeCollection]
   )
 
+  // Persistent pagination for all dashboard list surfaces (any role).
+  const { pageItems: boqPageItems, paginationProps: boqPagination } = useDataPagination(
+    boqEstimates,
+    "dash-boq-estimates",
+  )
+  const { pageItems: savedPageItems, paginationProps: savedPagination } = useDataPagination(
+    visibleSavedItems,
+    "dash-saved-items",
+  )
+
   const handleEditClick = () => {
     if (!profile) return
     setEditForm({
@@ -255,6 +266,9 @@ export function Dashboard() {
         : a.createdAt.localeCompare(b.createdAt)
     )
   }, [dashboardData, activityFilter, activitySort])
+
+  const { pageItems: activityPageItems, paginationProps: activityPagination } =
+    useDataPagination(activityFeed, "dash-activity", 15)
 
   const actionHandlers: Record<QuickActionKey, () => void> = {
     submitRfq: () => setRfqModalOpen(true),
@@ -470,7 +484,7 @@ export function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {boqEstimates.map((est) => {
+              {boqPageItems.map((est) => {
                 const actuals = actualsByEstimate[est.id] ?? summarizeActuals([])
                 const variancePct =
                   actuals.count > 0 && Number(est.outputs?.total) > 0
@@ -554,6 +568,7 @@ export function Dashboard() {
                 </div>
                 )
               })}
+              <DataPagination {...boqPagination} />
               <BoqActualsPanel language={language} estimates={boqEstimates} />
               {totalActual > 0 && totalEstimated > 0 && (
                 <div className="rounded-lg bg-muted/60 p-3 text-xs">
@@ -619,7 +634,7 @@ export function Dashboard() {
                   ))}
                 </div>
               )}
-              {visibleSavedItems.map((item) => (
+              {savedPageItems.map((item) => (
                 <div
                   key={`${item.type}-${item.id}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3"
@@ -708,6 +723,7 @@ export function Dashboard() {
                   </div>
                 </div>
               ))}
+              <DataPagination {...savedPagination} />
             </CardContent>
           </Card>
         )}
@@ -1233,7 +1249,7 @@ export function Dashboard() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {activityFeed.map((item) => (
+                      {activityPageItems.map((item) => (
                         <div
                           key={`${item.kind}-${item.id}`}
                           className="flex items-start gap-3 rounded-lg border border-border/60 p-3"
@@ -1259,6 +1275,7 @@ export function Dashboard() {
                           </div>
                         </div>
                       ))}
+                      <DataPagination {...activityPagination} />
                     </div>
                    )}
                    {activityHasMore && (

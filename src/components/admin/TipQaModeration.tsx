@@ -7,6 +7,7 @@ import { Loader2, RefreshCw, Search, Trash2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useLanguage } from "@/lib/i18n"
 import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 
 type PendingDelete = {
   kind: "question" | "answer"
@@ -100,6 +101,8 @@ export function TipQaModeration() {
       return hay.includes(term)
     })
   }, [questions, term, answersByQuestion])
+  const { pageItems: pagedQuestions, paginationProps: moderationPagination } =
+    useDataPagination(visibleQuestions, "admin-tipqa")
 
   const runDelete = async () => {
     if (!pendingDelete) return
@@ -160,7 +163,7 @@ export function TipQaModeration() {
         </p>
       ) : (
         <div className="space-y-2">
-          {visibleQuestions.map((q) => (
+          {pagedQuestions.map((q) => (
             <div key={q.id} className="rounded-md border border-border/60 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -227,6 +230,7 @@ export function TipQaModeration() {
               )}
             </div>
           ))}
+          <DataPagination {...moderationPagination} />
         </div>
       )}
 

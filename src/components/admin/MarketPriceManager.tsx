@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Plus, Pencil, Trash2, Upload, Download, RefreshCw, Loader2, SearchX } from "lucide-react"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -178,16 +179,26 @@ export function MarketPriceManager() {
     setSaving(false)
   }
 
-  const filtered = prices.filter((p) => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return (
-      p.material_en.toLowerCase().includes(q) ||
-      p.material_am.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      p.city.toLowerCase().includes(q)
-    )
-  })
+  const filtered = useMemo(
+    () =>
+      prices.filter((p) => {
+        if (!search) return true
+        const q = search.toLowerCase()
+        return (
+          p.material_en.toLowerCase().includes(q) ||
+          p.material_am.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          p.city.toLowerCase().includes(q)
+        )
+      }),
+    [prices, search],
+  )
+  // The desk can hold thousands of prices (CSV bulk import) — never render unbounded.
+  const { pageItems: pricePageItems, paginationProps: pricePagination } = useDataPagination(
+    filtered,
+    "admin-market-prices",
+    25,
+  )
 
   const handleCsvExport = () => {
     const headers = ["material_en", "material_am", "unit", "price", "change_percent", "category", "city", "specification", "source_type", "source_name", "freshness_status", "trend_direction"]
@@ -278,7 +289,7 @@ export function MarketPriceManager() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((price) => (
+              {pricePageItems.map((price) => (
                 <tr key={price.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="p-2 font-medium">{price.material_en}</td>
                   <td className="p-2">{price.material_am}</td>
@@ -305,9 +316,7 @@ export function MarketPriceManager() {
               ))}
             </tbody>
           </table>
-          <div className="p-2 text-xs text-muted-foreground border-t">
-            {language === "en" ? `Showing ${filtered.length} of ${prices.length} prices` : `${filtered.length} ከ ${prices.length} ዋጋዎች ይታያሉ`}
-          </div>
+          <DataPagination {...pricePagination} className="border-t px-2" />
         </div>
       )}
 

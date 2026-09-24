@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -63,6 +64,8 @@ export function AdminDashboardTab() {
   const [metrics, setMetrics] = useState<AdminMetrics>(emptyMetrics)
   const [actionInFlight, setActionInFlight] = useState<string | null>(null)
   const [actionResult, setActionResult] = useState<AdminActionResult | null>(null)
+  const { pageItems: actionPageItems, paginationProps: actionPagination } =
+    useDataPagination(actionResult?.data ?? [], "admin-action-results")
   const [editingRecord, setEditingRecord] = useState<Record<string, any> | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -414,7 +417,7 @@ export function AdminDashboardTab() {
               })()}
               <div className="max-h-72 overflow-auto rounded-lg border border-border/60">
                 <div className="min-w-[600px] divide-y divide-border/60">
-                  {actionResult.data.slice(0, 10).map((record, index) => {
+                  {actionPageItems.map((record, index) => {
                     const item = record as Record<string, any>
                     const action = actionResult.action
                     return (
@@ -514,6 +517,7 @@ export function AdminDashboardTab() {
                   })}
                 </div>
               </div>
+              <DataPagination {...actionPagination} />
             </CardContent>
           )}
         </Card>
@@ -924,6 +928,8 @@ function UserManagementSection({ language }: { language: string }) {
         u.email.toLowerCase().includes(search.toLowerCase())
       )
     : users
+  const { pageItems: pagedUsers, paginationProps: usersPagination } =
+    useDataPagination(filtered, "admin-users")
 
   return (
     <div className="space-y-4">
@@ -964,7 +970,7 @@ function UserManagementSection({ language }: { language: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((u) => (
+              {pagedUsers.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.username}</TableCell>
                   <TableCell className="text-muted-foreground">{u.email}</TableCell>
@@ -1022,6 +1028,7 @@ function UserManagementSection({ language }: { language: string }) {
           </Table>
         </div>
       )}
+      <DataPagination {...usersPagination} />
 
       <ConfirmActionDialog
         open={pendingStatus !== null}

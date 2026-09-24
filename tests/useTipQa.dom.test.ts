@@ -29,6 +29,10 @@ type TableSpec = { result: SupabaseResult<unknown>; callsRef: { current: ReturnT
 
 function makePerTableSupabase(tables: Record<string, TableSpec>) {
   const from = vi.fn((table: string) => {
+    // The scores view is best-effort in the hook; tests that don't provide a
+    // spec for it get an empty scoreboard.
+    if (table === "v_tip_qa_scores" && !tables[table])
+      return createQueryBuilder({ data: [], error: null }).builder
     const spec = tables[table]
     if (!spec) throw new Error(`unexpected table in test: ${table}`)
     const qb = createQueryBuilder(spec.result)
@@ -89,6 +93,36 @@ describe("useTipQa data path", () => {
     expect(questions.current?.calls.find((c) => c.method === "eq")?.args).toEqual(["tip_id", "tip1"])
     expect(questions.current?.calls.find((c) => c.method === "limit")?.args).toEqual([20])
     expect(answers.current?.calls.find((c) => c.method === "in")?.args).toEqual(["question_id", ["q1", "q2"]])
+  })
+
+  it("merges vote scores and the viewer's own vote from the scores view", async () => {
+    const scores = { current: null }
+    const { useTipQa } = await loadHook({
+      users: { result: { data: [{ id: "u-me" }], error: null }, callsRef: { current: null } },
+      tip_questions: { result: { data: QUESTIONS, error: null }, callsRef: { current: null } },
+      tip_answers: { result: { data: ANSWERS, error: null }, callsRef: { current: null } },
+      v_tip_qa_scores: {
+        result: {
+          data: [
+            { question_id: "q1", answer_id: null, score: 3, my_value: 1 },
+            { question_id: null, answer_id: "a2", score: -1, my_value: -1 },
+          ],
+          error: null,
+        },
+        callsRef: scores,
+      },
+    })
+    const { result } = renderHook(() => useTipQa("tip1", "auth-uid-1"))
+    await waitForReady(result, () => result.current.questions.length === 2)
+    expect(result.current.questions.find((q) => q.id === "q1")?.score).toBe(3)
+    expect(result.current.questions.find((q) => q.id === "q1")?.myVote).toBe(1)
+    expect(result.current.questions.find((q) => q.id === "q2")?.score).toBe(0)
+    const a2 = result.current.answers.q1?.find((a) => a.id === "a2")
+    expect(a2?.score).toBe(-1)
+    expect(a2?.myVote).toBe(-1)
+    // Both targets are fetched through a single or() filter.
+    expect(scores.current?.calls.find((c) => c.method === "or")?.args[0]).toContain("question_id.in.(q1,q2)")
+    expect(scores.current?.calls.find((c) => c.method === "or")?.args[0]).toContain("answer_id.in.(a1,a2)")
   })
 
   it("surfaces a query error and clears state", async () => {
@@ -163,7 +197,7 @@ describe("useTipQa realtime", () => {
     const { result, unmount } = renderHook(() => useTipQa("tip1", "auth-1"))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(stub.isSubscribed()).toBe(true)
-    expect(stub.handlers.map((h) => h.table).sort()).toEqual(["tip_answers", "tip_questions"])
+    expect(stub.handlers.map((h) => h.table).sort()).toEqual(["tip_answers", "tip_qa_votes", "tip_questions"])
     const fetchesAfterLoad = questionFetches
 
     // Fire both channels back-to-back: the 300ms debounce collapses them

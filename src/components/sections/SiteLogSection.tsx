@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { Plus, ClipboardList, Trash2, Calendar, Users, DollarSign, AlertTriangle } from "lucide-react"
+import { DataPagination, useDataPagination } from "@/components/ui/data-pagination"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -107,6 +108,13 @@ export function SiteLogSection() {
   const [error, setError] = useState("")
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  // A long-running project accrues daily entries — page the log instead of
+  // rendering every record at once.
+  const { pageItems: logPageItems, paginationProps: logPagination } = useDataPagination(
+    logs,
+    "site-log",
+    15,
+  )
 
   const handleSubmit = async () => {
     if (!user) {
@@ -307,9 +315,10 @@ export function SiteLogSection() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {logs.map((log) => (
+            {logPageItems.map((log) => (
               <SiteLogCard key={log.id} log={log} onDelete={(id) => setPendingDeleteId(id)} />
             ))}
+            <DataPagination {...logPagination} />
           </div>
         )}
 

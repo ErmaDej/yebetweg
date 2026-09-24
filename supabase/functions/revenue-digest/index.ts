@@ -62,6 +62,8 @@ function fmt(n: number): string {
 
 type LedgerRow = {
   amount: number | null;
+  base_amount?: number | null;
+  gateway_fee?: number | null;
   status: string | null;
   created_at: string;
   metadata: Record<string, unknown> | null;
@@ -85,14 +87,27 @@ function buildHtml(
 ): string {
   const completed = weekRows.filter((r) => r.status === "completed");
   const failed = weekRows.filter((r) => r.status && r.status !== "completed");
-  const weekRevenue = completed.reduce((a, r) => a + Number(r.amount ?? 0), 0);
-  const monthRevenue = monthRows.reduce((a, r) => a + Number(r.amount ?? 0), 0);
+  // Net revenue: what YeBetWeg keeps after the pass-through checkout fee that
+  // covers Chapa. Falls back to amount for legacy rows without the split.
+  const weekGross = completed.reduce((a, r) => a + Number(r.amount ?? 0), 0);
+  const weekFees = completed.reduce((a, r) => a + Number(r.gateway_fee ?? 0), 0);
+  const weekRevenue = completed.reduce(
+    (a, r) => a + Number(r.base_amount ?? r.amount ?? 0),
+    0,
+  );
+  const monthRevenue = monthRows.reduce(
+    (a, r) => a + Number(r.base_amount ?? r.amount ?? 0),
+    0,
+  );
 
   const tierMap = new Map<string, { total: number; count: number }>();
   for (const r of completed) {
     const tier = String(r.metadata?.tier ?? "other");
     const cur = tierMap.get(tier) ?? { total: 0, count: 0 };
-    tierMap.set(tier, { total: cur.total + Number(r.amount ?? 0), count: cur.count + 1 });
+    tierMap.set(tier, {
+      total: cur.total + Number(r.base_amount ?? r.amount ?? 0),
+      count: cur.count + 1,
+    });
   }
   const tierHtml = [...tierMap.entries()]
     .map(
@@ -105,7 +120,7 @@ function buildHtml(
 
   const outputVat = VAT_REGISTERED ? weekRevenue - weekRevenue / (1 + VAT_RATE) : 0;
   const netSales = weekRevenue - outputVat;
-  const tot = !VAT_REGISTERED ? netSales * TOT_RATE : 0;
+  const tot = !VAT_REGISTERED ? weekRevenue * TOT_RATE : 0;
   const schemeLabel = VAT_REGISTERED ? "VAT-registered (15%)" : "Turnover Tax (2%)";
 
   const pendingHtml = pending
@@ -154,7 +169,9 @@ function buildHtml(
 
     <h3 style="font-size:14px;margin:20px 0 6px">Tax context (last 7 days)</h3>
     <table style="border-collapse:collapse;width:100%;font-size:13px">
-      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Gross revenue</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${esc(fmt(weekRevenue))}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Buyer-paid gross</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${esc(fmt(weekGross))}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Checkout fees (cover Chapa)</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">−${esc(fmt(weekFees))}</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #eee"><strong>Net revenue (tax base)</strong></td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right"><strong>${esc(fmt(weekRevenue))}</strong></td></tr>
       <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Output VAT (15%)</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${esc(fmt(outputVat))}</td></tr>
       <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">Net sales</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right">${esc(fmt(netSales))}</td></tr>
       <tr><td style="padding:6px 10px;border-bottom:1px solid #eee">${esc(VAT_REGISTERED ? "VAT due" : "Turnover Tax due (2%)")}</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;font-weight:700">${esc(fmt(VAT_REGISTERED ? outputVat : tot))}</td></tr>
@@ -224,7 +241,7 @@ serve(async (req) => {
     // 1) Ledger: everything since the start of last month (covers both windows).
     const { data: ledger, error: ledgerErr } = await admin
       .from("subscription_payments")
-      .select("amount, status, created_at, metadata")
+      .select("amount, base_amount, gateway_fee, status, created_at, metadata")
       .gte("created_at", prevMonthStartIso)
       .order("created_at", { ascending: false })
       .limit(2000);
@@ -236,10 +253,17 @@ serve(async (req) => {
     const prevMonthRows = rows.filter(
       (r) => r.created_at < monthStartIso && r.created_at >= prevMonthStartIso,
     );
-    const sum = (list: LedgerRow[]) =>
-      list.filter((r) => r.status === "completed").reduce((a, r) => a + Number(r.amount ?? 0), 0);
-    const thisMonth = sum(monthRows);
-    const prevMonth = sum(prevMonthRows);
+    // Net revenue = what YeBetWeg keeps after the pass-through checkout fee.
+    const sumNet = (list: LedgerRow[]) =>
+      list
+        .filter((r) => r.status === "completed")
+        .reduce((a, r) => a + Number(r.base_amount ?? r.amount ?? 0), 0);
+    const sumFees = (list: LedgerRow[]) =>
+      list
+        .filter((r) => r.status === "completed")
+        .reduce((a, r) => a + Number(r.gateway_fee ?? 0), 0);
+    const thisMonth = sumNet(monthRows);
+    const prevMonth = sumNet(prevMonthRows);
     const momPct = prevMonth > 0 ? ((thisMonth - prevMonth) / prevMonth) * 100 : null;
 
     // 2) Pending activations needing attention.
@@ -279,7 +303,7 @@ serve(async (req) => {
             body: JSON.stringify({
               from: FROM,
               to,
-              subject: `[YeBetWeg] Weekly revenue: ${fmt(sum(weekRows))}${
+              subject: `[YeBetWeg] Weekly revenue: ${fmt(sumNet(weekRows))}${
                 momPct !== null ? ` (${momPct >= 0 ? "+" : ""}${momPct.toFixed(0)}% MoM)` : ""
               }`,
               html,
@@ -299,7 +323,8 @@ serve(async (req) => {
       JSON.stringify({
         ok: true,
         dry_run: dryRun,
-        week_revenue_etb: sum(weekRows),
+        week_revenue_etb: sumNet(weekRows),
+        week_fees_etb: sumFees(weekRows),
         month_revenue_etb: thisMonth,
         mom_growth_pct: momPct,
         pending_activations: pending.length,
