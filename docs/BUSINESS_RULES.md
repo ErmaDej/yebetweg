@@ -168,7 +168,15 @@ Telebirr exists as a secondary gateway reference field; Chapa is primary
    renewal reminders to actives expiring within 3 days and win-back emails to
    members expired 1–14 days ago with no active subscription — idempotent per
    cycle via `notifications.meta->>'dedup_key'` (no double-sends; dry-runs
-   write nothing). See docs/EDGE_FUNCTIONS_RUNBOOK.md §5c.
+   write nothing). See docs/EDGE_FUNCTIONS_RUNBOOK.md §5c. All four HTTP cron
+   jobs (this one plus the three digests) resolve their guard secret from
+   `app_settings` ('cron_secret') at fire time via the locked-down
+   `current_cron_secret()` RPC — secret rotations apply immediately and no
+   secret is stored in the cron command; the platform `CRON_SECRET` must be
+   kept in sync via `supabase secrets set`. The function also accepts
+   `{"sandbox":true}` to send test emails through Resend's sandbox sender
+   (delivers only to the Resend account owner) until the sending domain is
+   verified — cron never sets this flag.
 
 **Cancellation/refunds:** none self-service; expiry is time-based
 (30 days); admins manage everything manually.

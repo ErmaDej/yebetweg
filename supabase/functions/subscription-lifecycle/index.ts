@@ -23,6 +23,10 @@
 // digests, and schedule with pg_net (see docs/EDGE_FUNCTIONS_RUNBOOK.md §5b).
 //
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, CRON_SECRET
+// Test mode: POST {"sandbox":true} sends through Resend's sandbox sender
+// (onboarding@resend.dev, delivers only to the Resend account owner) with a
+// [SANDBOX] subject prefix — lets you verify the full flow before the
+// yebetweg.com domain is verified. Cron never sets this flag.
 // ============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -34,6 +38,7 @@ const corsHeaders = {
 };
 
 const FROM = "YeBetWeg Membership <digest@yebetweg.com>";
+const SANDBOX_FROM = "YeBetWeg Membership <onboarding@resend.dev>";
 const APP_URL = (Deno.env.get("APP_URL") ?? "https://yebetweg.com").replace(/\/$/, "");
 const RENEWAL_WINDOW_DAYS = 3;
 const WINBACK_WINDOW_DAYS = 14;
@@ -130,9 +135,11 @@ Deno.serve(async (req) => {
   const admin = createClient(supabaseUrl, serviceKey);
 
   let dryRun = false;
+  let sandbox = false;
   try {
     const body = await req.json();
     dryRun = body?.dryRun === true;
+    sandbox = body?.sandbox === true;
   } catch {
     // empty body is fine (cron posts {})
   }
@@ -241,7 +248,12 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY") ?? ""}`,
           },
-          body: JSON.stringify({ from: FROM, to: email, subject, html }),
+          body: JSON.stringify({
+            from: sandbox ? SANDBOX_FROM : FROM,
+            to: email,
+            subject: sandbox ? `[SANDBOX] ${subject}` : subject,
+            html,
+          }),
         });
         if (!r.ok) {
           errors.push(`${email}: ${r.status} ${await r.text()}`);

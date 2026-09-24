@@ -208,19 +208,16 @@ in-function `x-cron-key` guard IS the authentication (requests without it get 40
 
 ## 5c. Schedule subscription-lifecycle (daily renewal reminders + win-back)
 
-```sql
--- SQL Editor, once — replace <CRON_SECRET> with the value saved in §3
-select cron.schedule(
-  'yebetweg-subscription-lifecycle',
-  '0 8 * * *',  -- daily 08:00 UTC
-  $$
-  select net.http_post(
-    url := 'https://jxyavtdmcloxnhuavokc.supabase.co/functions/v1/subscription-lifecycle',
-    headers := jsonb_build_object('Content-Type','application/json','x-lifecycle-key','<CRON_SECRET>'),
-    body := '{}'::jsonb
-  );
-  $$
-);
+**Already scheduled by migration** `20260924170000_schedule_subscription_lifecycle.sql`
+(applied 2026-09-24; re-running `db push` is a no-op). All four HTTP cron jobs —
+lifecycle plus the three digests — now resolve the guard secret from
+`public.app_settings` ('cron_secret') at fire time via the locked-down
+`public.current_cron_secret()` RPC, instead of a literal embedded in the stored
+command: rotations apply immediately and no secret is stored in cron SQL.
+Keep the platform secret in sync after any rotation:
+
+```bash
+npx supabase secrets set CRON_SECRET=<new value>
 ```
 
 **subscription-lifecycle** emails premium/pro members directly (not admins):
