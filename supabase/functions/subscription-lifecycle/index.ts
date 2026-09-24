@@ -75,8 +75,29 @@ type SubRow = {
 
 type NotifiedRow = { user_id: string; dedup_key: string };
 
-function renewalHtml(name: string, tier: string, expiresAt: string, daysLeft: number): string {
-  const price = buyerGross(tier === "pro" ? 1000 : 500);
+// Admin-governed tier pricing (app_settings 'tier_pricing' via the public
+// get_tier_pricing() RPC). Falls back to the built-in prices if the RPC fails
+// — an email with fallback pricing is better than no email at all.
+const FALLBACK_PRICING = { premium: 500, pro: 1000 };
+async function loadTierPricing(admin: ReturnType<typeof createClient>): Promise<Record<string, number>> {
+  try {
+    const { data, error } = await admin.rpc("get_tier_pricing");
+    if (!error && data && typeof data === "object") {
+      const d = data as Record<string, unknown>;
+      const premium = Number(d.premium);
+      const pro = Number(d.pro);
+      if (Number.isFinite(premium) && premium > 0 && Number.isFinite(pro) && pro > 0) {
+        return { premium, pro };
+      }
+    }
+  } catch {
+    // fall through to built-in defaults
+  }
+  return FALLBACK_PRICING;
+}
+
+function renewalHtml(name: string, tier: string, expiresAt: string, daysLeft: number, basePrice: number): string {
+  const price = buyerGross(basePrice);
   return `
   <div style="font-family:system-ui,sans-serif;max-width:560px">
     <h2 style="margin:0 0 8px">Your ${esc(tier === "pro" ? "Pro" : "Premium")} membership expires soon</h2>
@@ -96,8 +117,8 @@ function renewalHtml(name: string, tier: string, expiresAt: string, daysLeft: nu
   </div>`;
 }
 
-function winbackHtml(name: string, tier: string, expiredAt: string): string {
-  const price = buyerGross(tier === "pro" ? 1000 : 500);
+function winbackHtml(name: string, tier: string, expiredAt: string, basePrice: number): string {
+  const price = buyerGross(basePrice);
   return `
   <div style="font-family:system-ui,sans-serif;max-width:560px">
     <h2 style="margin:0 0 8px">Your ${esc(tier === "pro" ? "Pro" : "Premium")} benefits have ended</h2>
@@ -222,6 +243,7 @@ Deno.serve(async (req) => {
     let sent = 0;
     const skipped: string[] = [];
     const errors: string[] = [];
+    const tierPricing = await loadTierPricing(admin);
     for (const { row, flow, dedup } of allTargets) {
       const email = row.user?.email;
       if (!email) continue;
@@ -232,10 +254,11 @@ Deno.serve(async (req) => {
       const name = row.user?.full_name ?? "";
       const expiresAt = row.expires_at ?? now.toISOString();
       const daysLeft = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - now.getTime()) / 86400000));
+      const basePrice = tierPricing[row.tier] ?? (row.tier === "pro" ? FALLBACK_PRICING.pro : FALLBACK_PRICING.premium);
       const html =
         flow === "renewal"
-          ? renewalHtml(name, row.tier, expiresAt, daysLeft)
-          : winbackHtml(name, row.tier, expiresAt);
+          ? renewalHtml(name, row.tier, expiresAt, daysLeft, basePrice)
+          : winbackHtml(name, row.tier, expiresAt, basePrice);
       const subject =
         flow === "renewal"
           ? `[YeBetWeg] Your ${row.tier} membership expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`

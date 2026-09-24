@@ -23,6 +23,7 @@ import { RfqManager } from "@/components/admin/RfqManager"
 import { TipQaModeration } from "@/components/admin/TipQaModeration"
 import { ModerationLogView } from "@/components/admin/ModerationLogView"
 import { RevenueMonitor } from "@/components/admin/RevenueMonitor"
+import { TierPricingManager } from "@/components/admin/TierPricingManager"
 
 type AdminMetricKey =
   | "users"
@@ -629,6 +630,10 @@ export function AdminDashboardTab() {
 
       <ExpandableSection title={language === "en" ? "RFQ Management" : "የዋጋ ጥያቄ አስተዳደር"} defaultOpen={false}>
         <RfqManager />
+      </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "Membership Pricing" : "የአባልነት ዋጋ"} defaultOpen={false}>
+        <TierPricingManager />
       </ExpandableSection>
 
       <ExpandableSection title={language === "en" ? "Revenue Monitoring & Reports" : "የገቢ ክትትል እና ሪፖርቶች"} defaultOpen={false}>

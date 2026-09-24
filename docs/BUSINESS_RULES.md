@@ -122,7 +122,15 @@ Suppliers never touch the web app. They message a Telegram bot:
 
 ## 5. Payments & subscriptions (Chapa, pass-through fee model)
 
-**Canonical pricing:** premium **500 ETB** / pro **1000 ETB** per 30 days.
+**Canonical pricing:** premium **500 ETB** / pro **1000 ETB** per 30 days —
+**admin-governed** (Sep 2026): the live values live in `app_settings`
+('tier_pricing'), editable in Admin → Membership Pricing via the admin-only
+`set_tier_pricing()` RPC (validated: positive whole ETB ≤ 100000; every change
+audited to `moderation_log`). The 500/1000 figures are hardcoded fallbacks used
+only if the setting is missing/corrupt. The checkout UI and the lifecycle
+emails resolve prices at render/read time, so changes apply to the next
+payment with no redeploy. Fee rates are governed the same way ('fee_config').
+
 Telebirr exists as a secondary gateway reference field; Chapa is primary
 (Telebirr, CBE Birr, cards via Chapa).**Pass-through rule (Sep 2026):** the buyer pays the listed price **plus a checkout fee** covering the gateway's transaction fee, so YeBetWeg nets the full listed price.
 

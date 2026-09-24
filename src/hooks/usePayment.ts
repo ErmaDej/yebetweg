@@ -19,12 +19,60 @@ const TIER_PRICES: Record<PremiumTier, number> = {
   pro: 1000,
 }
 
+/** Fallback pricing when the admin-governed RPC is unavailable. */
+export const FALLBACK_TIER_PRICING = { premium: 500, pro: 1000, currency: "ETB" } as const
+
+export type TierPricing = { premium: number; pro: number; currency: string }
+
+/**
+ * Resolves admin-governed tier pricing (app_settings 'tier_pricing' via the
+ * public get_tier_pricing() RPC), falling back to the built-in prices.
+ * One shared loader: the pricing UI (checkout display + admin editor) and the
+ * charge path all read the same values.
+ */
+export function useTierPricing() {
+  const [pricing, setPricing] = useState<TierPricing>(FALLBACK_TIER_PRICING)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase.rpc("get_tier_pricing")
+      if (!cancelled && !error && data && typeof data === "object") {
+        const d = data as Record<string, unknown>
+        const premium = Number(d.premium)
+        const pro = Number(d.pro)
+        if (Number.isFinite(premium) && premium > 0 && Number.isFinite(pro) && pro > 0) {
+          setPricing({ premium, pro, currency: typeof d.currency === "string" ? d.currency : "ETB" })
+        }
+      }
+      if (!cancelled) setLoaded(true)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /** Full price map including the free tier. */
+  const tierPrices: Record<PremiumTier, number> = {
+    free: 0,
+    premium: pricing.premium,
+    pro: pricing.pro,
+  }
+
+  return { pricing, tierPrices, loaded }
+}
+
 export function usePayment() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuthContext()
   const { profile } = useUserProfile()
   const { language } = useLanguage()
+
+  // Admin-governed prices (replaces the old hardcoded TIER_PRICES as the
+  // source for display and charging).
+  const { tierPrices } = useTierPricing()
 
   // Admin-configurable fee rates (app_settings 'fee_config' via the public
   // get_fee_config() RPC). Falls back to the built-in 2% until loaded or if
@@ -84,7 +132,8 @@ export function usePayment() {
       // full listed price (see src/lib/fees.ts). The channel isn't known
       // until Chapa's chooser, so charge with the highest configured rate —
       // a buyer on a cheaper channel can only over-pay the fee, never under-pay.
-      const { fee, gross } = withCheckoutFee(TIER_PRICES[tier], conservativeFeeRate(feeConfig))
+      const base = tierPrices[tier]
+      const { fee, gross } = withCheckoutFee(base, conservativeFeeRate(feeConfig))
       const amount = gross
       const txRef = generateTxRef()
       const projectUrl = import.meta.env.VITE_SUPABASE_URL || window.location.origin
@@ -137,16 +186,16 @@ export function usePayment() {
         setLoading(false)
       }
     },
-    [user, profile, language, getUserName, generateTxRef, feeConfig],
+    [user, profile, language, getUserName, generateTxRef, feeConfig, tierPrices],
   )
 
   return {
     loading,
     error,
     initiatePayment,
-    tierPrices: TIER_PRICES,
+    tierPrices,
     /** Pass-through split of a tier price at the conservative (highest) rate. */
-    feeSplitFor: (tier: PremiumTier) => withCheckoutFee(TIER_PRICES[tier], conservativeFeeRate(feeConfig)),
+    feeSplitFor: (tier: PremiumTier) => withCheckoutFee(tierPrices[tier], conservativeFeeRate(feeConfig)),
     /** Raw fee configuration from get_fee_config() (null until loaded). */
     feeConfig,
     formatAmount,
