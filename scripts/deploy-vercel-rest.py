@@ -22,7 +22,6 @@ TOKEN = os.environ["VERCEL_TOKEN"]
 TEAM = "team_LAY5zmGkqFZX0dBHV6AHlCTh"
 PROJECT = "yebetweg"
 BASE = "https://api.vercel.com"
-BATCH = 40
 
 
 def request(path, data=None, headers=None, method=None, timeout=180):
@@ -36,47 +35,30 @@ def request(path, data=None, headers=None, method=None, timeout=180):
         return r.status, r.read().decode()
 
 
-def multipart(files):
-    """files: list of (path, bytes, sha1hex)."""
-    boundary = "----verceldeploy7d3f2b"
-    out = bytearray()
-    for path, content, _sha in files:
-        out += f"--{boundary}\r\n".encode()
-        out += f'Content-Disposition: form-data; name="{path}"; filename="{path}"\r\n'.encode()
-        out += b"Content-Type: application/octet-stream\r\n\r\n"
-        out += content
-        out += b"\r\n"
-    out += f"--{boundary}--\r\n".encode()
-    return bytes(out), f"multipart/form-data; boundary={boundary}"
-
-
-def upload_batch(batch):
-    body, ctype = multipart(batch)
-    try:
-        status, _ = request("/v2/files", data=body, headers={"Content-Type": ctype}, method="POST", timeout=300)
-        return status in (200, 201), None
-    except urllib.error.HTTPError as e:
-        if e.code == 409:
-            return True, "conflict"  # some file already exists — retry individually
-        return False, f"HTTP {e.code}: {e.read().decode()[:200]}"
-    except Exception as e:
-        return False, f"{type(e).__name__}: {e}"
-
-
 def upload_one(path, content, digest):
-    try:
-        status, _ = request(
-            "/v2/files",
-            data=content,
-            headers={"Content-Type": "application/octet-stream", "x-vercel-digest": digest},
-            method="POST",
-            timeout=300,
-        )
-        return status in (200, 201)
-    except urllib.error.HTTPError as e:
-        return e.code == 409  # already uploaded = fine
-    except Exception:
-        return False
+    """Per the REST docs, POST /v2/files uploads exactly ONE file per
+    request: the body is the raw file content and its sha1 rides in the
+    `x-vercel-digest` header. There is no multipart mode (a multipart body
+    yields 400 `invalid_digest`). 409 = already uploaded, which is success
+    for our purposes."""
+    for i in range(3):
+        try:
+            status, _ = request(
+                "/v2/files",
+                data=content,
+                headers={"Content-Type": "application/octet-stream", "x-vercel-digest": digest},
+                method="POST",
+                timeout=300,
+            )
+            return True, None
+        except urllib.error.HTTPError as e:
+            if e.code == 409:
+                return True, None  # already uploaded = fine
+            return False, f"HTTP {e.code}: {e.read().decode()[:200]}"
+        except Exception as e:
+            if i == 2:
+                return False, f"{type(e).__name__}: {e}"
+            time.sleep(2 * (i + 1))
 
 
 def with_retries(fn, attempts=3):
@@ -96,31 +78,29 @@ def main():
     files = subprocess.check_output(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard"], text=True
     ).splitlines()
+    # The ref docs (Ref/, memory/, docs/archive/, one-off MD notes) and
+    # heavy public/ media don't influence the Vite build — excluding them
+    # keeps the upload small and fast. node_modules/dist/.env are already
+    # out via gitignore rules (ls-files --exclude-standard).
+    SKIP_PREFIXES = ("Ref/", "memory/", "docs/", ".github/", "scripts/", "public/videos/", "public/images/")
     files = [
         f
         for f in files
-        if f and not f.startswith(".env") and f != "scripts/deploy-vercel-rest.py"
+        if f and not f.startswith(".env") and f != "scripts/deploy-vercel-rest.py" and not f.startswith(SKIP_PREFIXES)
     ]
     payloads = []
     for path in files:
         content = open(path, "rb").read()
         payloads.append((path, content, hashlib.sha1(content).hexdigest()))
-    print(f"{len(payloads)} tracked files, {sum(len(p[1]) for p in payloads)} bytes")
+    print(f"{len(payloads)} files to upload, {sum(len(p[1]) for p in payloads)} bytes")
 
     failed = []
-    for i in range(0, len(payloads), BATCH):
-        batch = payloads[i : i + BATCH]
-        names = ", ".join(p[0] for p in batch[:2]) + ("…" if len(batch) > 2 else "")
-        print(f"[batch {i // BATCH + 1}/{(len(payloads) + BATCH - 1) // BATCH}] {len(batch)} files: {names}")
-        ok, info = with_retries(lambda b=batch: upload_batch(b))
-        if ok and info == "conflict":
-            # Batch rejected because at least one file exists — fall back to
-            # per-file uploads (mostly instant 409s).
-            for path, content, digest in batch:
-                if not with_retries(lambda p=path, c=content, d=digest: (upload_one(p, c, d), None)):
-                    failed.append(path)
-        elif not ok:
-            failed.extend(p[0] for p in batch)
+    for i, (path, content, digest) in enumerate(payloads):
+        if i % 25 == 0 or i == len(payloads) - 1:
+            print(f"[{i + 1}/{len(payloads)}] uploading {path}")
+        ok, info = with_retries(lambda p=path, c=content, d=digest: upload_one(p, c, d))
+        if not ok:
+            failed.append(path)
     if failed:
         print("FAILED FILES:", failed)
         sys.exit(1)
@@ -129,7 +109,7 @@ def main():
     body = json.dumps({
         "name": PROJECT,
         "target": "production",
-        "files": [{"sha": sha, "size": len(content)} for _p, content, sha in payloads],
+        "files": [{"sha": sha, "file": path, "size": len(content)} for path, content, sha in payloads],
     }).encode()
     try:
         status, raw = request(

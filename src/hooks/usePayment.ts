@@ -13,12 +13,6 @@ import { withCheckoutFee, conservativeFeeRate, type FeeConfig } from "@/lib/fees
 import { supabase } from "@/lib/supabase"
 import { useUserProfile } from "@/hooks/useUserProfile"
 
-const TIER_PRICES: Record<PremiumTier, number> = {
-  free: 0,
-  premium: 500,
-  pro: 1000,
-}
-
 /** Fallback pricing when the admin-governed RPC is unavailable. */
 export const FALLBACK_TIER_PRICING = { premium: 500, pro: 1000, currency: "ETB" } as const
 

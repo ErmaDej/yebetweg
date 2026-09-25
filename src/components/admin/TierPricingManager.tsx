@@ -121,7 +121,7 @@ export function TierPricingManager() {
           <Button onClick={handleSave} disabled={saving || invalid || premium === "" || pro === ""}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {am ? "አስቀምጥ" : "Save prices"}
-          </button>
+          </Button>
           {state === "saved" && (
             <span className="flex items-center gap-1 text-sm text-green-600">
               <Check className="h-4 w-4" /> {am ? "ተቀምጧል" : "Saved — live immediately"}

@@ -64,6 +64,19 @@ function detailSummary(detail: Record<string, unknown> | null): string {
   if (typeof detail.reference === "string") parts.push(`ref ${detail.reference}`)
   if (typeof detail.note === "string" && detail.note) parts.push(`note: ${detail.note}`)
   if (typeof detail.tip_id === "string") parts.push(`tip ${String(detail.tip_id).slice(0, 8)}`)
+  // tier_pricing_updated: { previous: {...}, new: {...} } — show the per-tier diff.
+  if (detail.new && typeof detail.new === "object" && detail.previous !== undefined) {
+    const prev = (detail.previous ?? {}) as Record<string, unknown>
+    const next = detail.new as Record<string, unknown>
+    const diff = Object.keys(next)
+      .map((k) =>
+        prev[k] === next[k]
+          ? `${k} ${String(next[k])} (unchanged)`
+          : `${k} ${String(prev[k] ?? "—")} → ${String(next[k])}`
+      )
+      .join(", ")
+    if (diff) parts.push(diff)
+  }
   return parts.join(" · ")
 }
 
