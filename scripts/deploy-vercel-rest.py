@@ -229,8 +229,11 @@ def main():
             print("\n" + "─" * 60)
             print("DEPLOY SUMMARY")
             print(f"  files in deploy set : {len(payloads)}")
-            print(f"  newly uploaded      : {uploaded}")
-            print(f"  unchanged (409)     : {unchanged}")
+            # NB: Vercel returns 200 for BOTH fresh and already-present
+            # files (409 is not observed in practice), so this counter
+            # means "upload requests sent", not "new bytes transferred".
+            print(f"  upload requests sent: {uploaded} (includes files Vercel already had)")
+            print(f"  rejected (409)      : {unchanged}")
             print(f"  bytes               : {total_bytes:,}")
             print(f"  deployment          : {dep_id}")
             print(f"  deployment URL      : https://{d.get('url')}")
