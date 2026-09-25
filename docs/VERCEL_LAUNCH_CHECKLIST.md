@@ -31,6 +31,32 @@ Everything code-side is ready; this doc is the owner's sequence for the deploy i
    - **Install Command:** `npm ci`
    - **Node.js Version:** 20.x or 22.x (project engines-compatible)
 
+### 1a. Deploying from a flaky connection: `scripts/deploy-vercel-rest.py`
+
+The Vercel CLI's bulk upload tends to abort on unstable networks. The REST
+script survives them by uploading **one file per request** with retries:
+
+```bash
+VERCEL_TOKEN=<token> python3 -u scripts/deploy-vercel-rest.py
+```
+
+How it works, and the two contract details it once got wrong:
+
+1. **Upload — `POST /v2/files`** is strictly *one raw file per request*: the
+   body is the file's bytes and its sha1 goes in the `x-vercel-digest` header.
+   There is no multipart mode — a multipart body yields `400 invalid_digest`.
+   (`409` = already uploaded, which counts as success.)
+2. **Create — `POST /v13/deployments`** references every file as
+   `{sha, file, size}` (the `file` path is required, not just the sha).
+3. The file list comes from `git ls-files --cached --others
+   --exclude-standard` (so node_modules/dist/.env are naturally out), minus
+   pure-doc trees (`Ref/`, `memory/`, `docs/`, `.github/`). **Everything the
+   remote build touches must stay**: `scripts/generate-sitemap.js` runs
+   inside `npm run build` and `public/` media ships as static assets.
+4. Deploys with `target: production` → alias to `yebetweg.vercel.app` when
+   READY. Build failures are visible via
+   `GET /v2/deployments/{id}/events`.
+
 ---
 
 ## 2. Environment variables (Vercel → Settings → Environment Variables)

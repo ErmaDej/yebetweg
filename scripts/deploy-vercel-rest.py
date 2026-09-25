@@ -78,11 +78,12 @@ def main():
     files = subprocess.check_output(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard"], text=True
     ).splitlines()
-    # The ref docs (Ref/, memory/, docs/archive/, one-off MD notes) and
-    # heavy public/ media don't influence the Vite build — excluding them
-    # keeps the upload small and fast. node_modules/dist/.env are already
+    # Pure-doc trees don't influence the Vite build — excluding them keeps
+    # the upload small. Everything the remote build touches MUST stay: e.g.
+    # scripts/generate-sitemap.js runs inside `npm run build`, and public/
+    # media is served as static assets. node_modules/dist/.env are already
     # out via gitignore rules (ls-files --exclude-standard).
-    SKIP_PREFIXES = ("Ref/", "memory/", "docs/", ".github/", "scripts/", "public/videos/", "public/images/")
+    SKIP_PREFIXES = ("Ref/", "memory/", "docs/", ".github/")
     files = [
         f
         for f in files
