@@ -1,11 +1,26 @@
 import path from "path"
+import { execSync } from "child_process"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
+// Identifies the exact commit a bundle was built from — the admin Deployment
+// Status card compares it against the last recorded deploy
+// (app_settings.deploy_info) to flag a stale live site.
+function commitSha(): string {
+  try {
+    return execSync("git rev-parse HEAD").toString().trim()
+  } catch {
+    return "unknown"
+  }
+}
+
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
+  define: {
+    __COMMIT_SHA__: JSON.stringify(commitSha()),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -64,4 +79,4 @@ export default defineConfig({
       'lucide-react',
     ],
   },
-})
+}))

@@ -24,6 +24,7 @@ import { TipQaModeration } from "@/components/admin/TipQaModeration"
 import { ModerationLogView } from "@/components/admin/ModerationLogView"
 import { RevenueMonitor } from "@/components/admin/RevenueMonitor"
 import { TierPricingManager } from "@/components/admin/TierPricingManager"
+import { DeploymentStatus } from "@/components/admin/DeploymentStatus"
 
 type AdminMetricKey =
   | "users"
@@ -634,6 +635,10 @@ export function AdminDashboardTab() {
 
       <ExpandableSection title={language === "en" ? "Membership Pricing" : "የአባልነት ዋጋ"} defaultOpen={false}>
         <TierPricingManager />
+      </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "Deployment Status" : "የማሰማሪ ሁኔታ"} defaultOpen={false}>
+        <DeploymentStatus />
       </ExpandableSection>
 
       <ExpandableSection title={language === "en" ? "Revenue Monitoring & Reports" : "የገቢ ክትትል እና ሪፖርቶች"} defaultOpen={false}>

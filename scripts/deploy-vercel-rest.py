@@ -2,10 +2,30 @@
 """Deploy yebetweg to Vercel production via REST API.
 
 The Vercel CLI's bulk upload kept aborting on this machine's connection, so
-this uploads files to /v2/files in small multipart batches with retries
-(several small requests survive a flaky network better than one bulk
-request), then creates the production deployment referencing the uploaded
-SHAs. Vercel builds remotely with the project's configured env vars.
+this uploads files ONE PER REQUEST to /v2/files with retries (several small
+requests survive a flaky network better than one bulk request), then creates
+the production deployment referencing the uploaded SHAs. Vercel builds
+remotely with the project's configured env vars.
+
+Contract notes (learned the hard way — see checklist §1a):
+- POST /v2/files takes ONE raw file per request; its sha1 goes in the
+  `x-vercel-digest` header. No multipart mode. 409 = already uploaded (fine).
+- POST /v13/deployments references files as {sha, file, size}.
+- Everything the remote build touches must be in the upload:
+  scripts/generate-sitemap.js runs inside `npm run build`; public/ media is
+  served as static assets. Only pure-doc trees are skipped.
+
+Usage:
+  set -a; . ./.env            # SUPABASE_URL + service key for deploy_info
+  VERCEL_TOKEN=<token> python3 scripts/deploy-vercel-rest.py [--dry-run]
+
+--dry-run: hash and classify every file, report what WOULD be sent, then
+exit without touching Vercel (per-file uploaded/unchanged counts are only
+knowable during a real send).
+
+After a successful deploy the script records the deployment in
+app_settings under `deploy_info` (id, url, commit, counts) — the admin
+Deployment Status card reads this to detect a stale live site.
 """
 import hashlib
 import json
@@ -16,12 +36,16 @@ import time
 import urllib.error
 import urllib.request
 
-# Token comes from the environment so this file can be uploaded to the
-# deployment without leaking the credential into Vercel's file store.
+DRY_RUN = "--dry-run" in sys.argv
+
 TOKEN = os.environ["VERCEL_TOKEN"]
 TEAM = "team_LAY5zmGkqFZX0dBHV6AHlCTh"
 PROJECT = "yebetweg"
 BASE = "https://api.vercel.com"
+
+# Where the deploy state is recorded for the in-app status card.
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 
 def request(path, data=None, headers=None, method=None, timeout=180):
@@ -35,12 +59,10 @@ def request(path, data=None, headers=None, method=None, timeout=180):
         return r.status, r.read().decode()
 
 
-def upload_one(path, content, digest):
-    """Per the REST docs, POST /v2/files uploads exactly ONE file per
-    request: the body is the raw file content and its sha1 rides in the
-    `x-vercel-digest` header. There is no multipart mode (a multipart body
-    yields 400 `invalid_digest`). 409 = already uploaded, which is success
-    for our purposes."""
+def upload_one(_path, content, digest):
+    """POST /v2/files: the body is the raw file content and its sha1 rides
+    in the `x-vercel-digest` header. 409 = already uploaded, which is
+    success for our purposes."""
     for i in range(3):
         try:
             status, _ = request(
@@ -50,10 +72,10 @@ def upload_one(path, content, digest):
                 method="POST",
                 timeout=300,
             )
-            return True, None
+            return True, "uploaded"
         except urllib.error.HTTPError as e:
             if e.code == 409:
-                return True, None  # already uploaded = fine
+                return True, "unchanged"  # already uploaded = fine
             return False, f"HTTP {e.code}: {e.read().decode()[:200]}"
         except Exception as e:
             if i == 2:
@@ -69,6 +91,47 @@ def with_retries(fn, attempts=3):
         print(f"    attempt {i + 1} failed: {info}")
         time.sleep(2 * (i + 1))
     return False, info
+
+
+def record_deploy_info(dep, uploaded, unchanged, total, bytes_sent):
+    """Best-effort: write the deployment to app_settings (key `deploy_info`)
+    so the admin Deployment Status card can detect a stale live site.
+    Never fails the deploy."""
+    if DRY_RUN:
+        return
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        print("note: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — deploy_info not recorded")
+        return
+    try:
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        row = {
+            "key": "deploy_info",
+            "value": {
+                "commit": commit,
+                "deployment_id": dep["id"],
+                "url": dep.get("url"),
+                "ready_at": dep.get("ready"),
+                "files_total": total,
+                "files_uploaded": uploaded,
+                "files_unchanged": unchanged,
+                "bytes": bytes_sent,
+            },
+        }
+        req = urllib.request.Request(
+            f"{SUPABASE_URL}/rest/v1/app_settings?on_conflict=key",
+            data=json.dumps(row).encode(),
+            headers={
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "apikey": SUPABASE_SERVICE_KEY,
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=60) as r:
+            print(f"deploy_info recorded in app_settings (HTTP {r.status})")
+    except Exception as e:
+        print(f"note: could not record deploy_info: {e}")
 
 
 def main():
@@ -89,24 +152,47 @@ def main():
         for f in files
         if f and not f.startswith(".env") and f != "scripts/deploy-vercel-rest.py" and not f.startswith(SKIP_PREFIXES)
     ]
+    # Deleted-but-uncommitted files linger in the git index; deploy what
+    # actually exists on disk.
+    files = [f for f in files if os.path.isfile(f)]
     payloads = []
     for path in files:
         content = open(path, "rb").read()
         payloads.append((path, content, hashlib.sha1(content).hexdigest()))
-    print(f"{len(payloads)} files to upload, {sum(len(p[1]) for p in payloads)} bytes")
+    total_bytes = sum(len(p[1]) for p in payloads)
+    print(f"{len(payloads)} files, {total_bytes} bytes"
+          + (" (DRY RUN — nothing will be sent)" if DRY_RUN else ""))
 
+    # ── Phase 1: upload ─────────────────────────────────────────────────
+    uploaded = unchanged = 0
     failed = []
     for i, (path, content, digest) in enumerate(payloads):
         if i % 25 == 0 or i == len(payloads) - 1:
-            print(f"[{i + 1}/{len(payloads)}] uploading {path}")
+            print(f"[{i + 1}/{len(payloads)}] {path}"
+                  + (f"   (uploaded {uploaded}, unchanged {unchanged})" if not DRY_RUN else ""))
+        if DRY_RUN:
+            uploaded += 1  # every file would be sent; unchanged is unknowable here
+            continue
         ok, info = with_retries(lambda p=path, c=content, d=digest: upload_one(p, c, d))
         if not ok:
             failed.append(path)
+        elif info == "uploaded":
+            uploaded += 1
+        else:
+            unchanged += 1
     if failed:
-        print("FAILED FILES:", failed)
+        print(f"\nFAILED FILES ({len(failed)}):", failed)
         sys.exit(1)
-    print("all files uploaded — creating deployment")
+    if DRY_RUN:
+        print("\nDRY RUN complete — no requests were sent to Vercel.")
+        print(f"  files in deploy set : {len(payloads)}")
+        print(f"  bytes               : {total_bytes:,}")
+        print("  uploaded/unchanged split is only knowable during a real send.")
+        return
 
+    print(f"\nall files handled — creating deployment (uploaded {uploaded}, unchanged {unchanged})")
+
+    # ── Phase 2: create + poll the deployment ───────────────────────────
     body = json.dumps({
         "name": PROJECT,
         "target": "production",
@@ -134,7 +220,18 @@ def main():
         state = d.get("readyState")
         print(f"  state: {state}")
         if state == "READY":
-            print(f"\nREADY: {d.get('url')}")
+            # ── End-of-run summary ────────────────────────────────────────
+            print("\n" + "─" * 60)
+            print("DEPLOY SUMMARY")
+            print(f"  files in deploy set : {len(payloads)}")
+            print(f"  newly uploaded      : {uploaded}")
+            print(f"  unchanged (409)     : {unchanged}")
+            print(f"  bytes               : {total_bytes:,}")
+            print(f"  deployment          : {dep_id}")
+            print(f"  deployment URL      : https://{d.get('url')}")
+            print(f"  production alias    : https://{PROJECT}.vercel.app")
+            print("─" * 60)
+            record_deploy_info(d, uploaded, unchanged, len(payloads), total_bytes)
             return
         if state in ("ERROR", "CANCELED"):
             print("deploy failed:", json.dumps(d.get("builds") or d)[:800])
