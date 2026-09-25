@@ -6,6 +6,16 @@ import { Play } from "lucide-react"
 
 const VIDEO_PLAYBACK_RATE = 0.65
 
+// Hero clips ship from Supabase Storage's public CDN (bucket: `videos`)
+// instead of the app bundle — they're ~17 MB and added ~85% of every deploy's
+// upload time. Uploaded via scripts/upload-videos-to-storage.py; the repo
+// copies stay in public/videos as the canonical source of truth.
+const CDN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/videos`
+const CDN_VIDEO_PATHS = {
+  hero: `${CDN_BASE}/HeroClip1x.mp4`,
+  impact: `${CDN_BASE}/kling_Clip_2.mp4`,
+} as const
+
 interface VideoCardProps {
   src: string
   label: string
@@ -141,7 +151,7 @@ export function VideoShowcaseSection() {
           {/* Primary video — HeroClip1x.mp4 (larger) */}
           <div className="lg:col-span-3">
             <VideoCard
-              src="/videos/HeroClip1x.mp4"
+              src={CDN_VIDEO_PATHS.hero}
               poster="/images/poster-hero-clip.webp"
               label={isEn ? "Real Projects" : "እውነተኛ ፕሮጀክቶች"}
               caption={
@@ -158,7 +168,7 @@ export function VideoShowcaseSection() {
           {/* Secondary video — kling_Clip_2.mp4 */}
           <div className="lg:col-span-2">
             <VideoCard
-              src="/videos/kling_Clip_2.mp4"
+              src={CDN_VIDEO_PATHS.impact}
               poster="/images/poster-kling-clip.webp"
               label={isEn ? "Real Impact" : "ውጤታማ ውጤት"}
               caption={
