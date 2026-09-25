@@ -1,17 +1,24 @@
 import path from "path"
 import { execSync } from "child_process"
+import { readFileSync } from "fs"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 // Identifies the exact commit a bundle was built from — the admin Deployment
 // Status card compares it against the last recorded deploy
-// (app_settings.deploy_info) to flag a stale live site.
+// (app_settings.deploy_info) to flag a stale live site. REST uploads have no
+// .git dir, so deploys made via scripts/deploy-vercel-rest.py carry the SHA
+// in .build-sha instead.
 function commitSha(): string {
   try {
     return execSync("git rev-parse HEAD").toString().trim()
   } catch {
-    return "unknown"
+    try {
+      return readFileSync(".build-sha", "utf8").trim()
+    } catch {
+      return "unknown"
+    }
   }
 }
 

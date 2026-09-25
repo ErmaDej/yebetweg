@@ -159,6 +159,11 @@ def main():
     for path in files:
         content = open(path, "rb").read()
         payloads.append((path, content, hashlib.sha1(content).hexdigest()))
+    # REST uploads have no .git dir on the builder, so hand the built bundle
+    # its own identity via .build-sha (read by vite.config.ts). Adding it
+    # HERE means the deployment's own SHA is always part of its payload.
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    payloads.append((".build-sha", commit.encode(), hashlib.sha1(commit.encode()).hexdigest()))
     total_bytes = sum(len(p[1]) for p in payloads)
     print(f"{len(payloads)} files, {total_bytes} bytes"
           + (" (DRY RUN — nothing will be sent)" if DRY_RUN else ""))
