@@ -235,6 +235,48 @@ npx supabase secrets set CRON_SECRET=<new value>
 Deploy: `npx supabase functions deploy subscription-lifecycle --no-verify-jwt`
 (same auth reasoning as the digests; its guard header is `x-lifecycle-key`).
 
+## 5d. Branded confirmation email (Supabase Auth + custom SMTP)
+
+The confirmation email is **not** an edge function — it is Supabase Auth's
+`signup` template, sent through your own SMTP/Resend credentials so the sender
+name and design carry the YeBetWeg brand:
+
+1. **Credentials:** Dashboard → Project Settings → Authentication → SMTP:
+   enable custom SMTP (e.g. Resend SMTP host `smtp.resend.com`, port 2465,
+   user `resend`, pass = RESEND_API_KEY). Until `yebetweg.com` is registered
+   and verified in Resend, sender must stay `onboarding@resend.dev` (test
+   sends only — Resend 403s any custom domain that isn't verified, which is
+   why live sends fail today).
+2. **Templates:** Dashboard → Authentication → Emails → *Confirm signup*:
+   replace the Supabase boilerplate with the branded bilingual template
+   (YeBetWeg logo/wordmark, EN + አማርኛ copy), keep `{{ .ConfirmationURL }}`
+   and `{{ .Token }}` intact (link = `/auth/callback?...`, code fallback for
+   clients that block link-following), set sender name "YeBetWeg".
+3. **Redirect allow-list:** Authentication → URL Configuration: Site URL =
+   production origin; Redirect URLs list localhost:5173, 4173, the Vercel
+   preview URL, and the production URL. `/auth/callback` exchanges the token
+   and routes into the app; expired/replayed tokens land on the app's
+   "link expired" state with resend — tokens are never accepted twice.
+4. **Rate limits** (auth settings) protect the template from abuse; unconfirmed
+   signups have no session and no RLS-visible identity (BUSINESS_RULES §2).
+
+## 5e. Production deploys & in-app deploy status
+
+Deploys run via `scripts/deploy-vercel-rest.py` (one raw-body POST per file to
+`/v2/files` with `x-vercel-digest`, then `/v13/deployments` — no multipart;
+see the script header for the contract notes). It needs `VERCEL_TOKEN` plus
+the Supabase service-role env pair from `.env`, then:
+
+- uploads the git-tracked files (docs/tests excluded, `supabase/.temp` and
+  `node_modules` never shipped), writing the current commit to `.build-sha`
+  so the remote build bakes the right SHA;
+- creates the production deployment and waits for READY;
+- **records `app_settings['deploy_info']`** (commit, deployment id, url,
+  file/request counts) using the service-role key — the same row the admin
+  **Deployment Status** card reads, so "running bundle vs last deploy" is
+  checkable in-app (stale = redeploy needed). Media lives on Supabase
+  Storage (`videos` bucket), not the bundle — the payload is ~7.6 MB.
+
 ## 6. Verification checks (end-to-end)
 
 **Automated:** `npm run verify:deploy` runs the machine-checkable subset of
@@ -255,6 +297,8 @@ check); `--post-test` sends one silent test message to the admin chat.
 | 7 | Watch digest | `/watch` in the bot | Top cement/rebar movers list |
 | 8 | Admin-channel push | Check your `TELEGRAM_CHAT_ID` group/channel after check 2 | Digest posted by the bot |
 | 9 | Email channel | Check Resend dashboard → Logs after check 2 | Digest delivered to admins (if `RESEND_API_KEY` set) |
+| 10 | Confirmation email | Sign up fresh in a private window; check inbox | Branded bilingual email arrives (SMTP/resend.dev per §5d); link + code confirm into `/auth/callback` and route into the app |
+| 11 | Cron health card | Admin tab → Scheduled Jobs Health → 6h window after a scheduled fire | Jobs listed with schedule + last run; alert rows if a fire had no HTTP reply; refresh re-queries |
 
 ## 7. Rotate & tear down (when needed)
 
@@ -280,4 +324,4 @@ select cron.unschedule('yebetweg-freshness-digest');
 | `refresh_market_price_freshness` / `expire_stale_market_prices` / `upsert_market_price_from_telegram` RPCs | inside the pending migrations | §1 applies them |
 | edge functions (code only) | `supabase/functions/*` | §2–§5 above |
 | tip-qa-digest + revenue-digest cron jobs | ✅ live (cron.job ids 5, 6) | none — verify via §6-style POST with `x-cron-key` |
-| ⚠️ Resend sending domain | `yebetweg.com` NOT verified in Resend | Owner: add + verify the domain at resend.com/domains (DKIM/SPF) — until then both digests compute correctly but email delivery 403s |
+| ⚠️ Resend sending domain | `yebetweg.com` NOT registered (whois: no match, 2026-09-26), hence not verifiable in Resend | Owner: register the domain, add it at resend.com/domains, add the DKIM/SPF records, verify — until then Resend 403s every custom-domain send (confirmed live 2026-09-25) and the confirmation + digest + lifecycle chains stall at delivery |

@@ -71,6 +71,23 @@ UI blur is progressive enhancement, not protection.
   branded bilingual confirmation email that links to `/auth/callback` (with a
   6-digit code fallback) and redirects into the app on success — see
   docs/VERCEL_LAUNCH_CHECKLIST.md §8 for the dashboard configuration.
+- **Confirmation-email rules** (branded flow, configured in the Auth dashboard
+  / CLI config — recipe in EDGE_FUNCTIONS_RUNBOOK.md §5d):
+  - Every new signup receives it; the account stays unusable (no session,
+    RLS sees no active user) until the link or 6-digit code is confirmed —
+    unconfirmed signups can authenticate nowhere, not even read public tips.
+  - The link carries a one-time token to `/auth/callback#…` + `?code=…`;
+    the callback exchanges it, then routes confirmed users into the app.
+    Expired/replayed tokens land on the app's "link expired" state with a
+    resend option — tokens are never accepted twice.
+  - Redirects are allow-listed: only Site URL + the configured Redirect URLs
+    are honored; open-redirect parameters in emails are ignored by Supabase
+    and must never be trusted by the callback either.
+  - Sender identity follows Resend's rules until `yebetweg.com` is registered
+    and DKIM/SPF-verified: the domain is currently **unregistered** (whois:
+    no match, 2026-09-26), so testing happens via `onboarding@resend.dev`
+    (single-recipient test sends only); at launch the custom SMTP/domain
+    sends as the project brand. See VERCEL_LAUNCH_CHECKLIST §8.
 - **Login hardening:** `record_login_attempt` + `check_login_rate_limit`
   (login_attempts table) throttle brute force; failed logins are logged.
 - **Roles are not self-service.** Signup always creates `role='user'`.
@@ -323,8 +340,19 @@ one answer per user per question (unique index); **premium/pro answerers get
   (payment verification), `telegram-webhook` (supplier funnel),
   `admin_actions` (the single admin RPC gateway; every action re-verifies the
   admin role server-side).
-- **Moderation/audit:** `moderation_log` records Q&A deletions and payment
-  reconciliations with actor + snapshot; login_attempts records auth abuse.
+- **Moderation/audit:** `moderation_log` records Q&A deletions, payment
+  reconciliations, and tier-pricing changes with actor + snapshot;
+  login_attempts records auth abuse.
+- **Ops cards in the admin tab:** **Deployment Status** compares the running
+  bundle's baked commit SHA with the last REST deploy recorded in
+  `app_settings` ('deploy_info') — "up to date" / "stale — redeploy needed" /
+  "no deploy recorded yet"; **Scheduled Jobs (Cron) Health** reads
+  `admin_cron_health` (admin-only RPC over `cron.job`/`cron.job_run_details`
+  + recent `net._http_response` rows) and raises alerts when a scheduled fire
+  had no HTTP reply, the reply was an error status, or the response window is
+  empty where a job claims runs — because pg_cron "succeeded" only ever meant
+  the SQL block ran (the 5s pg_net timeout incident proved the difference).
+  Cron alert details are expandable rows; 6h/36h/7d windows are selectable.
 
 ---
 
@@ -339,6 +367,13 @@ one answer per user per question (unique index); **premium/pro answerers get
    VAT-registered flag) persists in `app_settings` key `tax_profile`**
    (admin-only KV, seeded with defaults, auto-saved from RevenueAnalytics) —
    never re-typed after a refresh.
+2c. **Deploy provenance is checkable in-app.** `npm run build` bakes the
+   commit SHA into the bundle (`__COMMIT_SHA__`, `.build-sha` fallback for
+   REST deploys, which build without a `.git` dir); every REST deploy via
+   `scripts/deploy-vercel-rest.py` records commit + deployment id + file/byte
+   counts into `app_settings` ('deploy_info'). The admin Deployment Status
+   card turns any drift between the two into a visible "stale" alarm —
+   shipping an unannounced old bundle is a bug, not a surprise.
 3. **Everything destructive is audited** (moderation_log) and confirmed in
    the UI (ConfirmActionDialog).
 4. **Spam/abuse controls are rate-limit + heuristic based, inside the RPCs**,
