@@ -25,6 +25,7 @@ import { ModerationLogView } from "@/components/admin/ModerationLogView"
 import { RevenueMonitor } from "@/components/admin/RevenueMonitor"
 import { TierPricingManager } from "@/components/admin/TierPricingManager"
 import { DeploymentStatus } from "@/components/admin/DeploymentStatus"
+import { CronHealth } from "@/components/admin/CronHealth"
 
 type AdminMetricKey =
   | "users"
@@ -639,6 +640,10 @@ export function AdminDashboardTab() {
 
       <ExpandableSection title={language === "en" ? "Deployment Status" : "የማሰማሪ ሁኔታ"} defaultOpen={false}>
         <DeploymentStatus />
+      </ExpandableSection>
+
+      <ExpandableSection title={language === "en" ? "Scheduled Jobs Health" : "የተሰሌዱ ስራዎች ሁኔታ"} defaultOpen={false}>
+        <CronHealth />
       </ExpandableSection>
 
       <ExpandableSection title={language === "en" ? "Revenue Monitoring & Reports" : "የገቢ ክትትል እና ሪፖርቶች"} defaultOpen={false}>
