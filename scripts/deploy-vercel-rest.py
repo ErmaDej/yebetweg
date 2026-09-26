@@ -38,6 +38,28 @@ import urllib.request
 
 DRY_RUN = "--dry-run" in sys.argv
 
+
+def _load_dotenv(path: str = ".env") -> None:
+    """Populate os.environ from a dotenv file without clobbering existing vars.
+
+    Detached launches (setsid/nohup) don't inherit an interactive shell's
+    exported env — the reason two deploys in a row skipped the deploy_info
+    write. Loading ./.env directly makes the script self-sufficient.
+    """
+    try:
+        for line in open(path, encoding="utf-8"):
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            k, v = k.strip(), v.strip().strip('"').strip("'")
+            os.environ.setdefault(k, v)
+    except FileNotFoundError:
+        pass
+
+
+_load_dotenv()
+
 TOKEN = os.environ["VERCEL_TOKEN"]
 TEAM = "team_LAY5zmGkqFZX0dBHV6AHlCTh"
 PROJECT = "yebetweg"
